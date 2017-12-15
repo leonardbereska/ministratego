@@ -130,21 +130,24 @@ class Game:
                 return False  # piece on field cant move more than 1 field (not a 2)
             else:
                 if pos_after[0] == pos_before[0]:
-                    dist_sign = np.sign(pos_after[1] - pos_before[1])
-                    for k in list(range(pos_before[1], pos_after[1], int(dist_sign))):
+                    dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
+                    for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
                         if self.board[(pos_before[0], k)] is not None:
                             return False  # pieces in the way of the move
                 else:
-                    dist_sign = np.sign(pos_after[0] - pos_before[0])
-                    for k in range(pos_before[0]+1, pos_after[0], int(dist_sign)):  # TODO index error
+                    dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
+                    for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
                         if self.board[(k, pos_before[1])] is not None:
                             return False  # pieces in the way of the move
-        # TODO: seems to be missing impossibility to move on field with piece from same team
+        if not self.board[pos_after] is None:
+            if self.board[pos_after].team == self.board[pos_before].team:
+                return False  # cant fight own pieces
         return True
 
-    def goal_test(self):
+    def goal_test(self, actions_possible):
         if 0 in self.deadFigures[0] or 0 in self.deadFigures[1]:
             return True
+        elif not actions_possible
         else:
             return False
 
