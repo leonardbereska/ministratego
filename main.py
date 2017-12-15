@@ -1,6 +1,8 @@
 import numpy as np
 import scipy
 import random
+from matplotlib import pyplot as plt
+
 import pieces
 import agent
 import copy
@@ -80,6 +82,7 @@ class Game:
                 break
             elif decision == 0:
                 Tie = True
+            if self.goal_test(actions_possible):
                 break
             self.turn += 1
         if Tie:
@@ -194,6 +197,7 @@ class Game:
         elif not actions_possible:
             return True
         #TODO: implement tie checkup to avoid near endless loops
+
         else:
             return False
 
@@ -224,5 +228,34 @@ class Game:
         return board_visible, actions_possible
 
 
+def print_board(board):
+    board = copy.deepcopy(board)
+    plt.figure()
+    Z1 = np.add.outer(range(5), range(5)) % 2  # board
+    plt.imshow(Z1, cmap=plt.cm.magma, alpha=.5, interpolation='nearest')
+    for pos in ((i, j) for i in range(5) for j in range(5)):
+        # place pieces on board
+        piece = board[pos]
+        if piece is not None:
+            if piece.team == 1:
+                color = 'b'
+            elif piece.team == 0:
+                color = 'r'
+            else:  # must be obstacle
+                color = 'k'
+            if piece.can_move:
+                form = 'o'
+            else:  # either not move or unknown
+                form = 's'
+            if piece.type == 0:  # if flag
+                form = 'X'
+            piecemarker = ''.join(('-', color, form))
+            plt.gca().invert_yaxis()
+            plt.plot(pos[1], pos[0], piecemarker, markersize=37)  # transpose pos[0], pos[1]
+            plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")
+    plt.show()
+
+
 new = Game()
-new.run_game()
+print_board(new.board)
+# new.run_game()
