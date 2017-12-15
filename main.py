@@ -1,5 +1,8 @@
 import numpy as np
+import scipy
+import random
 from matplotlib import pyplot as plt
+
 import pieces
 import agent
 import copy
@@ -17,6 +20,7 @@ class Game:
         """
         self.agent0 = agent.Agent(0)
         self.agent1 = agent.Agent(1)
+
         self.board = np.empty((5, 5), dtype=object)
 
         self.types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11, 0]
@@ -26,11 +30,12 @@ class Game:
         self.board[3:5, 0:5] = setup0
         self.board[0:2, 0:5] = setup1
         self.board[2, 2] = pieces.Piece(99, 99)  # initialize obstacle
+
         self.turn = 1
 
         self.deadFigures = []
-        self.deadFigures.append(([]))
-        self.deadFigures.append(([]))
+        self.deadFigures.append([])
+        self.deadFigures.append([])
 
         self.battleMatrix = dict()
         self.battleMatrix[1, 11] = -1
@@ -52,14 +57,15 @@ class Game:
         self.battleMatrix[3, 10] = -1
         self.battleMatrix[10, 0] = 1
         self.battleMatrix[10, 11] = -1
-        self.battleMatrix[10, 1] = -1
+        self.battleMatrix[10, 1] = 1
         self.battleMatrix[10, 2] = 1
         self.battleMatrix[10, 3] = 1
         self.battleMatrix[10, 10] = 2
 
     def run_game(self):
+        Tie = False
         while True:
-            visible_state, actions_possible = self.get_visible_state()
+            visible_state, actions_possible = self.get_agent_knowledge()
             if not actions_possible:
                 return (self.turn + 1) % 2  # other player won
             if self.turn % 2 == 1:
@@ -71,30 +77,70 @@ class Game:
             else:
                 self.do_move(new_move)
             print(self.board)
+            decision = self.goal_test()
+            if decision:
+                break
+            elif decision == 0:
+                Tie = True
             if self.goal_test(actions_possible):
                 break
             self.turn += 1
-        if self.turn % 2 == 1:
+        if Tie:
+            return 0.5
+        elif self.turn % 2 == 1:
             return 1  # player1 won!
         else:
             return 0  # player2 won
 
     def do_move(self, move):
+        '''
+        :param move: tuple or array consisting of coordinates from in 0 and to in 1
+        :return:
+        '''
+        from_ = move[0]
+        to_ = move[1]
         if not self.is_legal_move(move):
-            return 0  # illegal move chosen
-        if not self.board[move[1]] is None:  # Target field is not empty, then has to fight
-            fight_outcome = self.fight(self.board[move[0]], self.board[move[1]])
+            return False  # illegal move chosen
+        if not self.board[to_] is None:  # Target field is not empty, then has to fight
+            fight_outcome = self.fight(self.board[from_], self.board[to_])
             if fight_outcome is None:
                 print('Warning, cant let pieces of same team fight!')
-                return -1
+                return False
             elif fight_outcome == 1:
-                self.board[move[1]] = self.board[move[0]]
-                self.board[move[0]] = None
+                self.updateBoard( (to_, self.board[from_]), True)
+                self.updateBoard( (from_, None), True)
             elif fight_outcome == 2:
-                self.board[move[1]] = None
-                self.board[move[0]] = None
+                self.updateBoard( (to_, None), True)
+                self.updateBoard( (from_, None), True)
             else:
-                self.board[move[0]] = None
+                self.updateBoard( (from_, None), True)
+        else:
+            self.updateBoard( [(from_, None), (to_, self.board[from_])], False)
+        return True
+
+    def updateBoard(self, updatedPieces, visible):
+        '''
+        :param updatedPieces: array of tuples (piece_board_position, piece_object)
+        :param visible: boolean, True if the piece is visible to the enemy team, False if hidden
+        :return: void
+        '''
+        if visible:
+            self.agent0.updateBoard(updatedPieces)
+            self.agent1.updateBoard(updatedPieces)
+        else:
+            if not updatedPieces[1] is None:
+                if updatedPieces[1].team == 0:
+                    self.agent0.updateBoard(updatedPieces)
+                    self.agent1.updateBoard( (updatedPieces[0], pieces.Piece(88, 1)) )
+                else:
+                    self.agent0.updateBoard( (updatedPieces[0], pieces.Piece(88, 0)) )
+                    self.agent1.updateBoard(updatedPieces)
+            else:
+                self.agent0.updateBoard(updatedPieces)
+                self.agent1.updateBoard(updatedPieces)
+
+        for pos, piece in updatedPieces:
+            self.board[pos] = piece
 
     def fight(self, piece_att, piece_def):
         """
@@ -113,21 +159,22 @@ class Game:
         return outcome
 
     def is_legal_move(self, moveToCheck):
-        """
-        Checks if move is legal
-        """
+        '''
+
+        :param moveToCheck: array/tuple with the coordinates of the position from and to
+        :return: True if warrants a legal move, False if not
+        '''
         pos_before = moveToCheck[0]
         pos_after = moveToCheck[1]
 
         if self.board[pos_before] is None:
             return False  # no piece on field to move
-        elif self.board[pos_before].type in [0, 11]:
-            return False  # bomb and flag cant move
-        if abs(pos_after[0] - pos_before[0]) + abs(pos_after[1] - pos_before[1]) > 1:  # move across more than one field
+        move_dist = scipy.spatial.distance.cityblock(pos_before, pos_after)
+        if move_dist > self.board[pos_before].move_radius:
+            return False  # move too far for selected piece
+        if move_dist > 1:
             if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
                 return False  # no diagonal moves allowed
-            if not self.board[pos_before].type == 2:
-                return False  # piece on field cant move more than 1 field (not a 2)
             else:
                 if pos_after[0] == pos_before[0]:
                     dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
@@ -149,10 +196,12 @@ class Game:
             return True
         elif not actions_possible:
             return True
+        #TODO: implement tie checkup to avoid near endless loops
+
         else:
             return False
 
-    def get_visible_state(self):
+    def get_agent_knowledge(self):
         """
         :return: a deepcopy of the board with pieces visible to the agent, and his possible actions
         """
@@ -160,7 +209,7 @@ class Game:
         same_team = self.turn % 2
         other_team = (self.turn + 1) % 2
         actions_possible = []
-
+        # TODO: CLean up visible states update and only leave possible actions calc behind
         for pos in ((i, j) for i in range(5) for j in range(5)):
             piece = board_visible[pos]  # select a piece for all possible board positions
             if piece is not None:  # board positions has a piece on it
@@ -173,12 +222,9 @@ class Game:
                         # check which moves are possible
                         if piece.can_move:
                             for pos_to in ((i, j) for i in range(5) for j in range(5)):
-                                # TODO: use piece.move_radius to restrict search
                                 move = (pos, pos_to)
                                 if self.is_legal_move(move):
                                     actions_possible.append(move)
-            print(pos)
-
         return board_visible, actions_possible
 
 

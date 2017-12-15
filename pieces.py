@@ -34,3 +34,4 @@ class Piece:
 
     def change_hidden(self, new_status):
         self.hidden = new_status
+        return self
