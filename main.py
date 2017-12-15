@@ -93,10 +93,10 @@ class Game:
             return 0  # player2 won
 
     def do_move(self, move):
-        '''
+        """
         :param move: tuple or array consisting of coordinates from in 0 and to in 1
         :return:
-        '''
+        """
         from_ = move[0]
         to_ = move[1]
         if not self.is_legal_move(move):
@@ -119,11 +119,11 @@ class Game:
         return True
 
     def updateBoard(self, updatedPieces, visible):
-        '''
+        """
         :param updatedPieces: array of tuples (piece_board_position, piece_object)
         :param visible: boolean, True if the piece is visible to the enemy team, False if hidden
         :return: void
-        '''
+        """
         if visible:
             self.agent0.updateBoard(updatedPieces)
             self.agent1.updateBoard(updatedPieces)
@@ -159,11 +159,11 @@ class Game:
         return outcome
 
     def is_legal_move(self, moveToCheck):
-        '''
+        """
 
         :param moveToCheck: array/tuple with the coordinates of the position from and to
         :return: True if warrants a legal move, False if not
-        '''
+        """
         pos_before = moveToCheck[0]
         pos_after = moveToCheck[1]
 
@@ -229,33 +229,38 @@ class Game:
 
 
 def print_board(board):
-    board = copy.deepcopy(board)
+    """
+    Plots a board object in a pyplot figure
+    """
+    board = copy.deepcopy(board)  # ensure to not accidentally change input
+    plt.interactive(False)  # make plot stay?
     plt.figure()
-    Z1 = np.add.outer(range(5), range(5)) % 2  # board
-    plt.imshow(Z1, cmap=plt.cm.magma, alpha=.5, interpolation='nearest')
-    for pos in ((i, j) for i in range(5) for j in range(5)):
-        # place pieces on board
-        piece = board[pos]
+    layout = np.add.outer(range(5), range(5)) % 2  # chess-pattern board
+    plt.imshow(layout, cmap=plt.cm.magma, alpha=.5, interpolation='nearest')  # plot board
+    for pos in ((i, j) for i in range(5) for j in range(5)):  # go through all board positions
+        piece = board[pos]  # select piece on respective board position
+        # decide which marker type to use for piece
         if piece is not None:
             if piece.team == 1:
-                color = 'b'
+                color = 'b'  # blue: player 1
             elif piece.team == 0:
-                color = 'r'
-            else:  # must be obstacle
-                color = 'k'
+                color = 'r'  # red: player 0
+            else:
+                color = 'k'  # black: obstacle
             if piece.can_move:
-                form = 'o'
-            else:  # either not move or unknown
-                form = 's'
-            if piece.type == 0:  # if flag
-                form = 'X'
-            piecemarker = ''.join(('-', color, form))
-            plt.gca().invert_yaxis()
-            plt.plot(pos[1], pos[0], piecemarker, markersize=37)  # transpose pos[0], pos[1]
-            plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")
+                form = 'o'  # circle: for movable
+            else:
+                form = 's'  # square: either immovable or unknown piece
+            if piece.type == 0:
+                form = 'X'  # cross: flag
+            piece_marker = ''.join(('-', color, form))
+            plt.gca().invert_yaxis()  # own pieces down, others up
+            # transpose pos[0], pos[1] to turn board
+            plt.plot(pos[1], pos[0], piece_marker, markersize=37)  # plot markers for pieces
+            plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
     plt.show()
+    return 1
 
 
 new = Game()
 print_board(new.board)
-# new.run_game()
