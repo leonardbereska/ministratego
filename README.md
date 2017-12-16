@@ -13,3 +13,4 @@ agent:
 - [ ] monte-carlo agent
 - [ ] heuristic agent
 - [ ] minmax omniscient agent
+- [ ] reinforcement or otherly learned agent with dataset from played games of (not too dump AI)
