@@ -20,7 +20,9 @@ class Piece:
             self.can_move = True
             self.move_radius = 1
 
-    def __repr__(self):  # for printing pieces on the board return type of piece
+    # CAVEAT: Turning this specific form into __repr__ fucks up numpy arrays that hold objects of class pieces
+    #         thus we either need to further read into __repr__ in combo with numpy or leave it as __str__ for the moment
+    def __str__(self):  # for printing pieces on the board return type of piece
         if self.type == 0:
             return "f"
         if self.type == 11:
