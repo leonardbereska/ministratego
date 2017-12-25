@@ -8,7 +8,7 @@ import pickle
 
 
 class Game:
-    def __init__(self, setup):
+    def __init__(self, agent0, agent1):
         """
         player1 = Player()
         player2 = Player()
@@ -17,10 +17,11 @@ class Game:
         self.board[0:1, 0:5] = player1.decideInitialSetup()
         self.board[3:4, 0:5] = player2.decideInitialSetup()
         """
-        self.agents = (agent.SmartSetup(0, setup), agent.RandomAgent(1))
+
+        self.agents = (agent0, agent1)
         self.board = np.empty((5, 5), dtype=object)
 
-        self.types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
+        self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
         setup0 = self.agents[0].decide_setup(self.types_available)
         setup1 = self.agents[1].decide_setup(self.types_available)
         setup1 = np.flip(setup1, 0)  # flip setup for second player
@@ -64,6 +65,7 @@ class Game:
         game_over = False
         rewards = None
         while not game_over:
+            print_board(self.board)
             rewards = self.run_step()
             if rewards is not None:
                 game_over = True
@@ -83,38 +85,13 @@ class Game:
             return 0, 0  # each agent gets reward 0
 
         new_move = self.agents[turn].decide_move(visible_state, actions_possible)
-        self.do_move_proxy(new_move)  # execute agent's choice
+        self.do_move(new_move)  # execute agent's choice
         self.move_count += 1
         return None
 
-    def do_move_proxy(self, move):
-        """
-        replaces do_move function with working proxy until update_moves is implemented
-        assumes move has been checked to be legal previously
-        """
-        from_pos = move[0]
-        to_pos = move[1]
-        from_piece = self.board[from_pos]
-        to_piece = self.board[to_pos]
-
-        if to_piece is None:  # if field empty then simply move there
-            self.board[to_pos] = from_piece
-            self.board[from_pos] = None
-        else:  # if not empty field => fight
-            outcome = self.fight(from_piece, to_piece)
-            if outcome == 1:  # attacker wins
-                self.board[from_pos] = None
-                self.board[to_pos] = from_piece
-            elif outcome == -1:  # defendant wins
-                self.board[from_pos] = None
-                self.board[to_pos] = to_piece  # piece stays
-            elif outcome == 0:  # tie: both die
-                self.board[from_pos] = None
-                self.board[to_pos] = None
-
     def do_move(self, move):
         """
-        :param move: tuple or array consisting of coordinates from in 0 and to in 1
+        :param move: tuple or array consisting of coordinates 'from' at 0 and 'to' at 1
         """
         from_ = move[0]
         to_ = move[1]
@@ -126,40 +103,43 @@ class Game:
                 print('Warning, cant let pieces of same team fight!')
                 return False
             elif fight_outcome == 1:
-                self.update_board((to_, self.board[from_]), True)
-                self.update_board((from_, None), True)
+                self.update_board((to_, self.board[from_]), visible=True)
+                self.update_board((from_, None), visible=True)
             elif fight_outcome == 0:
-                self.update_board((to_, None), True)
-                self.update_board((from_, None), True)
+                self.update_board((to_, None), visible=True)
+                self.update_board((from_, None), visible=True)
             else:
-                self.update_board((from_, None), True)
+                self.update_board((from_, None), visible=True)
         else:
-            self.update_board([(from_, None), (to_, self.board[from_])], False)
+            self.update_board((to_, self.board[from_]), visible=False)
+            self.update_board((from_, None), visible=False)
+
         return True
 
-    def update_board(self, updated_pieces, visible):
+    def update_board(self, updated_piece, visible):
         """
-        :param updated_pieces: array of tuples (piece_board_position, piece_object)
+        :param updated_piece: tuple (piece_board_position, piece_object)
         :param visible: boolean, True if the piece is visible to the enemy team, False if hidden
         :return: void
         """
+        pos = updated_piece[0]
+        piece = updated_piece[1]
         if visible:
-            self.agent0.updateBoard(updated_pieces)
-            self.agent1.updateBoard(updated_pieces)
+            self.agents[0].updateBoard(updated_piece)
+            self.agents[1].updateBoard(updated_piece)
         else:
-            if not updated_pieces[1] is None:
-                if updated_pieces[1].team == 0:
-                    self.agent0.updateBoard(updated_pieces)
-                    self.agent1.updateBoard((updated_pieces[0], pieces.Piece(88, 1)))
+            if not piece is None:
+                if piece.team == 0:
+                    self.agents[0].updateBoard(updated_piece)
+                    self.agents[1].updateBoard((pos, pieces.Piece(88, 1)))
                 else:
-                    self.agent0.updateBoard((updated_pieces[0], pieces.Piece(88, 0)))
-                    self.agent1.updateBoard(updated_pieces)
+                    self.agents[0].updateBoard((pos, pieces.Piece(88, 0)))
+                    self.agents[1].updateBoard(updated_piece)
             else:
-                self.agent0.updateBoard(updated_pieces)
-                self.agent1.updateBoard(updated_pieces)
+                self.agents[0].updateBoard(updated_piece)
+                self.agents[1].updateBoard(updated_piece)
 
-        for pos, piece in updated_pieces:
-            self.board[pos] = piece
+        self.board[pos] = piece
 
     def fight(self, piece_att, piece_def):
         """
@@ -230,6 +210,7 @@ class Game:
         other_team = (self.move_count + 1) % 2
         actions_possible = []
         # TODO: CLean up visible states update and only leave possible actions calc behind
+        x = board_visible[(0,3)]
         for pos in ((i, j) for i in range(5) for j in range(5)):
             piece = board_visible[pos]  # select a piece for all possible board positions
             if piece is not None:  # board positions has a piece on it
@@ -246,6 +227,8 @@ class Game:
                                 if self.is_legal_move(move):
                                     actions_possible.append(move)
         return board_visible, actions_possible
+
+
 
 
 def print_board(board):
@@ -274,7 +257,7 @@ def print_board(board):
             if piece.type == 0:
                 form = 'X'  # cross: flag
             piece_marker = ''.join(('-', color, form))
-            plt.gca().invert_yaxis()  # own pieces down, others up
+            #plt.gca().invert_yaxis()  # own pieces down, others up
             # transpose pos[0], pos[1] to turn board
             plt.plot(pos[1], pos[0], piece_marker, markersize=37)  # plot markers for pieces
             plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
@@ -284,7 +267,6 @@ def print_board(board):
 
 def simulation():
     """
-
     :return: tested_setups: list of setup and winning percentage
     """
     types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
@@ -316,3 +298,10 @@ def simulation():
 # pickle.dump(setups, open('randominit2.p', 'wb'))
 
 
+setup_agent1 = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
+setup_agent1 = np.array([pieces.Piece(i, 1) for i in setup_agent1])
+setup_agent1.resize(2, 5)
+agent_0 = agent.RandomAgent(0)
+agent_1 = agent.SmartSetup(1, setup_agent1)
+game = Game(agent_0, agent_1)
+game.run_game()
