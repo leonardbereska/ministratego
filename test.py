@@ -1,11 +1,8 @@
 import numpy as np
+from collections import Counter
 
-class testo:
-    def __init__(self):
-        self.val1 = 1
-        self.val2 = True
-        self.val3 = [1,2,3,4]
 
-    def __repr__(self):
-        return str(self.val1)
 
+if not -100:
+    x = 15 + True
+    print( x)
