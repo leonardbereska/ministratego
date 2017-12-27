@@ -6,6 +6,7 @@ import random
 import numpy as np
 import pieces
 import copy
+from collections import Counter
 
 
 class Agent:
@@ -13,12 +14,15 @@ class Agent:
         self.team = team
         self.setup = None
         self.board = np.empty((5, 5), dtype=object)
-        opp_setup = np.array([pieces.Piece(88, (self.team + 1) % 2)]*10, dtype=object)
+        opp_setup = np.array([pieces.unknownPiece((self.team + 1) % 2) for i in range(10)], dtype=object)
         opp_setup.resize(2, 5)
         self.board[3:5, 0:5] = opp_setup
-        self.deadFigures = []
-        self.deadFigures.append([])
-        self.deadFigures.append([])
+        self.deadPieces = []
+        dead_piecesdict = dict()
+        for type in set(self.types_available):
+            dead_piecesdict[type] = 0
+        self.deadPieces.append(dead_piecesdict)
+        self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
     def init_setup(self, types_available):
         """
@@ -97,17 +101,12 @@ class SmartSetup(Agent):
         action = random.choice(actions)
         return action
 
+
 class ExpectiSmart(Agent):
     def __init__(self, team):
         super(ExpectiSmart, self).__init__(team=team)
         self.winFightReward = 10
         self.gainInfoReward = 5
-
-        self.oppPiecesProbabilites = dict()
-        # each entry of this dict is a list containting the probability P_k of hidden piece j being piece k, i.e.
-        # oppPiecesProbabilites[3,0] = [P_0, P_1, P_2, P_3, P_10, P_11] with indices declaring k
-        for pos in ((i, j) for i in range(3,5) for j in range(0,5)):
-            self.oppPiecesProbabilites[id(self.board[pos])] = [0.1, 0.1, 0.3, 0.2, 0.1, 0.2]
 
         self.battleMatrix = dict()
         self.battleMatrix[1, 11] = -1
@@ -139,21 +138,47 @@ class ExpectiSmart(Agent):
         return self.setup
 
     def decide_move(self, state, actions):
-        current_reward = 0
-        self.expectimax(state, actions, current_reward, max_depth=4)
+        return self.minimax(actions, max_depth=4)
 
-    def expectimax(self, state, actions, curr_rew, max_depth):
+    def minimax(self, actions, max_depth):
+        curr_board = self.assign_pieces_by_highest_probability(copy.deepcopy(self.board))
+        chosen_action = self.max_val(curr_board, actions, 0, -float("inf"), float("inf"), max_depth)
+        return chosen_action
+
+    def max_val(self, board, actions, current_reward, alpha, beta, depth):
+        if self.goal_test(board, actions):
+            return current_reward
+        val = None
         for action in actions:
-            from_ = action[0]
-            to_ = action[1]
-            curr_board = copy.deepcopy(self.board)
-            if self.goal_test(actions):
-                return curr_rew
-            if self.board[to_].team == (self.team +1 % 2):
-                if self.board[to_]
+            board_new = copy.deepcopy(board)
+            self.do_move(board_new, action, bookkeeping=False)
+            actions_remaining = copy.deepcopy(actions)
+            actions_remaining.remove(action)
+            val = max(val, self.min_val(board, actions_remaining, current_reward, alpha, beta, depth-1))
+            if val >= beta:
+                return val
+            alpha = max(alpha, val)
+        return val
 
-    def goal_test(self, actions_possible):
-        if 0 in self.deadFigures[0] or 0 in self.deadFigures[1]:
+    def min_val(self, board, actions, current_reward, alpha, beta, depth):
+        if self.goal_test(board):
+            return current_reward
+        val = None
+        for action in actions:
+            board_new = copy.deepcopy(board)
+            board_new = self.do_move(board_new, action, bookkeeping=False)
+            actions_remaining = copy.deepcopy(actions)
+            actions_remaining.remove(action)
+            val = max(val, self.max_val(board_new, actions_remaining, current_reward, alpha, beta, depth-1))
+            if val <= alpha:
+                return val
+            beta = min(beta, val)
+        return val
+
+    def goal_test(self, actions_possible, board=None):
+        # TODO: Make goal test check on the specific, given board instead of overall game
+        # TODO: Necessary for minimax evaluation
+        if 0 in self.deadPieces[0] or 0 in self.deadPieces[1]:
             # print('flag captured')
             return True
         elif not actions_possible:
@@ -162,70 +187,78 @@ class ExpectiSmart(Agent):
         else:
             return False
 
-    def do_move(self, board, move):
+    def assign_pieces_by_highest_probability(self, board):
+        # get all enemy pieces
+        pieces_left_to_assign = []
+        overall_counter = Counter([0,1,2,2,2,3,3,10,11,11])
+        for piece_type, count in overall_counter.items():
+            nr_remaining = count - self.deadPieces[self.team][piece_type]
+            if nr_remaining > 0:
+                pieces_left_to_assign.extend([piece_type]*nr_remaining)
+        enemy_pieces = [(pos, board[pos]) for (pos, piece) in np.ndenumerate(board)
+                        if piece.type == 88 and piece.team == (self.team+1) % 2]
+        for piece_type in pieces_left_to_assign:
+            likeliest_current_prob = 0
+            current_assignment = None
+            for pos, enemy_piece in enemy_pieces:
+                if enemy_piece.piece_probabilites[piece_type] > likeliest_current_prob:
+                    likeliest_current_prob = enemy_piece.piece_probabilites[piece_type]
+                    current_assignment = pos
+            board[current_assignment] = pieces.Piece(piece_type, (self.team+1) % 2)
+        return board
+
+    def update_probabilites(self):
+        # TODO: implement inferential statistics analyzing movement patterns etc
+
+
+    def do_move(self, board, move, bookkeeping=True):
         """
         :param move: tuple or array consisting of coordinates 'from' at 0 and 'to' at 1
         """
         from_ = move[0]
         to_ = move[1]
-        if not self.is_legal_move(move):
-            return False  # illegal move chosen
-        if not self.board[to_] is None:  # Target field is not empty, then has to fight
-            fight_outcome = self.fight(self.board[from_], self.board[to_])
+        if not board[to_] is None:  # Target field is not empty, then has to fight
+            fight_outcome = self.fight(board[from_], board[to_], collect_dead_pieces=bookkeeping)
             if fight_outcome is None:
                 print('Warning, cant let pieces of same team fight!')
                 return False
             elif fight_outcome == 1:
-                self.update_board((to_, self.board[from_]), visible=True)
-                self.update_board((from_, None), visible=True)
+                self.update_board(board, (to_, board[from_]))
+                self.update_board(board, (from_, None))
             elif fight_outcome == 0:
-                self.update_board((to_, None), visible=True)
-                self.update_board((from_, None), visible=True)
+                self.update_board(board, (to_, None))
+                self.update_board(board, (from_, None))
             else:
-                self.update_board((from_, None), visible=True)
+                self.update_board(board, (from_, None))
         else:
-            self.update_board((to_, self.board[from_]), visible=False)
-            self.update_board((from_, None), visible=False)
+            self.update_board(board, (to_, board[from_]))
+            self.update_board(board, (from_, None))
+        return board
 
-        return True
-
-    def update_board(self, updated_piece, visible):
+    def update_board(self, board, updated_piece):
         """
         :param updated_piece: tuple (piece_board_position, piece_object)
-        :param visible: boolean, True if the piece is visible to the enemy team, False if hidden
+        :param board: the playboard that should be updated
         :return: void
         """
         pos = updated_piece[0]
         piece = updated_piece[1]
-        if visible:
-            self.agents[0].updateBoard(updated_piece)
-            self.agents[1].updateBoard(updated_piece)
-        else:
-            if not piece is None:
-                if piece.team == 0:
-                    self.agents[0].updateBoard(updated_piece)
-                    self.agents[1].updateBoard((pos, pieces.Piece(88, 1)))
-                else:
-                    self.agents[0].updateBoard((pos, pieces.Piece(88, 0)))
-                    self.agents[1].updateBoard(updated_piece)
-            else:
-                self.agents[0].updateBoard(updated_piece)
-                self.agents[1].updateBoard(updated_piece)
+        board[pos] = piece
+        return board
 
-        self.board[pos] = piece
-
-
-    def fight(self, piece_att, piece_def):
+    def fight(self, piece_att, piece_def, collect_dead_pieces=True):
         """
         Determine the outcome of a fight between two pieces: 1: win, 0: tie, -1: loss
         add dead pieces to deadFigures
         """
         outcome = self.battleMatrix[piece_att.type, piece_def.type]
-        if outcome == 1:
-            self.deadFigures[piece_def.team].append(piece_def.type)
-        elif outcome == 0:
-            self.deadFigures[piece_def.team].append(piece_def.type)
-            self.deadFigures[piece_att.team].append(piece_att.type)
-        elif outcome == -1:
-            self.deadFigures[piece_att.team].append(piece_att.type)
+        if collect_dead_pieces:
+            if outcome == 1:
+                self.deadPieces[piece_def.team].append(piece_def.type)
+            elif outcome == 0:
+                self.deadPieces[piece_def.team].append(piece_def.type)
+                self.deadPieces[piece_att.team].append(piece_att.type)
+            elif outcome == -1:
+                self.deadPieces[piece_att.team].append(piece_att.type)
+            return outcome
         return outcome

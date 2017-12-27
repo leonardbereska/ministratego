@@ -31,9 +31,12 @@ class Game:
 
         self.move_count = 1  # agent 1 starts
 
-        self.deadFigures = []
-        self.deadFigures.append([])
-        self.deadFigures.append([])
+        self.deadPieces = []
+        dead_piecesdict = dict()
+        for type in set(self.types_available):
+            dead_piecesdict[type] = 0
+        self.deadPieces.append(dead_piecesdict)
+        self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
         self.battleMatrix = dict()
         self.battleMatrix[1, 11] = -1
@@ -148,12 +151,12 @@ class Game:
         """
         outcome = self.battleMatrix[piece_att.type, piece_def.type]
         if outcome == 1:
-            self.deadFigures[piece_def.team].append(piece_def.type)
+            self.deadPieces[piece_def.team].append(piece_def.type)
         elif outcome == 0:
-            self.deadFigures[piece_def.team].append(piece_def.type)
-            self.deadFigures[piece_att.team].append(piece_att.type)
+            self.deadPieces[piece_def.team].append(piece_def.type)
+            self.deadPieces[piece_att.team].append(piece_att.type)
         elif outcome == -1:
-            self.deadFigures[piece_att.team].append(piece_att.type)
+            self.deadPieces[piece_att.team].append(piece_att.type)
         return outcome
 
     def is_legal_move(self, move_to_check):
@@ -192,7 +195,7 @@ class Game:
         return True
 
     def goal_test(self, actions_possible):
-        if 0 in self.deadFigures[0] or 0 in self.deadFigures[1]:
+        if 0 in self.deadPieces[0] or 0 in self.deadPieces[1]:
             # print('flag captured')
             return True
         elif not actions_possible:
