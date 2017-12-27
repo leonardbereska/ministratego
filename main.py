@@ -5,6 +5,7 @@ import pieces
 import agent
 import copy
 import pickle
+import battleMatrix
 
 
 class Game:
@@ -25,6 +26,7 @@ class Game:
         setup0 = self.agents[0].decide_setup(self.types_available)
         setup1 = self.agents[1].decide_setup(self.types_available)
         setup1 = np.flip(setup1, 0)  # flip setup for second player
+        # this positioning of agent 0 and agent 1 on the board is now hardcoded!! Dont change
         self.board[3:5, 0:5] = setup0
         self.board[0:2, 0:5] = setup1
         self.board[2, 2] = pieces.Piece(99, 99)  # set obstacle
@@ -38,37 +40,13 @@ class Game:
         self.deadPieces.append(dead_piecesdict)
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
-        self.battleMatrix = dict()
-        self.battleMatrix[1, 11] = -1
-        self.battleMatrix[1, 1] = 0
-        self.battleMatrix[1, 2] = -1
-        self.battleMatrix[1, 3] = -1
-        self.battleMatrix[1, 0] = 1
-        self.battleMatrix[1, 10] = 1
-        self.battleMatrix[2, 0] = 1
-        self.battleMatrix[2, 11] = -1
-        self.battleMatrix[2, 1] = 1
-        self.battleMatrix[2, 2] = 0
-        self.battleMatrix[2, 3] = -1
-        self.battleMatrix[2, 10] = -1
-        self.battleMatrix[3, 0] = 1
-        self.battleMatrix[3, 11] = 1
-        self.battleMatrix[3, 2] = 1
-        self.battleMatrix[3, 3] = 0
-        self.battleMatrix[3, 1] = 1
-        self.battleMatrix[3, 10] = -1
-        self.battleMatrix[10, 0] = 1
-        self.battleMatrix[10, 11] = -1
-        self.battleMatrix[10, 1] = 1
-        self.battleMatrix[10, 2] = 1
-        self.battleMatrix[10, 3] = 1
-        self.battleMatrix[10, 10] = 0
+        self.battleMatrix = battleMatrix.get_battle_matrix()
 
     def run_game(self):
         game_over = False
         rewards = None
         while not game_over:
-            print_board(self.board)
+            #print_board(self.board)
             rewards = self.run_step()
             if rewards is not None:
                 game_over = True
@@ -113,6 +91,7 @@ class Game:
                 self.update_board((from_, None), visible=True)
             else:
                 self.update_board((from_, None), visible=True)
+                self.update_board((to_, self.board[to_]), visible=True)
         else:
             self.update_board((to_, self.board[from_]), visible=False)
             self.update_board((from_, None), visible=False)
@@ -134,9 +113,9 @@ class Game:
             if not piece is None:
                 if piece.team == 0:
                     self.agents[0].updateBoard(updated_piece)
-                    self.agents[1].updateBoard((pos, pieces.Piece(88, 1)))
+                    self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
                 else:
-                    self.agents[0].updateBoard((pos, pieces.Piece(88, 0)))
+                    self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
                     self.agents[1].updateBoard(updated_piece)
             else:
                 self.agents[0].updateBoard(updated_piece)
@@ -151,12 +130,21 @@ class Game:
         """
         outcome = self.battleMatrix[piece_att.type, piece_def.type]
         if outcome == 1:
-            self.deadPieces[piece_def.team].append(piece_def.type)
+            self.deadPieces[piece_def.team][piece_def.type] += 1
+            self.agents[0].deadPieces[piece_def.team][piece_def.type] += 1
+            self.agents[1].deadPieces[piece_def.team][piece_def.type] += 1
         elif outcome == 0:
-            self.deadPieces[piece_def.team].append(piece_def.type)
-            self.deadPieces[piece_att.team].append(piece_att.type)
+            self.deadPieces[piece_def.team][piece_def.type] += 1
+            self.agents[0].deadPieces[piece_def.team][piece_def.type] += 1
+            self.agents[1].deadPieces[piece_def.team][piece_def.type] += 1
+
+            self.deadPieces[piece_att.team][piece_att.type] += 1
+            self.agents[0].deadPieces[piece_att.team][piece_att.type] += 1
+            self.agents[1].deadPieces[piece_att.team][piece_att.type] += 1
         elif outcome == -1:
-            self.deadPieces[piece_att.team].append(piece_att.type)
+            self.deadPieces[piece_att.team][piece_att.type] += 1
+            self.agents[0].deadPieces[piece_att.team][piece_att.type] += 1
+            self.agents[1].deadPieces[piece_att.team][piece_att.type] += 1
         return outcome
 
     def is_legal_move(self, move_to_check):
@@ -195,7 +183,7 @@ class Game:
         return True
 
     def goal_test(self, actions_possible):
-        if 0 in self.deadPieces[0] or 0 in self.deadPieces[1]:
+        if self.deadPieces[0] == 1 or self.deadPieces[1] == 1:
             # print('flag captured')
             return True
         elif not actions_possible:
@@ -304,7 +292,8 @@ def simulation():
 setup_agent1 = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
 setup_agent1 = np.array([pieces.Piece(i, 1) for i in setup_agent1])
 setup_agent1.resize(2, 5)
-agent_0 = agent.RandomAgent(0)
+agent_0 = agent.ExpectiSmart(0, setup_agent1)
 agent_1 = agent.SmartSetup(1, setup_agent1)
 game = Game(agent_0, agent_1)
-game.run_game()
+result = game.run_game()
+print(result)
