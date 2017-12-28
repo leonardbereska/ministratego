@@ -134,23 +134,28 @@ class ExpectiSmart(Agent):
         return np.random.choice(types_available, 10, replace=False)
 
     def decide_move(self, state, actions):
-        return self.minimax(actions, max_depth=4)
+        return self.minimax(max_depth=4)
 
-    def minimax(self, actions, max_depth):
+    def minimax(self, max_depth):
         curr_board = self.assign_pieces_by_highest_probability(copy.deepcopy(self.board))
-        opponent_possible_actions = self.get_opp_actions(curr_board)
-        chosen_action = self.max_val(curr_board, actions, opponent_possible_actions, 0, -float("inf"), float("inf"), max_depth)[1]
+        chosen_action = self.max_val(curr_board, 0, float("inf"), -float("inf"), max_depth)[1]
         return chosen_action
 
-    def max_val(self, board, max_player_actions, min_player_actions, current_reward, alpha, beta, depth):
-        goal_check = self.goal_test(max_player_actions, board)
+    def max_val(self, board, current_reward, alpha, beta, depth):
+        # this is what the expectimax agent will think
+
+        my_doable_actions = self.get_poss_actions(board, self.team)
+
+        # check for end-state scenario
+        goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
             if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
                 return current_reward, (None, None)
             return current_reward + goal_check, (None, None)
-        val = None
+
+        val = -float('inf')
         best_action = None
-        for action in max_player_actions:
+        for action in my_doable_actions:
             board_new = copy.deepcopy(board)
             board_new = self.do_move(board_new, action, bookkeeping=False)
             fight_result = board_new[1]
@@ -159,49 +164,47 @@ class ExpectiSmart(Agent):
                 if fight_result == 1:
                     current_reward += self.winFightReward
                 elif fight_result == 0:
-                    current_reward += self.neutralFightReward
-                if fight_result == -1:
-                    current_reward += - self.winFightReward
-            actions_remaining = copy.deepcopy(max_player_actions)
-            actions_remaining.remove(action)
+                    current_reward += self.neutralFightReward  # both pieces die
+                elif fight_result == -1:
+                    current_reward += -self.winFightReward
             val = max(val, self.min_val(board_new,
-                                        actions_remaining,
-                                        min_player_actions,
                                         current_reward,
-                                        alpha, beta, depth-1))[0]
+                                        alpha, beta, depth-1)[0])
             if val >= beta:
                 best_action = action
                 return val, best_action
             alpha = max(alpha, val)
         return val, best_action
 
-    def min_val(self, board, max_player_actions, min_player_actions, current_reward, alpha, beta, depth):
-        goal_check = self.goal_test(min_player_actions, board)
+    def min_val(self, board, current_reward, alpha, beta, depth):
+        # this is what the opponent will think, the min-player
+
+        my_doable_actions = self.get_poss_actions(board, self.other_team)
+        # check for end-state scenario first
+        goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
             if goal_check == True: # Needs to be this form, as -100 is also True for if statement
                 return current_reward, (None, None)
+            x = current_reward + goal_check
             return current_reward + goal_check, (None, None)
-        val = None
+
+        val = float('inf')  # inital value set, so min comparison later possible
         best_action = None
-        for action in min_player_actions:
+        for action in my_doable_actions:
             board_new = copy.deepcopy(board)
             board_new = self.do_move(board_new, action, bookkeeping=False)
             fight_result = board_new[1]
             board_new = board_new[0]
             if fight_result is not None:
                 if fight_result == 1:
-                    current_reward += self.winFightReward
+                    current_reward += -self.winFightReward
                 elif fight_result == 0:
-                    current_reward += self.neutralFightReward
-                if fight_result == -1:
-                    current_reward += - self.winFightReward
-            actions_remaining = copy.deepcopy(min_player_actions)
-            actions_remaining.remove(action)
+                    current_reward += self.neutralFightReward  # both pieces die
+                elif fight_result == -1:
+                    current_reward += self.winFightReward
             val = min(val, self.max_val(board_new,
-                                        max_player_actions,
-                                        actions_remaining,
                                         current_reward,
-                                        alpha, beta, depth-1))[0]
+                                        alpha, beta, depth-1)[0])
             if val <= alpha:
                 best_action = action
                 return val, best_action
@@ -218,6 +221,11 @@ class ExpectiSmart(Agent):
 
         if board[pos_before] is None:
             return False  # no piece on field to move
+        if not board[pos_after] is None:
+            if board[pos_after].team == board[pos_before].team:
+                return False  # cant fight own pieces
+            if board[pos_after].type == 99:
+                return False  # cant fight obstacles
         move_dist = spatial.distance.cityblock(pos_before, pos_after)
         if move_dist > board[pos_before].move_radius:
             return False  # move too far for selected piece
@@ -235,14 +243,9 @@ class ExpectiSmart(Agent):
                     for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
                         if board[(k, pos_before[1])] is not None:
                             return False  # pieces in the way of the move
-        if not board[pos_after] is None:
-            if board[pos_after].team == board[pos_before].team:
-                return False  # cant fight own pieces
-            if board[pos_after].type == 99:
-                return False  # cant fight obstacles
         return True
 
-    def get_opp_actions(self, board):
+    def get_poss_actions(self, board, player):
         '''
         :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
         :return: list of possible actions for opponent
@@ -251,7 +254,7 @@ class ExpectiSmart(Agent):
         for pos, piece in np.ndenumerate(board):
             if piece is not None:  # board positions has a piece on it
                 if not piece.type == 99:  # that piece is not an obstacle
-                    if piece.team == self.other_team:
+                    if piece.team == player:
                         # check which moves are possible
                         if piece.can_move:
                             for pos_to in ((i, j) for i in range(5) for j in range(5)):
@@ -285,6 +288,13 @@ class ExpectiSmart(Agent):
         pieces_left_to_assign = []
         overall_counter = Counter([0,1,2,2,2,3,3,10,11,11])
 
+        # now get all pieces of the enemy on the board
+        enemy_pieces = [(pos, board[pos]) for (pos, piece) in np.ndenumerate(board)
+                        if piece is not None and piece.team == self.other_team]
+        # all the unknowns
+        enemy_pieces_known = [piece.type for (pos, piece) in enemy_pieces if not piece.type == 88]
+        enemy_pieces_unknown = [(pos, piece) for (pos, piece) in enemy_pieces if piece.type == 88]
+
         # remove all dead enemy pieces from the list of pieces that need to be assigned to the unknown on the field
         # then append the leftover pieces to pieces_left_to_assign
         for piece_type, count in overall_counter.items():
@@ -292,20 +302,20 @@ class ExpectiSmart(Agent):
             nr_remaining = count - self.deadPieces[self.other_team][piece_type]
             if nr_remaining > 0:  # if equal 0, then all pieces of this type already dead
                 pieces_left_to_assign.extend([piece_type]*nr_remaining)
-        # now get all pieces of the enemy on the board, that are unknown
-        enemy_pieces = [(pos, board[pos]) for (pos, piece) in np.ndenumerate(board)
-                        if piece is not None and piece.type == 88 and piece.team == self.other_team]
+        for piece in enemy_pieces_known:
+            pieces_left_to_assign.remove(piece)
+
         # find the piece on the board with the highest likelihood of being the current piece in the loop
         for piece_type in pieces_left_to_assign:
             likeliest_current_prob = 0
             current_assignment = None
             chosen_piece = None
-            for pos, enemy_piece in enemy_pieces:
+            for pos, enemy_piece in enemy_pieces_unknown:
                 if enemy_piece.piece_probabilites[piece_type] > likeliest_current_prob:
                     likeliest_current_prob = enemy_piece.piece_probabilites[piece_type]
                     current_assignment = pos
                     chosen_piece = enemy_piece
-            enemy_pieces.remove((current_assignment, chosen_piece))
+            enemy_pieces_unknown.remove((current_assignment, chosen_piece))
             board[current_assignment] = pieces.Piece(piece_type, self.other_team)
         return board
 

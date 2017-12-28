@@ -46,7 +46,7 @@ class Game:
         game_over = False
         rewards = None
         while not game_over:
-            #print_board(self.board)
+            print_board(self.board)
             rewards = self.run_step()
             if rewards is not None:
                 game_over = True
@@ -64,7 +64,6 @@ class Game:
                 return -1, 1  # agent1 wins
         if self.move_count > 1000:  # if game lasts longer than 1000 turns => tie
             return 0, 0  # each agent gets reward 0
-
         new_move = self.agents[turn].decide_move(visible_state, actions_possible)
         self.do_move(new_move)  # execute agent's choice
         self.move_count += 1
@@ -76,6 +75,7 @@ class Game:
         """
         from_ = move[0]
         to_ = move[1]
+
         if not self.is_legal_move(move):
             return False  # illegal move chosen
         if not self.board[to_] is None:  # Target field is not empty, then has to fight
@@ -155,9 +155,13 @@ class Game:
         """
         pos_before = move_to_check[0]
         pos_after = move_to_check[1]
-
         if self.board[pos_before] is None:
             return False  # no piece on field to move
+        if not self.board[pos_after] is None:
+            if self.board[pos_after].team == self.board[pos_before].team:
+                return False  # cant fight own pieces
+            if self.board[pos_after].type == 99:
+                return False  # cant fight obstacles
         move_dist = spatial.distance.cityblock(pos_before, pos_after)
         if move_dist > self.board[pos_before].move_radius:
             return False  # move too far for selected piece
@@ -175,15 +179,10 @@ class Game:
                     for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
                         if self.board[(k, pos_before[1])] is not None:
                             return False  # pieces in the way of the move
-        if not self.board[pos_after] is None:
-            if self.board[pos_after].team == self.board[pos_before].team:
-                return False  # cant fight own pieces
-            if self.board[pos_after].type == 99:
-                return False  # cant fight obstacles
         return True
 
     def goal_test(self, actions_possible):
-        if self.deadPieces[0] == 1 or self.deadPieces[1] == 1:
+        if self.deadPieces[0][0] == 1 or self.deadPieces[1][0] == 1:
             # print('flag captured')
             return True
         elif not actions_possible:
