@@ -17,6 +17,8 @@ class Agent:
         self.other_team = (self.team + 1) % 2
         self.setup = None
         self.board = np.empty((5, 5), dtype=object)
+        self.omniscient = False
+
         opp_setup = np.array([pieces.unknownPiece(self.other_team) for i in range(10)], dtype=object)
         opp_setup.resize((2, 5))
 
@@ -26,6 +28,8 @@ class Agent:
         else:
             self.board[0:2, 0:5] = opp_setup
         self.board[2, 2] = pieces.Piece(99, 99)  # set obstacle
+
+        # fallen pieces bookkeeping
         self.deadPieces = []
         dead_piecesdict = dict()
         types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
@@ -68,11 +72,66 @@ class Agent:
     def updateBoard(self, updatedPiece):
         self.board[updatedPiece[0]] = updatedPiece[1]
 
-    def decide_move(self, state, actions):
+    def decide_move(self):
         """
         Agent has to implement on which action to decide given the state
         """
         raise NotImplementedError
+
+    def is_legal_move(self, move_to_check, board):
+        """
+        :param move_to_check: array/tuple with the coordinates of the position from and to
+        :return: True if warrants a legal move, False if not
+        """
+        pos_before = move_to_check[0]
+        pos_after = move_to_check[1]
+
+        if board[pos_before] is None:
+            return False  # no piece on field to move
+        if not board[pos_after] is None:
+            if board[pos_after].team == board[pos_before].team:
+                return False  # cant fight own pieces
+            if board[pos_after].type == 99:
+                return False  # cant fight obstacles
+        move_dist = spatial.distance.cityblock(pos_before, pos_after)
+        if move_dist > board[pos_before].move_radius:
+            return False  # move too far for selected piece
+        if move_dist > 1:
+            if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
+                return False  # no diagonal moves allowed
+            else:
+                if pos_after[0] == pos_before[0]:
+                    dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
+                    for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
+                        if board[(pos_before[0], k)] is not None:
+                            return False  # pieces in the way of the move
+                else:
+                    dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
+                    for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
+                        if board[(k, pos_before[1])] is not None:
+                            return False  # pieces in the way of the move
+        return True
+
+    def get_poss_actions(self, board, player):
+        '''
+        :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
+        :return: list of possible actions for opponent
+        '''
+        actions_possible = []
+        for pos, piece in np.ndenumerate(board):
+            if piece is not None:  # board positions has a piece on it
+                if not piece.type == 99:  # that piece is not an obstacle
+                    if piece.team == player:
+                        # check which moves are possible
+                        if piece.can_move:
+                            for pos_to in ((i, j) for i in range(5) for j in range(5)):
+                                move = (pos, pos_to)
+                                if self.is_legal_move(move, board):
+                                    actions_possible.append(move)
+        return actions_possible
+
+    def analyze_board(self):
+        pass
 
 
 class RandomAgent(Agent):
@@ -86,7 +145,8 @@ class RandomAgent(Agent):
         # randomly order the available figures in a list
         return np.random.choice(types_available, 10, replace=False)
 
-    def decide_move(self, state, actions):
+    def decide_move(self):
+        actions = self.get_poss_actions(self.board, self.team)
         # ignore state, do random action
         action = random.choice(actions)
         return action
@@ -112,7 +172,8 @@ class SmartSetup(Agent):
             self.board[0:2, 0:5] = self.setup
         return self.setup
 
-    def decide_move(self, state, actions):
+    def decide_move(self):
+        actions = self.get_poss_actions(self.board, self.team)
         # ignore state, do random action
         action = random.choice(actions)
         return action
@@ -133,7 +194,7 @@ class ExpectiSmart(Agent):
         # randomly order the available figures in a list
         return np.random.choice(types_available, 10, replace=False)
 
-    def decide_move(self, state, actions):
+    def decide_move(self):
         return self.minimax(max_depth=4)
 
     def minimax(self, max_depth):
@@ -210,40 +271,6 @@ class ExpectiSmart(Agent):
                 return val, best_action
             beta = min(beta, val)
         return val, best_action
-
-    def is_legal_move(self, move_to_check, board):
-        """
-        :param move_to_check: array/tuple with the coordinates of the position from and to
-        :return: True if warrants a legal move, False if not
-        """
-        pos_before = move_to_check[0]
-        pos_after = move_to_check[1]
-
-        if board[pos_before] is None:
-            return False  # no piece on field to move
-        if not board[pos_after] is None:
-            if board[pos_after].team == board[pos_before].team:
-                return False  # cant fight own pieces
-            if board[pos_after].type == 99:
-                return False  # cant fight obstacles
-        move_dist = spatial.distance.cityblock(pos_before, pos_after)
-        if move_dist > board[pos_before].move_radius:
-            return False  # move too far for selected piece
-        if move_dist > 1:
-            if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
-                return False  # no diagonal moves allowed
-            else:
-                if pos_after[0] == pos_before[0]:
-                    dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
-                    for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
-                        if board[(pos_before[0], k)] is not None:
-                            return False  # pieces in the way of the move
-                else:
-                    dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
-                    for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
-                        if board[(k, pos_before[1])] is not None:
-                            return False  # pieces in the way of the move
-        return True
 
     def get_poss_actions(self, board, player):
         '''
@@ -348,7 +375,7 @@ class ExpectiSmart(Agent):
             self.update_board(board, (from_, None))
         return board, fight_outcome
 
-    def update_board(self, board, updated_piece):
+    def update_board(self, board, updated_piece, move=None):
         """
         :param updated_piece: tuple (piece_board_position, piece_object)
         :param board: the playboard that should be updated
@@ -357,6 +384,222 @@ class ExpectiSmart(Agent):
         pos = updated_piece[0]
         piece = updated_piece[1]
         board[pos] = piece
+        return board
+
+    def fight(self, piece_att, piece_def, collect_dead_pieces=True):
+        """
+        Determine the outcome of a fight between two pieces: 1: win, 0: tie, -1: loss
+        add dead pieces to deadFigures
+        """
+        outcome = self.battleMatrix[piece_att.type, piece_def.type]
+        if collect_dead_pieces:
+            if outcome == 1:
+                self.deadPieces[piece_def.team][piece_def.type] += 1
+            elif outcome == 0:
+                self.deadPieces[piece_def.team][piece_def.type] += 1
+                self.deadPieces[piece_att.team][piece_att.type] += 1
+            elif outcome == -1:
+                self.deadPieces[piece_att.team][piece_att.type] += 1
+            return outcome
+        return outcome
+
+
+class OmniscientExpectiSmart(Agent):
+    def __init__(self, team, setup, opp_setup):
+        super(OmniscientExpectiSmart, self).__init__(team=team)
+        self.setup = setup
+        self.omniscient = True
+
+        # Agent 1 is always in 0:2,0:5 and agent 0 in 3:5, 0:5
+        if self.team == 1:
+            self.board[3:5, 0:5] = opp_setup
+        else:
+            self.board[0:2, 0:5] = opp_setup
+        self.winFightReward = 10
+        self.neutralFightReward = 5
+        self.winGameReward = 100
+
+        # we need these two outside of the rest, as python passes immutable objects (float, int, string etc) by value
+        # and there is no way then to change such variables inside a recursive loop
+        self.alpha = -float('inf')
+        self.beta = float('inf')
+
+        self.battleMatrix = battleMatrix.get_battle_matrix()
+
+    def init_setup(self, types_available):
+        # randomly order the available figures in a list
+        return self.setup
+        #return np.random.choice(types_available, 10, replace=False)
+
+    def decide_setup(self, *args):
+        if self.team == 0:
+            self.board[3:5, 0:5] = self.setup
+        else:
+            self.board[0:2, 0:5] = self.setup
+        return self.setup
+
+    def decide_move(self):
+        return self.minimax(max_depth=2 )
+
+    def minimax(self, max_depth):
+        self.alpha = -float('inf')
+        self.beta = float('inf')
+        chosen_action = self.max_val(self.board, 0, max_depth)[1]
+        return chosen_action
+
+    def max_val(self, board, current_reward, depth):
+        # this is what the expectimax agent will think
+
+        my_doable_actions = self.get_poss_actions(board, self.team)
+
+        # check for end-state scenario
+        goal_check = self.goal_test(my_doable_actions, board)
+        if goal_check or depth == 0:
+            if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
+                return current_reward, (None, None)
+            return current_reward + goal_check, (None, None)
+
+        val = -float('inf')
+        best_action = None
+        for action in my_doable_actions:
+            board_new = copy.deepcopy(board)
+            board_new = self.do_move(board_new, action, bookkeeping=False)
+            fight_result = board_new[1]
+            board_new = board_new[0]
+            temp_reward = current_reward
+            if fight_result is not None:
+                if fight_result == 1:
+                    temp_reward += self.winFightReward
+                elif fight_result == 0:
+                    temp_reward += self.neutralFightReward  # both pieces die
+                elif fight_result == -1:
+                    temp_reward += -self.winFightReward
+            val = max(val, self.min_val(board_new,
+                                        temp_reward,
+                                        depth-1)[0])
+            if val >= self.beta:
+                best_action = action
+                return val, best_action
+            self.alpha = max(self.alpha, val)
+        return val, best_action
+
+    def min_val(self, board, current_reward, depth):
+        # this is what the opponent will think, the min-player
+
+        my_doable_actions = self.get_poss_actions(board, self.other_team)
+        # check for end-state scenario first
+        goal_check = self.goal_test(my_doable_actions, board)
+        if goal_check or depth == 0:
+            if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
+                return current_reward, (None, None)
+            return current_reward + goal_check, (None, None)
+
+        val = float('inf')  # inital value set, so min comparison later possible
+        best_action = None
+        for action in my_doable_actions:
+            board_new = copy.deepcopy(board)
+            board_new = self.do_move(board_new, action, bookkeeping=False)
+            fight_result = board_new[1]
+            board_new = board_new[0]
+            temp_reward = current_reward
+            if fight_result is not None:
+                if fight_result == 1:
+                    temp_reward += self.winFightReward
+                elif fight_result == 0:
+                    temp_reward += self.neutralFightReward  # both pieces die
+                elif fight_result == -1:
+                    temp_reward += -self.winFightReward
+            val = min(val, self.max_val(board_new,
+                                        temp_reward,
+                                        depth-1)[0])
+            if val <= self.alpha:
+                best_action = action
+                return val, best_action
+            self.beta = min(self.beta, val)
+        return val, best_action
+
+    def get_poss_actions(self, board, player):
+        '''
+        :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
+        :return: list of possible actions for opponent
+        '''
+        actions_possible = []
+        for pos, piece in np.ndenumerate(board):
+            if piece is not None:  # board positions has a piece on it
+                if not piece.type == 99:  # that piece is not an obstacle
+                    if piece.team == player:
+                        # check which moves are possible
+                        if piece.can_move:
+                            for pos_to in ((i, j) for i in range(5) for j in range(5)):
+                                move = (pos, pos_to)
+                                if self.is_legal_move(move, board):
+                                    actions_possible.append(move)
+        return actions_possible
+
+    def goal_test(self, actions_possible, board=None):
+        if board is not None:
+            flag_alive = [False, False]
+            for pos, piece in np.ndenumerate(board):
+                if piece is not None and piece.type == 0:
+                    flag_alive[piece.team] = True
+            if not flag_alive[self.other_team]:
+                return self.winGameReward
+            if not flag_alive[self.team]:
+                return -self.winGameReward
+        else:
+            if 0 in self.deadPieces[0] or 0 in self.deadPieces[1]:
+                # print('flag captured')
+                return True
+        if not actions_possible:
+            # print('cannot move anymore')
+            return True
+        else:
+            return False
+
+    def update_probabilites(self):
+        # TODO: implement inferential statistics analyzing movement patterns etc
+        pass
+
+    def do_move(self, board, move, bookkeeping=True):
+        """
+        :param move: tuple or array consisting of coordinates 'from' at 0 and 'to' at 1
+        """
+        from_ = move[0]
+        to_ = move[1]
+        fight_outcome = None
+        if not board[to_] is None:  # Target field is not empty, then has to fight
+            fight_outcome = self.fight(board[from_], board[to_], collect_dead_pieces=bookkeeping)
+            if fight_outcome is None:
+                print('Warning, cant let pieces of same team fight!')
+                return False
+            elif fight_outcome == 1:
+                self.update_board((to_, board[from_]), board=board)
+                self.update_board((from_, None), board=board)
+            elif fight_outcome == 0:
+                self.update_board((to_, None), board=board)
+                self.update_board((from_, None), board=board)
+            else:
+                self.update_board((from_, None), board=board)
+        else:
+            self.update_board((to_, board[from_]), board=board)
+            self.update_board((from_, None), board=board)
+        return board, fight_outcome
+
+    def update_board(self, updated_piece, move=None, board=None):
+        """
+        :param updated_piece: tuple (piece_board_position, piece_object)
+        :param board: the playboard that should be updated
+        :return: void
+        """
+        if board is None:
+            board = self.board
+        if move is not None:
+            board[move[1]] = board[move[0]]
+            board[move[0]] = None
+        else:
+            pos = updated_piece[0]
+            piece = updated_piece[1]
+            board[pos] = piece
         return board
 
     def fight(self, piece_att, piece_def, collect_dead_pieces=True):
