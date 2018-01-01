@@ -25,7 +25,7 @@ class Game:
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
         setup0 = self.agents[0].decide_setup(self.types_available)
         setup1 = self.agents[1].decide_setup(self.types_available)
-        setup1 = np.flip(setup1, 0)  # flip setup for second player
+        #setup1 = np.flip(setup1, 0)  # flip setup for second player
         # this positioning of agent 0 and agent 1 on the board is now hardcoded!! Dont change
         self.board[3:5, 0:5] = setup0
         self.board[0:2, 0:5] = setup1
@@ -35,8 +35,8 @@ class Game:
 
         self.deadPieces = []
         dead_piecesdict = dict()
-        for type in set(self.types_available):
-            dead_piecesdict[type] = 0
+        for type_ in set(self.types_available):
+            dead_piecesdict[type_] = 0
         self.deadPieces.append(dead_piecesdict)
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
@@ -53,18 +53,22 @@ class Game:
         return rewards
 
     def run_step(self):
-        visible_state, actions_possible = self.get_agent_knowledge()
         turn = self.move_count % 2  # player 1 or player 0
 
         # test if game is over
-        if self.goal_test(actions_possible):  # flag already discovered or no action possible
+        if self.goal_test():  # flag already discovered or no action possible
             if turn == 1:
                 return 1, -1  # agent0 wins
             elif turn == 0:
                 return -1, 1  # agent1 wins
         if self.move_count > 1000:  # if game lasts longer than 1000 turns => tie
             return 0, 0  # each agent gets reward 0
-        new_move = self.agents[turn].decide_move(visible_state, actions_possible)
+        new_move = self.agents[turn].decide_move()
+        if new_move == (None, None):  # agent cant move anymore --> lost
+            if turn == 1:
+                return 1, -1  # agent0 wins
+            elif turn == 0:
+                return -1, 1  # agent1 wins
         self.do_move(new_move)  # execute agent's choice
         self.move_count += 1
         return None
@@ -110,17 +114,47 @@ class Game:
             self.agents[0].updateBoard(updated_piece)
             self.agents[1].updateBoard(updated_piece)
         else:
-            if not piece is None:
-                if piece.team == 0:
-                    self.agents[0].updateBoard(updated_piece)
-                    self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
+            if piece is not None:
+                if self.agents[0].omniscient:
+                    if self.agents[1].omniscient:
+                        # 0 and 1 is omniscient --> both know the piece
+                        self.agents[0].updateBoard(updated_piece)
+                        self.agents[1].updateBoard(updated_piece)
+                    else:
+                        # 0 is omniscient, but 1 isnt
+                        if piece.team == 0:
+                            # piece belongs to team 0, so 1 doesnt know it
+                            self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
+                            self.agents[0].updateBoard(updated_piece)
+                        else:
+                            # piece belongs to team 1, but both know the piece, as 0 is omniscient
+                            self.agents[0].updateBoard(updated_piece)
+                            self.agents[1].updateBoard(updated_piece)
+                elif self.agents[1].omniscient:
+                    if self.agents[0].omniscient:
+                        # 0 and 1 is omniscient --> both know the piece
+                        self.agents[0].updateBoard(updated_piece)
+                        self.agents[1].updateBoard(updated_piece)
+                    else:
+                        if piece.team == 1:
+                            # piece belongs to team 1, so 0 doesnt know it, because not omnsicient
+                            self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
+                            self.agents[1].updateBoard(updated_piece)
+                        else:
+                            # # piece belongs to team 0, but both know the piece, as 1 is omniscient
+                            self.agents[0].updateBoard(updated_piece)
+                            self.agents[1].updateBoard(updated_piece)
                 else:
-                    self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                    self.agents[1].updateBoard(updated_piece)
+                    # none of the agents are omniscient, update by team dependency
+                    if piece.team == 0:
+                        self.agents[0].updateBoard(updated_piece)
+                        self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
+                    else:
+                        self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
+                        self.agents[1].updateBoard(updated_piece)
             else:
                 self.agents[0].updateBoard(updated_piece)
                 self.agents[1].updateBoard(updated_piece)
-
         self.board[pos] = piece
 
     def fight(self, piece_att, piece_def):
@@ -181,44 +215,12 @@ class Game:
                             return False  # pieces in the way of the move
         return True
 
-    def goal_test(self, actions_possible):
+    def goal_test(self):
         if self.deadPieces[0][0] == 1 or self.deadPieces[1][0] == 1:
             # print('flag captured')
             return True
-        elif not actions_possible:
-            # print('cannot move anymore')
-            return True
         else:
             return False
-
-    def get_agent_knowledge(self):
-        """
-        :return: a deepcopy of the board with pieces visible to the agent, and his possible actions
-        """
-        board_visible = copy.deepcopy(self.board)
-        same_team = self.move_count % 2
-        other_team = (self.move_count + 1) % 2
-        actions_possible = []
-        # TODO: CLean up visible states update and only leave possible actions calc behind
-        x = board_visible[(0,3)]
-        for pos in ((i, j) for i in range(5) for j in range(5)):
-            piece = board_visible[pos]  # select a piece for all possible board positions
-            if piece is not None:  # board positions has a piece on it
-                if piece.type != 99:  # that piece is not an obstacle
-                    if piece.team == other_team:
-                        # check if piece is hidden or not
-                        if piece.hidden:
-                            board_visible[pos] = pieces.Piece(88, other_team)  # replace piece at board with unknown
-                    elif piece.team == same_team:
-                        # check which moves are possible
-                        if piece.can_move:
-                            for pos_to in ((i, j) for i in range(5) for j in range(5)):
-                                move = (pos, pos_to)
-                                if self.is_legal_move(move):
-                                    actions_possible.append(move)
-        return board_visible, actions_possible
-
-
 
 
 def print_board(board):
@@ -289,10 +291,13 @@ def simulation():
 
 
 setup_agent1 = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
+setup_agent0 = np.array([pieces.Piece(i, 0) for i in setup_agent1])
 setup_agent1 = np.array([pieces.Piece(i, 1) for i in setup_agent1])
+setup_agent0.resize(2, 5)
 setup_agent1.resize(2, 5)
-agent_0 = agent.ExpectiSmart(0, setup_agent1)
-agent_1 = agent.SmartSetup(1, setup_agent1)
+setup0 = np.flip(setup_agent0, 0)
+agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0, setup_agent1)
+agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1, setup_agent0)
 game = Game(agent_0, agent_1)
 result = game.run_game()
 print(result)
