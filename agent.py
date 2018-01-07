@@ -113,10 +113,10 @@ class Agent:
         return True
 
     def get_poss_actions(self, board, player):
-        '''
+        """
         :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
         :return: list of possible actions for opponent
-        '''
+        """
         actions_possible = []
         for pos, piece in np.ndenumerate(board):
             if piece is not None:  # board positions has a piece on it
@@ -139,7 +139,7 @@ class RandomAgent(Agent):
     Agent who chooses his initial setup and actions at random
     """
     def __init__(self, team):
-        super(RandomAgent, self).__init__(team=team)
+        Agent.__init__(self, team=team)
 
     def init_setup(self, types_available):
         # randomly order the available figures in a list
@@ -157,19 +157,10 @@ class SmartSetup(Agent):
     RandomAgent with smart initial setup
     """
     def __init__(self, team, setup):
-        super(SmartSetup, self).__init__(team=team)
+        Agent.__init__(self, team=team)
         self.setup = setup
 
     def init_setup(self, types_available):
-        # cheating Agent: Agent 0 gets reward 100 in 100 simulations
-        # [11, 10, 3, 10, 11, 3, 3, 3, 3, 10]
-        return self.setup
-
-    def decide_setup(self, *args):
-        if self.team == 0:
-            self.board[3:5, 0:5] = self.setup
-        else:
-            self.board[0:2, 0:5] = self.setup
         return self.setup
 
     def decide_move(self):

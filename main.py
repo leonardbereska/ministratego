@@ -54,7 +54,7 @@ class Game:
 
     def run_step(self):
         turn = self.move_count % 2  # player 1 or player 0
-        print("Round: " + str(self.move_count))
+        # print("Round: " + str(self.move_count))
 
         # test if game is over
         if self.goal_test():  # flag already discovered or no action possible
@@ -293,9 +293,11 @@ def simulation():
         win_count = 0
 
         for simu in range(num_simulations):  # simulate games
-            new = Game(setup)
-            # if simu % 10 == 0:
-            #     print('\nTotal rewards: {}, Simulation {}/{}'.format(total_reward, simu, num_simu))
+            agent_0 = agent.RandomAgent(0)
+            agent_1 = agent.SmartSetup(1, setup)
+            new = Game(agent_0, agent_1)
+            if simu % 10 == 0:
+                print('\nTotal rewards: {}, Simulation {}/{}'.format(win_count, simu, num_simulations))
             for step in range(2000):
                 game_reward = new.run_step()
                 if game_reward is not None:
@@ -308,7 +310,7 @@ def simulation():
     return tested_setups
 
 
-# setups = simulation()
+setups = simulation()
 # pickle.dump(setups, open('randominit2.p', 'wb'))
 
 
