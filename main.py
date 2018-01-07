@@ -55,7 +55,7 @@ class Game:
     def run_step(self):
         turn = self.move_count % 2  # player 1 or player 0
         print("Round: " + str(self.move_count))
-        
+
         # test if game is over
         if self.goal_test():  # flag already discovered or no action possible
             if turn == 1:

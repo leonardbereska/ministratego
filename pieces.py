@@ -46,7 +46,7 @@ class Piece:
 
 class unknownPiece(Piece):
     def __init__(self, team):
-        super().__init__(88, team)
+        Piece.__init__(self, type=88, team=team)
         self.has_moved = False
         # each entry of this dict is a list containting the probability P_k of hidden piece j being piece k, i.e.
         # oppPiecesProbabilites[3,0] = [P_0, P_1, P_2, P_3, P_10, P_11] with indices declaring k
