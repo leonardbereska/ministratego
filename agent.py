@@ -221,16 +221,18 @@ class ExpectiSmart(Agent):
             board_new = self.do_move(board_new, action, bookkeeping=False)
             fight_result = board_new[1]
             board_new = board_new[0]
+            temp_reward = current_reward
             if fight_result is not None:
                 if fight_result == 1:
-                    current_reward += self.winFightReward
+                    temp_reward += self.winFightReward
                 elif fight_result == 0:
-                    current_reward += self.neutralFightReward  # both pieces die
+                    temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
-                    current_reward += -self.winFightReward
-            val = max(val, self.min_val(board_new,
-                                        current_reward,
-                                        alpha, beta, depth-1)[0])
+                    temp_reward += -self.winFightReward
+            new_val = self.min_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            if val < new_val:
+                val = new_val
+                best_action = action
             if val >= beta:
                 best_action = action
                 return val, best_action
@@ -244,9 +246,8 @@ class ExpectiSmart(Agent):
         # check for end-state scenario first
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
-            if goal_check == True: # Needs to be this form, as -100 is also True for if statement
+            if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
                 return current_reward, (None, None)
-            x = current_reward + goal_check
             return current_reward + goal_check, (None, None)
 
         val = float('inf')  # inital value set, so min comparison later possible
@@ -256,18 +257,19 @@ class ExpectiSmart(Agent):
             board_new = self.do_move(board_new, action, bookkeeping=False)
             fight_result = board_new[1]
             board_new = board_new[0]
+            temp_reward = current_reward
             if fight_result is not None:
                 if fight_result == 1:
-                    current_reward += -self.winFightReward
+                    temp_reward += self.winFightReward
                 elif fight_result == 0:
-                    current_reward += self.neutralFightReward  # both pieces die
+                    temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
-                    current_reward += self.winFightReward
-            val = min(val, self.max_val(board_new,
-                                        current_reward,
-                                        alpha, beta, depth-1)[0])
-            if val <= alpha:
+                    temp_reward += -self.winFightReward
+            new_val = self.max_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            if val > new_val:
+                val = new_val
                 best_action = action
+            if val <= alpha:
                 return val, best_action
             beta = min(beta, val)
         return val, best_action
@@ -417,7 +419,7 @@ class OmniscientExpectiSmart(Agent):
             self.board[0:2, 0:5] = opp_setup
         self.winFightReward = 10
         self.neutralFightReward = 5
-        self.winGameReward = 100
+        self.winGameReward = 1000
 
         # we need these two outside of the rest, as python passes immutable objects (float, int, string etc) by value
         # and there is no way then to change such variables inside a recursive loop
@@ -439,15 +441,13 @@ class OmniscientExpectiSmart(Agent):
         return self.setup
 
     def decide_move(self):
-        return self.minimax(max_depth=2 )
+        return self.minimax(max_depth=8)
 
     def minimax(self, max_depth):
-        self.alpha = -float('inf')
-        self.beta = float('inf')
-        chosen_action = self.max_val(self.board, 0, max_depth)[1]
+        chosen_action = self.max_val(copy.deepcopy(self.board), 0, -float("inf"), float("inf"), max_depth)[1]
         return chosen_action
 
-    def max_val(self, board, current_reward, depth):
+    def max_val(self, board, current_reward, alpha, beta, depth):
         # this is what the expectimax agent will think
 
         my_doable_actions = self.get_poss_actions(board, self.team)
@@ -474,16 +474,17 @@ class OmniscientExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            val = max(val, self.min_val(board_new,
-                                        temp_reward,
-                                        depth-1)[0])
-            if val >= self.beta:
+            new_val = self.min_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            if val < new_val:
+                val = new_val
+                best_action = action
+            if val >= beta:
                 best_action = action
                 return val, best_action
-            self.alpha = max(self.alpha, val)
+            alpha = max(alpha, val)
         return val, best_action
 
-    def min_val(self, board, current_reward, depth):
+    def min_val(self, board, current_reward, alpha, beta, depth):
         # this is what the opponent will think, the min-player
 
         my_doable_actions = self.get_poss_actions(board, self.other_team)
@@ -509,13 +510,13 @@ class OmniscientExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            val = min(val, self.max_val(board_new,
-                                        temp_reward,
-                                        depth-1)[0])
-            if val <= self.alpha:
+            new_val = self.max_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            if val > new_val:
+                val = new_val
                 best_action = action
+            if val <= alpha:
                 return val, best_action
-            self.beta = min(self.beta, val)
+            beta = min(beta, val)
         return val, best_action
 
     def get_poss_actions(self, board, player):

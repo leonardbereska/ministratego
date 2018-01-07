@@ -54,7 +54,7 @@ class Game:
 
     def run_step(self):
         turn = self.move_count % 2  # player 1 or player 0
-
+        print("Round: " + str(self.move_count))
         # test if game is over
         if self.goal_test():  # flag already discovered or no action possible
             if turn == 1:
@@ -290,12 +290,37 @@ def simulation():
 # pickle.dump(setups, open('randominit2.p', 'wb'))
 
 
-setup_agent1 = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
-setup_agent0 = np.array([pieces.Piece(i, 0) for i in setup_agent1])
-setup_agent1 = np.array([pieces.Piece(i, 1) for i in setup_agent1])
-setup_agent0.resize(2, 5)
-setup_agent1.resize(2, 5)
-setup0 = np.flip(setup_agent0, 0)
+good_setup = np.empty((2,5), dtype=int)
+good_setup[0,0] = 3
+good_setup[0,1] = 11
+good_setup[0,2] = 0
+good_setup[0,3] = 11
+good_setup[0,4] = 1
+good_setup[1,0] = 2
+good_setup[1,1] = 2
+good_setup[1,2] = 10
+good_setup[1,3] = 2
+good_setup[1,4] = 3
+
+good_setup2 = np.empty((2,5), dtype=int)
+good_setup2[0,0] = 3
+good_setup2[0,1] = 11
+good_setup2[0,2] = 0
+good_setup2[0,3] = 11
+good_setup2[0,4] = 1
+good_setup2[1,0] = 2
+good_setup2[1,1] = 2
+good_setup2[1,2] = 10
+good_setup2[1,3] = 2
+good_setup2[1,4] = 3
+good_setup2 = np.flip(good_setup2, 0)
+
+setup_agent0 = np.empty((2,5), dtype=object)
+setup_agent1 = np.empty((2,5), dtype=object)
+for pos in ((i,j) for i in range(2) for j in range(5)):
+    setup_agent0[pos] = pieces.Piece(good_setup[pos], 0)
+    setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1)
+#setup0 = np.flip(setup_agent0, 0)
 agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0, setup_agent1)
 agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1, setup_agent0)
 game = Game(agent_0, agent_1)
