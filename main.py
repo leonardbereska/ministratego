@@ -25,7 +25,7 @@ class Game:
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
         setup0 = self.agents[0].decide_setup(self.types_available)
         setup1 = self.agents[1].decide_setup(self.types_available)
-        #setup1 = np.flip(setup1, 0)  # flip setup for second player
+        # setup1 = np.flip(setup1, 0)  # flip setup for second player
         # this positioning of agent 0 and agent 1 on the board is now hardcoded!! Dont change
         self.board[3:5, 0:5] = setup0
         self.board[0:2, 0:5] = setup1
@@ -55,6 +55,7 @@ class Game:
     def run_step(self):
         turn = self.move_count % 2  # player 1 or player 0
         print("Round: " + str(self.move_count))
+        
         # test if game is over
         if self.goal_test():  # flag already discovered or no action possible
             if turn == 1:
@@ -215,7 +216,28 @@ class Game:
                             return False  # pieces in the way of the move
         return True
 
+    def get_poss_actions(self, board, player):
+        """
+        :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
+        :return: list of possible actions for opponent
+        """
+        actions_possible = []
+        for pos, piece in np.ndenumerate(self.board):
+            if piece is not None:  # board positions has a piece on it
+                if not piece.type == 99:  # that piece is not an obstacle
+                    if piece.team == player:
+                        # check which moves are possible
+                        if piece.can_move:
+                            for pos_to in ((i, j) for i in range(5) for j in range(5)):
+                                move = (pos, pos_to)
+                                if self.is_legal_move(move):
+                                    actions_possible.append(move)
+        return actions_possible
+
     def goal_test(self):
+        turn = self.move_count % 2
+        if not self.get_poss_actions(self.board, turn):  # if list of possible actions empty
+            return True
         if self.deadPieces[0][0] == 1 or self.deadPieces[1][0] == 1:
             # print('flag captured')
             return True
@@ -326,3 +348,4 @@ agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1, setup_agent0)
 game = Game(agent_0, agent_1)
 result = game.run_game()
 print(result)
+
