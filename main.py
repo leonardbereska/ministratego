@@ -301,6 +301,7 @@ good_setup[1,1] = 2
 good_setup[1,2] = 10
 good_setup[1,3] = 2
 good_setup[1,4] = 3
+good_setup = np.flip(good_setup, 0)
 
 good_setup2 = np.empty((2,5), dtype=int)
 good_setup2[0,0] = 3
@@ -313,7 +314,7 @@ good_setup2[1,1] = 2
 good_setup2[1,2] = 10
 good_setup2[1,3] = 2
 good_setup2[1,4] = 3
-good_setup2 = np.flip(good_setup2, 0)
+#good_setup2 = np.flip(good_setup2, 0)
 
 setup_agent0 = np.empty((2,5), dtype=object)
 setup_agent1 = np.empty((2,5), dtype=object)

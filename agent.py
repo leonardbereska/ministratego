@@ -426,6 +426,10 @@ class OmniscientExpectiSmart(Agent):
         self.alpha = -float('inf')
         self.beta = float('inf')
 
+        self.last_N_moves = []
+        self.pieces_last_N_Moves_beforePos = []
+        self.pieces_last_N_Moves_afterPos = []
+
         self.battleMatrix = battleMatrix.get_battle_matrix()
 
     def init_setup(self, types_available):
@@ -444,7 +448,7 @@ class OmniscientExpectiSmart(Agent):
         return self.minimax(max_depth=8)
 
     def minimax(self, max_depth):
-        chosen_action = self.max_val(copy.deepcopy(self.board), 0, -float("inf"), float("inf"), max_depth)[1]
+        chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
         return chosen_action
 
     def max_val(self, board, current_reward, alpha, beta, depth):
@@ -462,10 +466,9 @@ class OmniscientExpectiSmart(Agent):
         val = -float('inf')
         best_action = None
         for action in my_doable_actions:
-            board_new = copy.deepcopy(board)
-            board_new = self.do_move(board_new, action, bookkeeping=False)
-            fight_result = board_new[1]
-            board_new = board_new[0]
+            board = self.do_move(board, action, bookkeeping=False)
+            fight_result = board[1]
+            board = board[0]
             temp_reward = current_reward
             if fight_result is not None:
                 if fight_result == 1:
@@ -474,14 +477,16 @@ class OmniscientExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            new_val = self.min_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            new_val = self.min_val(board, temp_reward, alpha, beta, depth-1)[0]
             if val < new_val:
                 val = new_val
                 best_action = action
             if val >= beta:
+                self.board = self.undo_last_move(board)
                 best_action = action
                 return val, best_action
             alpha = max(alpha, val)
+            self.board = self.undo_last_move(board)
         return val, best_action
 
     def min_val(self, board, current_reward, alpha, beta, depth):
@@ -498,10 +503,9 @@ class OmniscientExpectiSmart(Agent):
         val = float('inf')  # inital value set, so min comparison later possible
         best_action = None
         for action in my_doable_actions:
-            board_new = copy.deepcopy(board)
-            board_new = self.do_move(board_new, action, bookkeeping=False)
-            fight_result = board_new[1]
-            board_new = board_new[0]
+            board = self.do_move(board, action, bookkeeping=False)
+            fight_result = board[1]
+            board = board[0]
             temp_reward = current_reward
             if fight_result is not None:
                 if fight_result == 1:
@@ -510,13 +514,15 @@ class OmniscientExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            new_val = self.max_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            new_val = self.max_val(board, temp_reward, alpha, beta, depth-1)[0]
             if val > new_val:
                 val = new_val
                 best_action = action
             if val <= alpha:
+                self.board = self.undo_last_move(board)
                 return val, best_action
             beta = min(beta, val)
+            self.board = self.undo_last_move(board)
         return val, best_action
 
     def get_poss_actions(self, board, player):
@@ -565,8 +571,12 @@ class OmniscientExpectiSmart(Agent):
         """
         :param move: tuple or array consisting of coordinates 'from' at 0 and 'to' at 1
         """
+        self.last_N_moves.append(move)
         from_ = move[0]
         to_ = move[1]
+        self.pieces_last_N_Moves_afterPos.append(board[to_])
+        self.pieces_last_N_Moves_beforePos.append(board[from_])
+
         fight_outcome = None
         if not board[to_] is None:  # Target field is not empty, then has to fight
             fight_outcome = self.fight(board[from_], board[to_], collect_dead_pieces=bookkeeping)
@@ -585,6 +595,16 @@ class OmniscientExpectiSmart(Agent):
             self.update_board((to_, board[from_]), board=board)
             self.update_board((from_, None), board=board)
         return board, fight_outcome
+
+
+    def undo_last_move(self, board):
+        last_move = self.last_N_moves.pop()
+        if last_move is None:
+            raise ValueError("No last move to undo detected!")
+        board[last_move[0]] = self.pieces_last_N_Moves_beforePos.pop()
+        board[last_move[1]] = self.pieces_last_N_Moves_afterPos.pop()
+        return board
+
 
     def update_board(self, updated_piece, move=None, board=None):
         """
