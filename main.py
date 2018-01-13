@@ -93,9 +93,6 @@ class Game:
         if not self.is_legal_move(move):
             return False  # illegal move chosen
         if not self.board[to_] is None:  # Target field is not empty, then has to fight
-            overrule = False
-            # if either of the pieces were hidden before, we will need to hijack the do_move function of each agent
-            # and update their copies of the board within this function, as they cant decide who wins a fight
             self.board[to_].hidden = False
             self.board[from_].hidden = False
 
