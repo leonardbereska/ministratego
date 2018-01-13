@@ -23,13 +23,20 @@ class Game:
         self.board = np.empty((5, 5), dtype=object)
 
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
-        setup0 = self.agents[0].decide_setup(self.types_available)
-        setup1 = self.agents[1].decide_setup(self.types_available)
+        setup0, setup1 = agent0.decide_setup(self.types_available), agent1.decide_setup(self.types_available)
+        agent0.install_opp_setup(setup1)
+        agent1.install_opp_setup(setup0)
+
         #setup1 = np.flip(setup1, 0)  # flip setup for second player
         # this positioning of agent 0 and agent 1 on the board is now hardcoded!! Dont change
         self.board[3:5, 0:5] = setup0
         self.board[0:2, 0:5] = setup1
-        self.board[2, 2] = pieces.Piece(99, 99)  # set obstacle
+        obstacle = pieces.Piece(99, 99, (2, 2))
+        obstacle.hidden = False
+        self.board[2, 2] =  obstacle # set obstacle
+        for pos, piece in np.ndenumerate(self.board):
+            if piece is not None:
+                piece.hidden = False
 
         self.move_count = 1  # agent 1 starts
 
@@ -79,30 +86,39 @@ class Game:
         """
         from_ = move[0]
         to_ = move[1]
+        # let agents update their boards too
+        for _agent in self.agents:
+            _agent.do_move(move)
 
         if not self.is_legal_move(move):
             return False  # illegal move chosen
         if not self.board[to_] is None:  # Target field is not empty, then has to fight
+            overrule = False
+            # if either of the pieces were hidden before, we will need to hijack the do_move function of each agent
+            # and update their copies of the board within this function, as they cant decide who wins a fight
+            self.board[to_].hidden = False
+            self.board[from_].hidden = False
+
             fight_outcome = self.fight(self.board[from_], self.board[to_])
             if fight_outcome is None:
                 print('Warning, cant let pieces of same team fight!')
                 return False
             elif fight_outcome == 1:
-                self.update_board((to_, self.board[from_]), visible=True)
-                self.update_board((from_, None), visible=True)
+                self.update_board((to_, self.board[from_]))
+                self.update_board((from_, None))
             elif fight_outcome == 0:
-                self.update_board((to_, None), visible=True)
-                self.update_board((from_, None), visible=True)
+                self.update_board((to_, None))
+                self.update_board((from_, None))
             else:
-                self.update_board((from_, None), visible=True)
-                self.update_board((to_, self.board[to_]), visible=True)
+                self.update_board((from_, None))
+                self.update_board((to_, self.board[to_]))
         else:
-            self.update_board((to_, self.board[from_]), visible=False)
-            self.update_board((from_, None), visible=False)
+            self.update_board((to_, self.board[from_]))
+            self.update_board((from_, None))
 
         return True
 
-    def update_board(self, updated_piece, visible):
+    def update_board(self, updated_piece):
         """
         :param updated_piece: tuple (piece_board_position, piece_object)
         :param visible: boolean, True if the piece is visible to the enemy team, False if hidden
@@ -110,52 +126,10 @@ class Game:
         """
         pos = updated_piece[0]
         piece = updated_piece[1]
-        if visible:
-            self.agents[0].updateBoard(updated_piece)
-            self.agents[1].updateBoard(updated_piece)
-        else:
-            if piece is not None:
-                if self.agents[0].omniscient:
-                    if self.agents[1].omniscient:
-                        # 0 and 1 is omniscient --> both know the piece
-                        self.agents[0].updateBoard(updated_piece)
-                        self.agents[1].updateBoard(updated_piece)
-                    else:
-                        # 0 is omniscient, but 1 isnt
-                        if piece.team == 0:
-                            # piece belongs to team 0, so 1 doesnt know it
-                            self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                            self.agents[0].updateBoard(updated_piece)
-                        else:
-                            # piece belongs to team 1, but both know the piece, as 0 is omniscient
-                            self.agents[0].updateBoard(updated_piece)
-                            self.agents[1].updateBoard(updated_piece)
-                elif self.agents[1].omniscient:
-                    if self.agents[0].omniscient:
-                        # 0 and 1 is omniscient --> both know the piece
-                        self.agents[0].updateBoard(updated_piece)
-                        self.agents[1].updateBoard(updated_piece)
-                    else:
-                        if piece.team == 1:
-                            # piece belongs to team 1, so 0 doesnt know it, because not omnsicient
-                            self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                            self.agents[1].updateBoard(updated_piece)
-                        else:
-                            # # piece belongs to team 0, but both know the piece, as 1 is omniscient
-                            self.agents[0].updateBoard(updated_piece)
-                            self.agents[1].updateBoard(updated_piece)
-                else:
-                    # none of the agents are omniscient, update by team dependency
-                    if piece.team == 0:
-                        self.agents[0].updateBoard(updated_piece)
-                        self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                    else:
-                        self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                        self.agents[1].updateBoard(updated_piece)
-            else:
-                self.agents[0].updateBoard(updated_piece)
-                self.agents[1].updateBoard(updated_piece)
+        if piece is not None:
+            piece.change_position(pos)
         self.board[pos] = piece
+        return
 
     def fight(self, piece_att, piece_def):
         """
@@ -319,11 +293,11 @@ good_setup2[1,4] = 3
 setup_agent0 = np.empty((2,5), dtype=object)
 setup_agent1 = np.empty((2,5), dtype=object)
 for pos in ((i,j) for i in range(2) for j in range(5)):
-    setup_agent0[pos] = pieces.Piece(good_setup[pos], 0)
-    setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1)
+    setup_agent0[pos] = pieces.Piece(good_setup[pos], 0, (4-pos[0], 4-pos[1]))
+    setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1, pos)
 #setup0 = np.flip(setup_agent0, 0)
-agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0, setup_agent1)
-agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1, setup_agent0)
+agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0)
+agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1)
 game = Game(agent_0, agent_1)
 result = game.run_game()
 print(result)
