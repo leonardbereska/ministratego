@@ -8,6 +8,7 @@ import pieces
 import copy
 from collections import Counter
 from scipy import spatial
+from scipy import optimize
 import battleMatrix
 
 
@@ -17,6 +18,7 @@ class Agent:
         self.other_team = (self.team + 1) % 2
         self.setup = None
         self.board = np.empty((5, 5), dtype=object)
+        self.move_count = 0
 
         self.last_N_moves = []
         self.pieces_last_N_Moves_beforePos = []
@@ -37,20 +39,26 @@ class Agent:
         self.deadPieces.append(dead_piecesdict)
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
+        self.ordered_opp_pieces = []
+        self.chances_array = np.ones((10, 10))
+
     def install_opp_setup(self, opp_setup):
         # Agent 1 is always in 0:2,0:5 and agent 0 in 3:5, 0:5
         if self.team == 1:
             for pos in ((i, j) for i in range(3, 5) for j in range(5)):
                 piece = opp_setup[4-pos[0], 4-pos[1]]
                 piece.hidden = True
+                self.ordered_opp_pieces.append(piece)
                 self.board[pos] = piece
             self.board[3:5, 0:5] = opp_setup
         else:
             for pos in ((i,j) for i in range(2) for j in range(5)):
                 piece = opp_setup[pos]
                 piece.hidden = True
+                self.ordered_opp_pieces.append(piece)
                 self.board[pos] = piece
             self.board[0:2, 0:5] = opp_setup
+
 
     def init_setup(self, *args):
         """
@@ -79,8 +87,6 @@ class Agent:
             else:
                 types_setup = np.random.choice(battleMatrix.get_smart_setups())
 
-        # converting list of types to an 2x5 array of Pieces
-        pieces_setup = np.empty((2,5), dtype=object)
         if self.team == 0:
             for pos, piece in np.ndenumerate(types_setup):
                 own_piece = pieces.Piece(piece, self.team, (4 - pos[0], 4 - pos[1]))
@@ -109,34 +115,51 @@ class Agent:
         """
         raise NotImplementedError
 
-    def do_move(self, move, board=None, bookkeeping=True):
+    def do_move(self, move, board=None, bookkeeping=True, true_gameplay=False):
         """
         :param move: tuple or array consisting of coordinates 'from' at 0 and 'to' at 1
         """
         from_ = move[0]
         to_ = move[1]
+        turn = self.move_count % 2
         fight_outcome = None
         if board is None:
             board = self.board
+            board[from_].has_moved = True
+        moving_piece = board[from_]
+        attacked_field = board[to_]
         self.last_N_moves.append(move)
-        self.pieces_last_N_Moves_afterPos.append(board[to_])
-        self.pieces_last_N_Moves_beforePos.append(board[from_])
+        self.pieces_last_N_Moves_afterPos.append(attacked_field)
+        self.pieces_last_N_Moves_beforePos.append(moving_piece)
         if not board[to_] is None:  # Target field is not empty, then has to fight
-            fight_outcome = self.fight(board[from_], board[to_], collect_dead_pieces=bookkeeping)
+            if board is None:
+                # only uncover them when the real board is being played on
+                attacked_field.hidden = False
+                moving_piece.hidden = False
+            fight_outcome = self.fight(moving_piece, attacked_field, collect_dead_pieces=bookkeeping)
             if fight_outcome is None:
                 print('Warning, cant let pieces of same team fight!')
                 return False
             elif fight_outcome == 1:
-                self.update_board((to_, board[from_]), board=board)
+                self.update_board((to_, moving_piece), board=board)
                 self.update_board((from_, None), board=board)
             elif fight_outcome == 0:
                 self.update_board((to_, None), board=board)
                 self.update_board((from_, None), board=board)
             else:
                 self.update_board((from_, None), board=board)
+            if true_gameplay:
+                if turn == self.team:
+                    self.update_prob_by_fight(attacked_field)
+                else:
+                    self.update_prob_by_fight(moving_piece)
         else:
-            self.update_board((to_, board[from_]), board=board)
+            self.update_board((to_, moving_piece), board=board)
             self.update_board((from_, None), board=board)
+            if true_gameplay:
+                if turn == self.other_team:
+                    self.update_prob_by_move(moving_piece)
+
         return board, fight_outcome
 
     def is_legal_move(self, move_to_check, board):
@@ -189,6 +212,12 @@ class Agent:
                 self.deadPieces[piece_att.team][piece_att.type] += 1
             return outcome
         return outcome
+
+    def update_prob_by_fight(self, *args):
+        pass
+
+    def update_prob_by_move(self, *args):
+        pass
 
     def get_poss_actions(self, board, player):
         '''
@@ -293,7 +322,7 @@ class ExpectiSmart(Agent):
         val = -float('inf')
         best_action = None
         for action in my_doable_actions:
-            board = self.do_move(action, board=board,  bookkeeping=False)
+            board = self.do_move(action, board=board,  bookkeeping=False, true_gameplay=False)
             fight_result = board[1]
             board = board[0]
             temp_reward = current_reward
@@ -330,7 +359,7 @@ class ExpectiSmart(Agent):
         val = float('inf')  # inital value set, so min comparison later possible
         best_action = None
         for action in my_doable_actions:
-            board = self.do_move(action, board=board, bookkeeping=False)
+            board = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
             fight_result = board[1]
             board = board[0]
             temp_reward = current_reward
@@ -381,8 +410,8 @@ class ExpectiSmart(Agent):
         enemy_pieces = [(pos, board[pos]) for (pos, piece) in np.ndenumerate(board)
                         if piece is not None and piece.team == self.other_team]
         # all the unknowns
-        enemy_pieces_known = [piece.type for (pos, piece) in enemy_pieces if not piece.type == 88]
-        enemy_pieces_unknown = [(pos, piece) for (pos, piece) in enemy_pieces if piece.type == 88]
+        enemy_pieces_known = [piece.type for (pos, piece) in enemy_pieces if not piece.hidden]
+        enemy_pieces_unknown = [(pos, piece) for (pos, piece) in enemy_pieces if piece.hidden]
 
         # remove all dead enemy pieces from the list of pieces that need to be assigned to the unknown on the field
         # then append the leftover pieces to pieces_left_to_assign
@@ -408,9 +437,119 @@ class ExpectiSmart(Agent):
             board[current_assignment] = pieces.Piece(piece_type, self.other_team)
         return board
 
-    def update_probabilites(self):
-        # TODO: implement inferential statistics analyzing movement patterns etc
-        pass
+    def update_prob_by_fight(self, enemy_piece):
+        idx_of_piece = self.ordered_opp_pieces.index(enemy_piece)
+        type = enemy_piece.type
+        if type == 1:
+            self.chances_array[1, idx_of_piece] = 1
+            self.chances_array[np.arange(10) != 1, idx_of_piece] = 0
+        elif type == 2:
+            self.chances_array[np.arange(10) not in [2, 3, 4], idx_of_piece] = 0
+        elif type == 3:
+            self.chances_array[np.arange(10) not in [5, 6], idx_of_piece] = 0
+        elif type == 10:
+            self.chances_array[7, idx_of_piece] = 1
+            self.chances_array[np.arange(10) != 7, idx_of_piece] = 0
+        elif type == 11:
+            self.chances_array[np.arange(10) not in [8, 9], idx_of_piece] = 0
+        self.update_chances_array()
+
+    def update_prob_by_move(self, move, moving_piece):
+        idx_of_piece = self.ordered_opp_pieces.index(moving_piece)
+        move_dist = spatial.distance.cityblock(move[0], move[1])
+        if move_dist > 1:
+            if np.all(np.concatenate(self.chances_array[0:2, idx_of_piece], self.chances_array[5:10, idx_of_piece]) == 0):
+                return
+            moving_piece.hidden = False
+            self.chances_array[0:2, idx_of_piece] = 0
+            self.chances_array[5:10, idx_of_piece] = 0
+        else:
+            if np.all(np.concatenate(self.chances_array[0, idx_of_piece], self.chances_array[8:10, idx_of_piece]) == 0):
+                return
+            self.chances_array[0, idx_of_piece] = 0
+            self.chances_array[8:10, idx_of_piece] = 0
+        self.update_chances_array()
+
+    def update_chances_array(self):
+        # As x needs to be a vector, not a matrix, i associate the entries of the self.chances_array matrix
+        # with the x as such:
+        # x_0 x_10 x_20 x_30 ....
+        # x_1 x_11 x_21 x_31 ....
+        # x_2 x_12 x_22 x_32 ....
+        # x_3 x_13 x_23 x_33 ....
+        #  .   .
+        #  .   .
+        #  .   .
+
+        # A_eq gives the constraints A_eq * x = b_eq. Our equality constraints are:
+        # Every previous 0-entry stays 0
+        # The variables in each coloumn for the same piece-type have to take the same value
+        # The row- and coloumn-sums aggregate to 1
+        #
+        a_eq = np.empty(100)
+
+        # Every previous 0-entry stays 0
+        zero_entries = np.where(self.chances_array == 0)
+        for i in range(len(zero_entries[0])):
+            # coloumn index (zero_entries[1]) gives the multiple of 10 for the variable vector of length 10*10
+            # in the linear prog. Since we need to turn a 10*10 matrix into a length 100 vector
+            constr = np.zeros(100)
+            constr[10*zero_entries[1][i] + zero_entries[0][i]] = 1
+            a_eq = np.append(a_eq, constr, axis=0)
+        b_eq = np.zeros(len(zero_entries[0]))
+
+        # The variables in each coloumn for the same piece-type have to take the same value
+        for j in range(10):
+            # 2.1 = 2.2
+            constr = np.zeros(100)
+            constr[10 * j + 2] = self.chances_array[2, j]
+            constr[10 * j + 3] = -self.chances_array[3, j]
+            a_eq = np.append(a_eq, constr, axis=0)
+            b_eq = np.append(b_eq, 0)
+            # 2.2 = 2.3
+            constr = np.zeros(100)
+            constr[10 * j + 3] = self.chances_array[3, j]
+            constr[10 * j + 4] = -self.chances_array[4, j]
+            a_eq = np.append(a_eq, constr, axis=0)
+            b_eq = np.append(b_eq, 0)
+            # 3.1 = 3.2
+            constr = np.zeros(100)
+            constr[10 * j + 5] = self.chances_array[5, j]
+            constr[10 * j + 6] = -self.chances_array[6, j]
+            a_eq = np.append(a_eq, constr, axis=0)
+            b_eq = np.append(b_eq, 0)
+            # 11.1 = 11.2
+            constr = np.zeros(100)
+            constr[10 * j + 8] = self.chances_array[8, j]
+            constr[10 * j + 9] = -self.chances_array[9, j]
+            a_eq = np.append(a_eq, constr, axis=0)
+            b_eq = np.append(b_eq, 0)
+
+        # The row- and coloumn-sums aggregate to 1
+        for i in range(10):
+            # i-th coloumn
+            constr = np.zeros(100)
+            constr[(10 * i):(10 * i + 10)] = self.chances_array[0:10, i]
+            a_eq = np.append(a_eq, constr, axis=0)
+            b_eq = np.append(b_eq, 1)
+            # i-th row
+            constr = np.zeros(100)
+            constr[i::10] = self.chances_array[i, 0:10]
+            a_eq = np.append(a_eq, constr, axis=0)
+            b_eq = np.append(b_eq, 1)
+        objective = np.ones(100)
+        solution = optimize.linprog(c=objective, A_eq=a_eq, b_eq=b_eq, method='simplex')
+        if solution[4] == 0:
+            x = solution[0]
+            x.resize((10, 10))
+            x.transpose()
+            self.chances_array = np.multiply(self.chances_array, x)
+        else:
+            print(solution[4])
+        return
+
+
+
 
     def undo_last_move(self, board):
         last_move = self.last_N_moves.pop()
@@ -439,6 +578,10 @@ class OmniscientExpectiSmart(ExpectiSmart):
         self.winFightReward = 10
         self.neutralFightReward = 5
         self.winGameReward = 1000
+
+    def install_opp_setup(self, opp_setup):
+        super().install_opp_setup(opp_setup)
+        self.unhide_all()
 
     def unhide_all(self):
         for pos, piece in np.ndenumerate(self.board):

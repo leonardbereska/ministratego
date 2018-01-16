@@ -24,13 +24,13 @@ class Game:
 
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
         setup0, setup1 = agent0.decide_setup(self.types_available), agent1.decide_setup(self.types_available)
-        agent0.install_opp_setup(setup1)
-        agent1.install_opp_setup(setup0)
+        agent0.install_opp_setup(copy.deepcopy(setup1))
+        agent1.install_opp_setup(copy.deepcopy(setup0))
 
         #setup1 = np.flip(setup1, 0)  # flip setup for second player
         # this positioning of agent 0 and agent 1 on the board is now hardcoded!! Dont change
-        self.board[3:5, 0:5] = setup0
-        self.board[0:2, 0:5] = setup1
+        self.board[3:5, 0:5] = copy.deepcopy(setup0)
+        self.board[0:2, 0:5] = copy.deepcopy(setup1)
         obstacle = pieces.Piece(99, 99, (2, 2))
         obstacle.hidden = False
         self.board[2, 2] =  obstacle # set obstacle
@@ -62,6 +62,8 @@ class Game:
     def run_step(self):
         turn = self.move_count % 2  # player 1 or player 0
         print("Round: " + str(self.move_count))
+        for agent_ in self.agents:
+            agent_.move_count = self.move_count
         # test if game is over
         if self.goal_test():  # flag already discovered or no action possible
             if turn == 1:
@@ -88,10 +90,11 @@ class Game:
         to_ = move[1]
         # let agents update their boards too
         for _agent in self.agents:
-            _agent.do_move(move)
+            _agent.do_move(move, true_gameplay=True)
 
         if not self.is_legal_move(move):
             return False  # illegal move chosen
+        self.board[from_].has_moved = True
         if not self.board[to_] is None:  # Target field is not empty, then has to fight
             self.board[to_].hidden = False
             self.board[from_].hidden = False
@@ -261,35 +264,35 @@ def simulation():
 # pickle.dump(setups, open('randominit2.p', 'wb'))
 
 
-good_setup = np.empty((2,5), dtype=int)
-good_setup[0,0] = 3
-good_setup[0,1] = 11
-good_setup[0,2] = 0
-good_setup[0,3] = 11
-good_setup[0,4] = 1
-good_setup[1,0] = 2
-good_setup[1,1] = 2
-good_setup[1,2] = 10
-good_setup[1,3] = 2
-good_setup[1,4] = 3
+good_setup = np.empty((2, 5), dtype=int)
+good_setup[0, 0] = 3
+good_setup[0, 1] = 11
+good_setup[0, 2] = 0
+good_setup[0, 3] = 11
+good_setup[0, 4] = 1
+good_setup[1, 0] = 2
+good_setup[1, 1] = 2
+good_setup[1, 2] = 10
+good_setup[1, 3] = 2
+good_setup[1, 4] = 3
 good_setup = np.flip(good_setup, 0)
 
-good_setup2 = np.empty((2,5), dtype=int)
-good_setup2[0,0] = 3
-good_setup2[0,1] = 11
-good_setup2[0,2] = 0
-good_setup2[0,3] = 11
-good_setup2[0,4] = 1
-good_setup2[1,0] = 2
-good_setup2[1,1] = 2
-good_setup2[1,2] = 10
-good_setup2[1,3] = 2
-good_setup2[1,4] = 3
+good_setup2 = np.empty((2, 5), dtype=int)
+good_setup2[0, 0] = 3
+good_setup2[0, 1] = 11
+good_setup2[0, 2] = 0
+good_setup2[0, 3] = 11
+good_setup2[0, 4] = 1
+good_setup2[1, 0] = 2
+good_setup2[1, 1] = 2
+good_setup2[1, 2] = 10
+good_setup2[1, 3] = 2
+good_setup2[1, 4] = 3
 #good_setup2 = np.flip(good_setup2, 0)
 
-setup_agent0 = np.empty((2,5), dtype=object)
-setup_agent1 = np.empty((2,5), dtype=object)
-for pos in ((i,j) for i in range(2) for j in range(5)):
+setup_agent0 = np.empty((2, 5), dtype=object)
+setup_agent1 = np.empty((2, 5), dtype=object)
+for pos in ((i, j) for i in range(2) for j in range(5)):
     setup_agent0[pos] = pieces.Piece(good_setup[pos], 0, (4-pos[0], 4-pos[1]))
     setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1, pos)
 #setup0 = np.flip(setup_agent0, 0)
