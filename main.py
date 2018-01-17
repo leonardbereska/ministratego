@@ -58,6 +58,5 @@ def simulation():
     print('\nAgent 0 (Blue) wins {} out of {} games'.format(blue_won, num_simulations))
 
 
-watch_game(agent0=agent.RandomAgent(team=0), agent1=agent.RandomAgent(team=1), step_time=0.01)
+# watch_game(agent0=agent.RandomAgent(team=0), agent1=agent.RandomAgent(team=1), step_time=0.01)
 # simulation()
-# pickle.dump(setups, open('randominit2.p', 'wb'))

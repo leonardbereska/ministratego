@@ -55,38 +55,30 @@ class Env:
     def __init__(self):
         self.board = np.empty((5, 5), dtype=object)
         self.board_positions = [(i, j) for i in range(5) for j in range(5)]
-
         positions = cp.deepcopy(self.board_positions)
         positions.remove((2, 2))  # remove obstacle position
-        # positions.remove((4, 4))  # place flag deterministically
-        # self.flag_pos = (4, 4)
-        self.obs_pos = (2, 2)
 
-        # randomly select positions
-        n_choices = 4
-        choices = np.random.choice(len(positions), n_choices, replace=False)
-        chosen = []
-        for choice in choices:
-            chosen.append(positions[choice])
-        self.agent_pos, self.flag_pos, self.enemy_pos1, self.enemy_pos2 = chosen
+        # randomly select positions for participating pieces
+        pieces_list = self.decide_pieces()
+        choices = np.random.choice(len(positions), len(pieces_list), replace=False)
+        chosen_pos = []
+        for i in choices:
+            chosen_pos.append(positions[i])
+        for p in pieces_list:
+            self.board[chosen_pos.pop()] = p
 
-        self.agent = pieces.Piece(3, 0)
-        self.enemy1 = pieces.Piece(10, 1)
-        self.enemy2 = pieces.Piece(10, 1)
-
-        self.board[self.obs_pos] = pieces.Piece(99, 99)  # place obstacle
-        self.board[self.agent_pos] = self.agent  # place agent
-        self.board[self.flag_pos] = pieces.Piece(0, 1)  # place opponents flag
-        self.board[self.enemy_pos1] = self.enemy1  # place opponent
-        self.board[self.enemy_pos2] = self.enemy2  # place opponent
+        self.board[(2, 2)] = pieces.Piece(99, 99)  # place obstacle
 
         self.score = 0
+        self.reward = 0
         self.steps = 0
-        self.agent_previous = self.agent_pos
         self.goal_test = False
 
     def reset(self):  # resetting means freshly initializing
         self.__init__()
+
+    def decide_pieces(self):
+        raise NotImplementedError
 
     def get_state(self):
         """
@@ -110,42 +102,29 @@ class Env:
         board_tensor = board_tensor.view(1, state_dim, 5, 5)  # add dimension for more batches
         return board_tensor
 
-    def step(self, action):
-        reward = 0
-
-        go_to_pos = action_to_pos(action, self.agent_pos)
-
-        if go_to_pos not in self.board_positions:
-            reward += -1  # hitting the wall
-        else:
-            piece = self.board[go_to_pos]
+    def get_team_pos(self, team):
+        team_pos = []
+        for pos in self.board_positions:
+            piece = self.board[pos]
             if piece is not None:
-                if piece.type == 99:
-                    reward += -1  # hitting obstacle
-                if piece.type == 0:
-                    reward += 10
-                    self.goal_test = True
-            else:
-                self.board[go_to_pos] = self.agent  # move to position
-                self.board[self.agent_pos] = None
-                self.agent_previous = self.agent_pos
-                self.agent_pos = go_to_pos
-                # reward += -0.01 * self.steps  # each step more and more difficult
-                reward += -0.1
+                if piece.team == team:  # own
+                    team_pos.append(pos)
+        return team_pos
 
-        r1, self.enemy_pos1 = self.piece_move(self.enemy_pos1)
-        r2, self.enemy_pos2 = self.piece_move(self.enemy_pos2)
-        reward += r1
-        reward += r2
-        # dist_flag_prev = abs(self.flag_pos[0] - self.agent_previous[0]) \
-        #                  + abs(self.flag_pos[1] - self.agent_previous[1])
-        # dist_flag_now = abs(self.flag_pos[0] - self.agent_pos[0]) + abs(self.flag_pos[1] - self.agent_pos[1])
-        # if dist_flag_prev - dist_flag_now < 0 and EVAL:  # print only in evaluation mode
-        #     print('Moved away from flag!')  # move away from flag is not optimal
+    def step(self, action):
+        self.reward = 0
+        self.agent_step(action)
+        self.opponent_step()
 
-        self.score += reward
+        self.score += self.reward
         self.steps += 1
-        return reward, self.goal_test
+        return self.reward, self.goal_test
+
+    def agent_step(self, action):
+        raise NotImplementedError
+
+    def opponent_step(self):
+        raise NotImplementedError
 
     def run(self, user_test):
         global EVAL
@@ -174,7 +153,6 @@ class Env:
         fig.canvas.draw()  # updates plot
 
     def piece_move(self, piece_pos):
-        reward = 0
         opp_piece = self.board[piece_pos]
         opp_action = random.randint(0, 3)
         go_to_pos = action_to_pos(opp_action, piece_pos)
@@ -186,18 +164,46 @@ class Env:
                 # if piece.type == 0:
                 #     pass  # cannot capture own flag
                 if piece.type == 3:
-                    reward -= 1  # kill agent
+                    self.reward -= 1  # kill agent
                     self.goal_test = True  # agent died
             else:
                 self.board[go_to_pos] = opp_piece  # move to position
                 self.board[piece_pos] = None
-                piece_pos = go_to_pos
-        return reward, piece_pos
 
 
 class FindFlag(Env):
     def __init__(self):
         super(FindFlag, self).__init__()
+
+    def decide_pieces(self):
+        """
+        own pieces: 3, enemy pieces: 2 x 10 and flag
+        """
+        pieces_list = [pieces.Piece(3, 0), pieces.Piece(10, 1), pieces.Piece(10, 1), pieces.Piece(0, 1)]
+        return pieces_list
+
+    def agent_step(self, action):
+        go_to_pos = action_to_pos(action, self.agent_pos)
+
+        if go_to_pos not in self.board_positions:
+            self.reward += -1  # hitting the wall
+        else:
+            piece = self.board[go_to_pos]
+            if piece is not None:
+                if piece.type == 99:
+                    self.reward += -1  # hitting obstacle
+                if piece.type == 0:
+                    self.reward += 10
+                    self.goal_test = True
+            else:
+                self.board[go_to_pos] = self.agent  # move to position
+                self.board[self.agent_pos] = None
+                # reward += -0.01 * self.steps  # each step more and more difficult
+                self.reward += -0.1
+
+    def opponent_step(self):
+        self.piece_move(self.enemy_pos1)
+        self.piece_move(self.enemy_pos2)
 
 
 def action_to_pos(action, init_pos):
