@@ -244,6 +244,16 @@ class Game:
         else:
             return False
 
+    def show(self):
+        fig = plt.figure(1)
+        print_board(self.board)
+        if self.move_count % 2 == 0:
+            player = "Red"
+        else:
+            player = "Blue"
+        plt.title("{}'s turn ".format(player))
+        fig.canvas.draw()  # updates plot
+
 
 def print_board(board):
     """
@@ -279,39 +289,6 @@ def print_board(board):
     plt.show(block=False)
 
 
-def simulation():
-    """
-    :return: tested_setups: list of setup and winning percentage
-    """
-    types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
-    num_simulations = 100
-    num_setups = 1000
-    tested_setups = []
-
-    for i in range(num_setups):  # test 100 setups
-        setup = np.random.choice(types_available, 10, replace=False)
-        win_count = 0
-
-        for simu in range(num_simulations):  # simulate games
-            agent_0 = agent.RandomAgent(0)
-            agent_1 = agent.SmartSetup(1, setup)
-            new = Game(agent_0, agent_1)
-            if simu % 10 == 0:
-                print('\nTotal rewards: {}, Simulation {}/{}'.format(win_count, simu, num_simulations))
-            for step in range(2000):
-                game_reward = new.run_step()
-                if game_reward is not None:
-                    if game_reward[0] == 1:  # count wins
-                        win_count += 1
-                    break
-        tested_setups.append((setup, win_count/num_simulations))
-        print('\nAgent wins {} out of {} simulations'
-              '\nSetup {} of {}'.format(win_count, num_simulations, i+1, num_setups))
-    return tested_setups
-
-
-# setups = simulation()
-# pickle.dump(setups, open('randominit2.p', 'wb'))
 
 
 good_setup = np.empty((2,5), dtype=int)
