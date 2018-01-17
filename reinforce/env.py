@@ -7,6 +7,7 @@ import torch  # TODO: eliminate torch dependencies?
 
 import pieces
 import game
+import battleMatrix
 
 
 class Env:
@@ -24,14 +25,14 @@ class Env:
         positions.remove((2, 2))  # remove obstacle position
 
         # randomly select positions for participating pieces
-        self.own_pieces = []
-        self.opp_pieces = []
+        self.living_pieces = [[], []]
+        self.dead_pieces = [[], []]
         pieces_list = self.decide_pieces()
         for p in pieces_list:
             if p.team == 0:
-                self.own_pieces.append(p)
+                self.living_pieces[0].append(p)
             else:
-                self.opp_pieces.append(p)
+                self.living_pieces[1].append(p)
         choices = np.random.choice(len(positions), len(pieces_list), replace=False)
         chosen_pos = []
         for i in choices:
@@ -40,13 +41,23 @@ class Env:
             self.board[chosen_pos.pop()] = p
 
         self.board[(2, 2)] = pieces.Piece(99, 99)  # place obstacle
+        self.fight = battleMatrix.get_battle_matrix()
+
+        self.opp_can_move = False
+        for p in self.living_pieces[1]:  # if movable piece among opponents pieces
+            if p.can_move:
+                self.opp_can_move = True
 
         self.score = 0
         self.reward = 0
         self.steps = 0
-        self.goal_test = False
 
-    def reset(self):  # resetting means freshly initializing
+        self.reward_illegal = 0  # to be overwritten by subclass
+        self.reward_step = 0
+        self.reward_win = 0
+        self.reward_loss = 0
+
+    def reset(self):  # resetting means freshly initializing TODO: subclass or superclass?
         self.__init__()
 
     def decide_pieces(self):
@@ -74,29 +85,98 @@ class Env:
         board_tensor = board_tensor.view(1, state_dim, 5, 5)  # add dimension for more batches
         return board_tensor
 
-    def get_team_pos(self, team):
-        team_pos = []
-        for pos in self.board_positions:
-            piece = self.board[pos]
-            if piece is not None:
-                if piece.team == team:  # own
-                    team_pos.append(pos)
-        return team_pos
-
     def step(self, action):
         self.reward = 0
-        self.agent_step(action)
-        self.opponent_step()
+        agent_move = self.action_to_move(action, team=0)
+        if not game.is_legal_move(self.board, agent_move):
+            self.reward += self.reward_illegal
+            self.score += self.reward
+            return self.reward, False  # environment does not change, agent should better choose only legal moves
+        self.do_move(agent_move, team=0)
 
-        self.score += self.reward
+        if self.opp_can_move:
+            opp_move = self.opponent_move()
+            if game.is_legal_move(self.board, opp_move):
+                self.do_move(opp_move, team=1)
+
         self.steps += 1
-        return self.reward, self.goal_test
+        done = self.goal_test()
+        self.score += self.reward
+        return self.reward, done
 
-    def agent_step(self, action):
-        raise NotImplementedError
+    # can be overwritten to give smarter opponent
+    def opponent_move(self):
+        actions = game.get_poss_actions(self.board, 1)
+        move = random.choice(actions)
+        # self.action_to_move(action, team=1)
+        return move
 
-    def opponent_step(self):
-        raise NotImplementedError
+    def do_move(self, move, team):
+        other_team = (team + 1) % 2
+        pos_from, pos_to = move
+
+        piece_to = self.board[pos_to]
+        piece_from = self.board[pos_from]
+
+        if piece_to is not None:
+            outcome = self.fight[piece_from.type, piece_to.type]
+            if outcome == -1:  # lose
+                self.dead_pieces[team].append(piece_from)
+                self.board[pos_from] = None
+            elif outcome == 0:  # tie
+                self.dead_pieces[team].append(piece_from)
+                self.dead_pieces[other_team].append(piece_to)
+                self.board[pos_from] = None
+                self.board[pos_to] = None
+            elif outcome == 1:  # win
+                self.dead_pieces[other_team].append(piece_to)
+                self.board[pos_from] = None
+                self.board[pos_to] = piece_from
+        else:
+            self.board[pos_to] = piece_from  # move to position
+            self.board[pos_from] = None
+            if team == 0:
+                self.reward += self.reward_step
+
+    def action_to_move(self, action, team):
+        i = int(action / 4)  # which piece: 0-3 is first 4-7 second etc.
+        piece = self.living_pieces[team][i]
+        piece_pos = self.find_piece(piece)  # where is the piece
+        if piece_pos is None:
+            move = (None, None)  # return illegal move
+            return move
+        action = action % 4  # 0-3 as direction
+
+        moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
+        direction = moves[action]  # action: 0-3
+        pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
+        pos_to = tuple(pos_to)
+        move = (piece_pos, pos_to)
+        return move
+
+    def find_piece(self, piece):  # TODO: test! this will most likely not work
+        for pos in self.board_positions:
+            if self.board[pos] == piece:
+                return pos
+        print("Error: Piece not found!")
+
+    def goal_test(self):
+        for p in self.dead_pieces[1]:
+            if p.type == 0:
+                self.reward += self.reward_win
+                return True
+        for p in self.dead_pieces[0]:
+            if p.type == 0:
+                self.reward += self.reward_loss
+                return True
+        if self.opp_can_move:  # only if opponent is playing, killing his pieces wins
+            if not game.get_poss_actions(self.board, team=1):
+                self.reward += self.reward_win
+                return True
+        if not game.get_poss_actions(self.board, team=0):
+            self.reward += self.reward_loss
+            return True
+        return False
 
     def show(self):
         fig = plt.figure(1)
@@ -108,67 +188,27 @@ class Env:
 class FindFlag(Env):
     def __init__(self):
         super(FindFlag, self).__init__()
+        self.reward_step = -0.1
+        self.reward_illegal = -1
+        self.reward_win = 1
+        self.reward_loss = -1
 
     def decide_pieces(self):
-        pieces_list = [pieces.Piece(3, 0), pieces.Piece(10, 1), pieces.Piece(10, 1), pieces.Piece(0, 1)]
+        pieces_list = [pieces.Piece(3, 0), pieces.Piece(0, 1)]
         return pieces_list
 
-    def agent_step(self, action):
-        i_piece = int(action / 4)  # which piece: 0-3 is first 4-7 second etc.
-        agent = self.own_pieces[i_piece]
-        agent_pos = self.find_piece(agent)  # where is the piece
-        action = action % 4
-        go_to_pos = self.action_to_pos(action, agent_pos)
 
-        if go_to_pos not in self.board_positions:
-            self.reward += -1  # hitting the wall
-        else:
-            piece = self.board[go_to_pos]
-            if piece is not None:
-                if piece.type == 99:
-                    self.reward += -1  # hitting obstacle
-                if piece.type == 0:
-                    self.reward += 10
-                    self.goal_test = True
-            else:
-                self.board[go_to_pos] = agent  # move to position
-                self.board[agent_pos] = None
-                # reward += -0.01 * self.steps  # each step more and more difficult
-                self.reward += -0.1
+class Escape(Env):
+    def __init__(self):
+        super(Escape, self).__init__()
+        self.reward_step = -0.1
+        self.reward_illegal = -1
+        self.reward_win = 10
+        self.reward_loss = -1
 
-    def opponent_step(self):
-        pass
-        # self.piece_move(self.enemy_pos1)
-        # self.piece_move(self.enemy_pos2)
+    def decide_pieces(self):
+        pieces_list = [pieces.Piece(3, 0), pieces.Piece(3, 0), pieces.Piece(11, 1), pieces.Piece(10, 1), pieces.Piece(3, 1), pieces.Piece(10, 1), pieces.Piece(0, 1)]
+        return pieces_list
 
-    def piece_move(self, piece_pos):
-        opp_piece = self.board[piece_pos]
-        opp_action = random.randint(0, 3)
-        go_to_pos = self.action_to_pos(opp_action, piece_pos)
-        if go_to_pos in self.board_positions:
-            piece = self.board[go_to_pos]
-            if piece is not None:
-                # if piece.type == 99:
-                #     pass  # hitting obstacle
-                # if piece.type == 0:
-                #     pass  # cannot capture own flag
-                if piece.type == 3:
-                    self.reward -= 1  # kill agent
-                    self.goal_test = True  # agent died
-            else:
-                self.board[go_to_pos] = opp_piece  # move to position
-                self.board[piece_pos] = None
 
-    def action_to_pos(self, action, init_pos):
-        moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]
-        direction = moves[action]  # action: 0, 1, 2, 3
-        go_to_pos = [sum(x) for x in zip(init_pos, direction)]  # go in this direction
-        go_to_pos = tuple(go_to_pos)
-        return go_to_pos
 
-    def find_piece(self, piece):
-        for pos in self.board_positions:
-            if self.board[pos] == piece:
-                return pos
-            else:
-                print("Error: Piece not found!")

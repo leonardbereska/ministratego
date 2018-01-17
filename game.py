@@ -209,6 +209,9 @@ def is_legal_move(board, move_to_check):
     """
     pos_before = move_to_check[0]
     pos_after = move_to_check[1]
+    board_positions = [(i, j) for i in range(5) for j in range(5)]
+    if pos_after not in board_positions:
+        return False
     if board[pos_before] is None:
         return False  # no piece on field to move
     if not board[pos_after] is None:
@@ -236,16 +239,17 @@ def is_legal_move(board, move_to_check):
     return True
 
 
-def get_poss_actions(board, player):
+def get_poss_actions(board, team):
     """
+    :param team: actions for team
     :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
-    :return: list of possible actions for opponent
+    :return: list of possible actions for team
     """
     actions_possible = []
     for pos, piece in np.ndenumerate(board):
         if piece is not None:  # board positions has a piece on it
             if not piece.type == 99:  # that piece is not an obstacle
-                if piece.team == player:
+                if piece.team == team:
                     # check which moves are possible
                     if piece.can_move:
                         for pos_to in ((i, j) for i in range(5) for j in range(5)):

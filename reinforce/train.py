@@ -75,10 +75,11 @@ def run_env(env, user_test):
                 action = action[0, 0]
             _, done = env.step(action)
             env.show()
-            if env.score < -3:  # stupid agent dies
+            if done and env.reward == env.reward_win:
+                print("Won!")
+            elif (done and env.reward == env.reward_loss) or env.score < -3:
                 print("Lost")
                 break
-        print("Won!")
 
 
 def select_action(state, p_random):
@@ -104,7 +105,7 @@ def select_action(state, p_random):
 
 def user_action():  # for testing the environment
     direction = input("Type direction\n")
-    keys = ('w', 's', 'a', 'd')
+    keys = ('w', 's', 'a', 'd', 'i', 'k', 'j', 'l')
     if direction not in keys:
         direction = input("Try typing again\n")
     return keys.index(direction)
@@ -187,7 +188,7 @@ model = models.CNN()
 memory = ReplayMemory(10000)
 optimizer = optim.RMSprop(model.parameters())
 
-env = env.FindFlag()
+env = env.Escape()
 run_env(env, user_test=True)
 
 # train(env=env, num_episodes=num_episodes)
