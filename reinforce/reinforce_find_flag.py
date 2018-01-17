@@ -1,22 +1,18 @@
+# other modules
 import math
 import random
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 from collections import namedtuple
-from itertools import count
-from copy import deepcopy
-from PIL import Image
-import pickle
 
+# torch dependencies
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
-from operator import add  # element-wise addition with: map(add, list1, list2)
-# import pygame
 
+# own modules
 import pieces
 import game
 
@@ -342,12 +338,12 @@ GAMMA = 0.999
 EPS_START = 0.8
 EPS_END = 0.0001
 EPS_DECAY = 100
-EVAL = False
+# EVAL = False
 
 
 model = CNN()
 # model = DQN(state_size=4)
-model.load_state_dict(torch.load('find_flag_CNN.pkl'))
+model.load_state_dict(torch.load('./reinforce/find_flag_CNN.pkl'))
 memory = ReplayMemory(10000)
 optimizer = optim.RMSprop(model.parameters())
 
@@ -358,10 +354,10 @@ env = Env()
 
 # ## Training routine
 # train()
-# torch.save(model.state_dict(), 'find_flag_CNN.pkl')
+# torch.save(model.state_dict(), './reinforce/find_flag_CNN.pkl')
 
 EVAL = True
-while True:
-    env.reset()
-    env.run()
+# while True:
+#     env.reset()
+#     env.run()
 

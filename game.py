@@ -340,15 +340,17 @@ good_setup2[1,3] = 2
 good_setup2[1,4] = 3
 #good_setup2 = np.flip(good_setup2, 0)
 
-setup_agent0 = np.empty((2,5), dtype=object)
-setup_agent1 = np.empty((2,5), dtype=object)
-for pos in ((i,j) for i in range(2) for j in range(5)):
-    setup_agent0[pos] = pieces.Piece(good_setup[pos], 0)
-    setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1)
+
+# please no more testing in game.py file!
+# setup_agent0 = np.empty((2,5), dtype=object)
+# setup_agent1 = np.empty((2,5), dtype=object)
+# for pos in ((i,j) for i in range(2) for j in range(5)):
+#     setup_agent0[pos] = pieces.Piece(good_setup[pos], 0)
+#     setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1)
 #setup0 = np.flip(setup_agent0, 0)
-agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0, setup_agent1)
-agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1, setup_agent0)
-game = Game(agent_0, agent_1)
-result = game.run_game()
-print(result)
+# agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0, setup_agent1)
+# agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1, setup_agent0)
+# game = Game(agent_0, agent_1)
+# result = game.run_game()
+# print(result)
 
