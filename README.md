@@ -1,21 +1,15 @@
 # Mini Stratego
 Build a mini stratego AI
 
-Ideas
+next: 
+[ ] minmax complete -> bootstrap to reinforce (monte carlo or TD)
+[ ] program arena for testing AIs against each other
 
-datasets: how big should it be?
-- [ ] initial setups random-agents 
-- [ ] complete games random-agents 
-- [ ] smart agents datasets?: e.g. minmax omniscient to construct 
+minmax agent
+[ ] probability dist sampling
+[ ] construct dataset of games with minmax policy
 
-initial setup:
-- [ ] learn classifier for good setups
-- [ ] evolutionary algorithm 
-- [ ] data analysis over setups, length of game, randomness, dependence on initial setup
-
-agent:
-- [ ] simple-reflex agent
-- [ ] monte-carlo agent
-- [ ] heuristic agent: learn heuristic with game dataset e.g. smart feature weights or convolutional value network
-- [ ] minmax omniscient agent 
-- [ ] reinforcement or otherly learned agent with dataset from played games of (not too dump AI)
+reinforce agent
+[ ] reinforce small game
+[ ] reinforce complete game integration
+[ ] can only act out legal moves (probability over legal moves)
