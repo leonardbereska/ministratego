@@ -214,23 +214,24 @@ class Game:
                             return False  # pieces in the way of the move
         return True
 
-    def get_poss_actions(self, board, player):
-        """
-        :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
-        :return: list of possible actions for opponent
-        """
-        actions_possible = []
-        for pos, piece in np.ndenumerate(self.board):
-            if piece is not None:  # board positions has a piece on it
-                if not piece.type == 99:  # that piece is not an obstacle
-                    if piece.team == player:
-                        # check which moves are possible
-                        if piece.can_move:
-                            for pos_to in ((i, j) for i in range(5) for j in range(5)):
-                                move = (pos, pos_to)
-                                if self.is_legal_move(move):
-                                    actions_possible.append(move)
-        return actions_possible
+def get_poss_actions(board, player):
+    """
+    :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
+    :return: list of possible actions for opponent
+    """
+    actions_possible = []
+    for pos, piece in np.ndenumerate(board):
+        if piece is not None:  # board positions has a piece on it
+            if not piece.type == 99:  # that piece is not an obstacle
+                if piece.team == player:
+                    # check which moves are possible
+                    if piece.can_move:
+                        for pos_to in ((i, j) for i in range(5) for j in range(5)):
+                            move = (pos, pos_to)
+                            if self.is_legal_move(move):
+                                actions_possible.append(move)
+    return actions_possible
+
 
     def goal_test(self):
         turn = self.move_count % 2
