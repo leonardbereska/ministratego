@@ -310,7 +310,7 @@ def simulation():
     return tested_setups
 
 
-setups = simulation()
+# setups = simulation()
 # pickle.dump(setups, open('randominit2.p', 'wb'))
 
 
