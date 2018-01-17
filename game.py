@@ -79,7 +79,7 @@ class Game:
         from_ = move[0]
         to_ = move[1]
 
-        if not self.is_legal_move(move):
+        if not is_legal_move(self.board, move):
             return False  # illegal move chosen
         if not self.board[to_] is None:  # Target field is not empty, then has to fight
             fight_outcome = self.fight(self.board[from_], self.board[to_])
@@ -180,62 +180,9 @@ class Game:
             self.agents[1].deadPieces[piece_att.team][piece_att.type] += 1
         return outcome
 
-    def is_legal_move(self, move_to_check):
-        """
-
-        :param move_to_check: array/tuple with the coordinates of the position from and to
-        :return: True if warrants a legal move, False if not
-        """
-        pos_before = move_to_check[0]
-        pos_after = move_to_check[1]
-        if self.board[pos_before] is None:
-            return False  # no piece on field to move
-        if not self.board[pos_after] is None:
-            if self.board[pos_after].team == self.board[pos_before].team:
-                return False  # cant fight own pieces
-            if self.board[pos_after].type == 99:
-                return False  # cant fight obstacles
-        move_dist = spatial.distance.cityblock(pos_before, pos_after)
-        if move_dist > self.board[pos_before].move_radius:
-            return False  # move too far for selected piece
-        if move_dist > 1:
-            if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
-                return False  # no diagonal moves allowed
-            else:
-                if pos_after[0] == pos_before[0]:
-                    dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
-                    for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
-                        if self.board[(pos_before[0], k)] is not None:
-                            return False  # pieces in the way of the move
-                else:
-                    dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
-                    for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
-                        if self.board[(k, pos_before[1])] is not None:
-                            return False  # pieces in the way of the move
-        return True
-
-def get_poss_actions(board, player):
-    """
-    :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
-    :return: list of possible actions for opponent
-    """
-    actions_possible = []
-    for pos, piece in np.ndenumerate(board):
-        if piece is not None:  # board positions has a piece on it
-            if not piece.type == 99:  # that piece is not an obstacle
-                if piece.team == player:
-                    # check which moves are possible
-                    if piece.can_move:
-                        for pos_to in ((i, j) for i in range(5) for j in range(5)):
-                            move = (pos, pos_to)
-                            if self.is_legal_move(move):
-                                actions_possible.append(move)
-    return actions_possible
-
-
     def goal_test(self):
         turn = self.move_count % 2
-        if not self.get_poss_actions(self.board, turn):  # if list of possible actions empty
+        if not get_poss_actions(self.board, turn):  # if list of possible actions empty
             return True
         if self.deadPieces[0][0] == 1 or self.deadPieces[1][0] == 1:
             # print('flag captured')
@@ -252,6 +199,60 @@ def get_poss_actions(board, player):
             player = "Blue"
         plt.title("{}'s turn ".format(player))
         fig.canvas.draw()  # updates plot
+
+
+def is_legal_move(board, move_to_check):
+    """
+
+    :param move_to_check: array/tuple with the coordinates of the position from and to
+    :return: True if warrants a legal move, False if not
+    """
+    pos_before = move_to_check[0]
+    pos_after = move_to_check[1]
+    if board[pos_before] is None:
+        return False  # no piece on field to move
+    if not board[pos_after] is None:
+        if board[pos_after].team == board[pos_before].team:
+            return False  # cant fight own pieces
+        if board[pos_after].type == 99:
+            return False  # cant fight obstacles
+    move_dist = spatial.distance.cityblock(pos_before, pos_after)
+    if move_dist > board[pos_before].move_radius:
+        return False  # move too far for selected piece
+    if move_dist > 1:
+        if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
+            return False  # no diagonal moves allowed
+        else:
+            if pos_after[0] == pos_before[0]:
+                dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
+                for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
+                    if board[(pos_before[0], k)] is not None:
+                        return False  # pieces in the way of the move
+            else:
+                dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
+                for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
+                    if board[(k, pos_before[1])] is not None:
+                        return False  # pieces in the way of the move
+    return True
+
+
+def get_poss_actions(board, player):
+    """
+    :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
+    :return: list of possible actions for opponent
+    """
+    actions_possible = []
+    for pos, piece in np.ndenumerate(board):
+        if piece is not None:  # board positions has a piece on it
+            if not piece.type == 99:  # that piece is not an obstacle
+                if piece.team == player:
+                    # check which moves are possible
+                    if piece.can_move:
+                        for pos_to in ((i, j) for i in range(5) for j in range(5)):
+                            move = (pos, pos_to)
+                            if is_legal_move(board, move):
+                                actions_possible.append(move)
+    return actions_possible
 
 
 def print_board(board):
@@ -288,32 +289,30 @@ def print_board(board):
     plt.show(block=False)
 
 
-
-
-good_setup = np.empty((2,5), dtype=int)
-good_setup[0,0] = 3
-good_setup[0,1] = 11
-good_setup[0,2] = 0
-good_setup[0,3] = 11
-good_setup[0,4] = 1
-good_setup[1,0] = 2
-good_setup[1,1] = 2
-good_setup[1,2] = 10
-good_setup[1,3] = 2
-good_setup[1,4] = 3
+good_setup = np.empty((2, 5), dtype=int)
+good_setup[0, 0] = 3
+good_setup[0, 1] = 11
+good_setup[0, 2] = 0
+good_setup[0, 3] = 11
+good_setup[0, 4] = 1
+good_setup[1, 0] = 2
+good_setup[1, 1] = 2
+good_setup[1, 2] = 10
+good_setup[1, 3] = 2
+good_setup[1, 4] = 3
 good_setup = np.flip(good_setup, 0)
 
-good_setup2 = np.empty((2,5), dtype=int)
-good_setup2[0,0] = 3
-good_setup2[0,1] = 11
-good_setup2[0,2] = 0
-good_setup2[0,3] = 11
-good_setup2[0,4] = 1
-good_setup2[1,0] = 2
-good_setup2[1,1] = 2
-good_setup2[1,2] = 10
-good_setup2[1,3] = 2
-good_setup2[1,4] = 3
+good_setup2 = np.empty((2, 5), dtype=int)
+good_setup2[0, 0] = 3
+good_setup2[0, 1] = 11
+good_setup2[0, 2] = 0
+good_setup2[0, 3] = 11
+good_setup2[0, 4] = 1
+good_setup2[1, 0] = 2
+good_setup2[1, 1] = 2
+good_setup2[1, 2] = 10
+good_setup2[1, 3] = 2
+good_setup2[1, 4] = 3
 #good_setup2 = np.flip(good_setup2, 0)
 
 
