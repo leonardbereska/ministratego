@@ -53,11 +53,11 @@ class Agent:
         # check if used only types available
         check_setup = copy.deepcopy(types_setup)
         check_setup.sort()
-        check_setup.resize(1,10)
+        check_setup.resize(1, 10)
         check_setup = check_setup[0]
         setup_valid = check_setup == types_available
 
-        assert(np.all(setup_valid)), "cheated in setup!"
+        assert (np.all(setup_valid)), "cheated in setup!"
 
         # converting list of types to an 2x5 array of Pieces
         pieces_setup = np.array([pieces.Piece(i, self.team) for i in types_setup])
@@ -138,6 +138,7 @@ class RandomAgent(Agent):
     """
     Agent who chooses his initial setup and actions at random
     """
+
     def __init__(self, team):
         Agent.__init__(self, team=team)
 
@@ -154,8 +155,9 @@ class RandomAgent(Agent):
 
 class SmartSetup(Agent):
     """
-    RandomAgent with smart initial setup
+    RandomAgent with pre-defined (not necessarily smart) initial setup
     """
+
     def __init__(self, team, setup):
         Agent.__init__(self, team=team)
         self.setup = setup
@@ -220,7 +222,7 @@ class ExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            new_val = self.min_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            new_val = self.min_val(board_new, temp_reward, alpha, beta, depth - 1)[0]
             if val < new_val:
                 val = new_val
                 best_action = action
@@ -256,7 +258,7 @@ class ExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            new_val = self.max_val(board_new, temp_reward, alpha, beta, depth-1)[0]
+            new_val = self.max_val(board_new, temp_reward, alpha, beta, depth - 1)[0]
             if val > new_val:
                 val = new_val
                 best_action = action
@@ -306,11 +308,11 @@ class ExpectiSmart(Agent):
     def assign_pieces_by_highest_probability(self, board):
         # get all enemy pieces
         pieces_left_to_assign = []
-        overall_counter = Counter([0,1,2,2,2,3,3,10,11,11])
+        overall_counter = Counter([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
 
         # now get all pieces of the enemy on the board
-        enemy_pieces = [(pos, board[pos]) for (pos, piece) in np.ndenumerate(board)
-                        if piece is not None and piece.team == self.other_team]
+        enemy_pieces = [(pos, board[pos]) for (pos, piece) in np.ndenumerate(board) if
+                        piece is not None and piece.team == self.other_team]
         # all the unknowns
         enemy_pieces_known = [piece.type for (pos, piece) in enemy_pieces if not piece.type == 88]
         enemy_pieces_unknown = [(pos, piece) for (pos, piece) in enemy_pieces if piece.type == 88]
@@ -321,7 +323,7 @@ class ExpectiSmart(Agent):
             # this many pieces of piece_type need to be asssigned
             nr_remaining = count - self.deadPieces[self.other_team][piece_type]
             if nr_remaining > 0:  # if equal 0, then all pieces of this type already dead
-                pieces_left_to_assign.extend([piece_type]*nr_remaining)
+                pieces_left_to_assign.extend([piece_type] * nr_remaining)
         for piece in enemy_pieces_known:
             pieces_left_to_assign.remove(piece)
 
@@ -426,7 +428,7 @@ class OmniscientExpectiSmart(Agent):
     def init_setup(self, types_available):
         # randomly order the available figures in a list
         return self.setup
-        #return np.random.choice(types_available, 10, replace=False)
+        # return np.random.choice(types_available, 10, replace=False)
 
     def decide_setup(self, *args):
         if self.team == 0:
@@ -468,7 +470,7 @@ class OmniscientExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            new_val = self.min_val(board, temp_reward, alpha, beta, depth-1)[0]
+            new_val = self.min_val(board, temp_reward, alpha, beta, depth - 1)[0]
             if val < new_val:
                 val = new_val
                 best_action = action
@@ -505,7 +507,7 @@ class OmniscientExpectiSmart(Agent):
                     temp_reward += self.neutralFightReward  # both pieces die
                 elif fight_result == -1:
                     temp_reward += -self.winFightReward
-            new_val = self.max_val(board, temp_reward, alpha, beta, depth-1)[0]
+            new_val = self.max_val(board, temp_reward, alpha, beta, depth - 1)[0]
             if val > new_val:
                 val = new_val
                 best_action = action
@@ -587,7 +589,6 @@ class OmniscientExpectiSmart(Agent):
             self.update_board((from_, None), board=board)
         return board, fight_outcome
 
-
     def undo_last_move(self, board):
         last_move = self.last_N_moves.pop()
         if last_move is None:
@@ -595,7 +596,6 @@ class OmniscientExpectiSmart(Agent):
         board[last_move[0]] = self.pieces_last_N_Moves_beforePos.pop()
         board[last_move[1]] = self.pieces_last_N_Moves_afterPos.pop()
         return board
-
 
     def update_board(self, updated_piece, move=None, board=None):
         """

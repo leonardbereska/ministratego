@@ -25,8 +25,6 @@ class Game:
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
         setup0 = self.agents[0].decide_setup(self.types_available)
         setup1 = self.agents[1].decide_setup(self.types_available)
-        # setup1 = np.flip(setup1, 0)  # flip setup for second player
-        # this positioning of agent 0 and agent 1 on the board is now hardcoded!! Dont change
         self.board[3:5, 0:5] = setup0
         self.board[0:2, 0:5] = setup1
         self.board[2, 2] = pieces.Piece(99, 99)  # set obstacle

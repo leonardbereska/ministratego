@@ -39,6 +39,8 @@ def simulation():
         setup1 = np.random.choice(types_available, 10, replace=False)
 
         agent0 = agent.SmartSetup(team=0, setup=setup0)  # not smart in this case!
+        # pieces_setup = np.array([pieces.Piece(i, self.team) for i in setup0])
+        # pieces_setup.resize((2, 5))
         agent1 = agent.OmniscientExpectiSmart(team=1, setup=setup1, opp_setup=setup0)
         new = game.Game(agent0, agent1)
         new.show()
