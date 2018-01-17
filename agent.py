@@ -10,6 +10,7 @@ from collections import Counter
 from scipy import spatial
 from scipy import optimize
 import battleMatrix
+import time
 
 
 class Agent:
@@ -87,6 +88,8 @@ class Agent:
             else:
                 types_setup = np.random.choice(battleMatrix.get_smart_setups())
 
+        types_setup = np.array(types_setup)
+        types_setup.resize((2,5))
         if self.team == 0:
             for pos, piece in np.ndenumerate(types_setup):
                 own_piece = pieces.Piece(piece, self.team, (4 - pos[0], 4 - pos[1]))
@@ -105,7 +108,7 @@ class Agent:
         if board is None:
             board = self.board
         if updated_piece[1] is not None:
-            updated_piece[1].change_position = updated_piece[0]
+            updated_piece[1].change_position(updated_piece[0])
         board[updated_piece[0]] = updated_piece[1]
         return board
 
@@ -158,8 +161,7 @@ class Agent:
             self.update_board((from_, None), board=board)
             if true_gameplay:
                 if turn == self.other_team:
-                    self.update_prob_by_move(moving_piece)
-
+                    self.update_prob_by_move(move, moving_piece)
         return board, fight_outcome
 
     def is_legal_move(self, move_to_check, board):
@@ -204,12 +206,16 @@ class Agent:
         outcome = self.battleMatrix[piece_att.type, piece_def.type]
         if collect_dead_pieces:
             if outcome == 1:
+                piece_def.dead = True
                 self.deadPieces[piece_def.team][piece_def.type] += 1
             elif outcome == 0:
                 self.deadPieces[piece_def.team][piece_def.type] += 1
+                piece_def.dead = True
                 self.deadPieces[piece_att.team][piece_att.type] += 1
+                piece_att.dead = True
             elif outcome == -1:
                 self.deadPieces[piece_att.team][piece_att.type] += 1
+                piece_att.dead = True
             return outcome
         return outcome
 
@@ -303,7 +309,8 @@ class ExpectiSmart(Agent):
         return self.minimax(max_depth=4)
 
     def minimax(self, max_depth):
-        curr_board = self.assign_pieces_by_highest_probability(copy.deepcopy(self.board))
+        curr_board = copy.deepcopy(self.board)
+        curr_board = self.draw_consistent_enemy_setup(curr_board)
         chosen_action = self.max_val(curr_board, 0, -float("inf"), float("inf"), max_depth)[1]
         return chosen_action
 
@@ -338,11 +345,11 @@ class ExpectiSmart(Agent):
                 val = new_val
                 best_action = action
             if val >= beta:
-                self.board = self.undo_last_move(board)
+                board = self.undo_last_move(board)
                 best_action = action
                 return val, best_action
             alpha = max(alpha, val)
-            self.board = self.undo_last_move(board)
+            board = self.undo_last_move(board)
         return val, best_action
 
     def min_val(self, board, current_reward, alpha, beta, depth):
@@ -375,10 +382,10 @@ class ExpectiSmart(Agent):
                 val = new_val
                 best_action = action
             if val <= alpha:
-                self.board = self.undo_last_move(board)
+                board = self.undo_last_move(board)
                 return val, best_action
             beta = min(beta, val)
-            self.board = self.undo_last_move(board)
+            board = self.undo_last_move(board)
         return val, best_action
 
     def goal_test(self, actions_possible, board=None):
@@ -438,39 +445,145 @@ class ExpectiSmart(Agent):
         return board
 
     def update_prob_by_fight(self, enemy_piece):
-        idx_of_piece = self.ordered_opp_pieces.index(enemy_piece)
+        for piece in self.ordered_opp_pieces:
+            if piece.unique_identifier == enemy_piece.unique_identifier:
+                equiv_piece_in_list = piece
+                break
+        idx_of_piece = self.ordered_opp_pieces.index(equiv_piece_in_list)
         type = enemy_piece.type
         if type == 1:
             self.chances_array[1, idx_of_piece] = 1
             self.chances_array[np.arange(10) != 1, idx_of_piece] = 0
         elif type == 2:
-            self.chances_array[np.arange(10) not in [2, 3, 4], idx_of_piece] = 0
+            self.chances_array[np.delete(np.arange(10), [2, 3, 4]), idx_of_piece] = 0
         elif type == 3:
-            self.chances_array[np.arange(10) not in [5, 6], idx_of_piece] = 0
+            self.chances_array[np.delete(np.arange(10), [5, 6]), idx_of_piece] = 0
         elif type == 10:
             self.chances_array[7, idx_of_piece] = 1
             self.chances_array[np.arange(10) != 7, idx_of_piece] = 0
         elif type == 11:
-            self.chances_array[np.arange(10) not in [8, 9], idx_of_piece] = 0
+            self.chances_array[np.delete(np.arange(10), [8, 9]), idx_of_piece] = 0
         self.update_chances_array()
 
     def update_prob_by_move(self, move, moving_piece):
-        idx_of_piece = self.ordered_opp_pieces.index(moving_piece)
+        for piece in self.ordered_opp_pieces:
+            if piece.unique_identifier == moving_piece.unique_identifier:
+                equiv_piece_in_list = piece
+                break
+        idx_of_piece = self.ordered_opp_pieces.index(equiv_piece_in_list)
         move_dist = spatial.distance.cityblock(move[0], move[1])
         if move_dist > 1:
-            if np.all(np.concatenate(self.chances_array[0:2, idx_of_piece], self.chances_array[5:10, idx_of_piece]) == 0):
-                return
             moving_piece.hidden = False
             self.chances_array[0:2, idx_of_piece] = 0
             self.chances_array[5:10, idx_of_piece] = 0
         else:
-            if np.all(np.concatenate(self.chances_array[0, idx_of_piece], self.chances_array[8:10, idx_of_piece]) == 0):
-                return
             self.chances_array[0, idx_of_piece] = 0
             self.chances_array[8:10, idx_of_piece] = 0
         self.update_chances_array()
 
+    def draw_consistent_enemy_setup(self, board):
+        start = time.clock()
+        print("recording time...")
+
+        enemy_pieces = copy.deepcopy(self.ordered_opp_pieces)
+        enemy_pieces_alive = [piece for piece in enemy_pieces if not piece.dead]
+        types_alive = [piece.type for piece in enemy_pieces_alive]
+        indices_of_types_alive = [idx for idx, piece in enumerate(enemy_pieces) if not piece.dead]
+
+        consistent = False
+        while not consistent:
+            sample = np.random.choice(types_alive, len(types_alive), replace=False)
+            temp_sample = copy.copy(sample)
+            ext_sample = []
+            for i in range(10):
+                if i in indices_of_types_alive:
+                    ext_sample.append(temp_sample[0])
+                    temp_sample = temp_sample[1:]
+                else:
+                    ext_sample.append(-1)
+            sample_assignment_array = np.zeros((10, 10))
+            for idx, s in enumerate(ext_sample):
+                if s == 0:
+                    sample_assignment_array[0, idx] = 1
+                elif s == 1:
+                    sample_assignment_array[1, idx] = 1
+                elif s == 2:
+                    sample_assignment_array[2:5, idx] = 1
+                elif s == 3:
+                    sample_assignment_array[5:7, idx] = 1
+                elif s == 10:
+                    sample_assignment_array[7, idx] = 1
+                elif s == 11:
+                    sample_assignment_array[8:10, idx] = 1
+            check = np.multiply(sample_assignment_array, self.chances_array)
+            if np.sum(check) == np.sum(sample_assignment_array):
+                consistent = True
+        for idx, piece in enumerate(enemy_pieces_alive):
+            piece.type = sample[idx]
+            if piece.type in [0, 11]:
+                piece.can_move = False
+                piece.move_radius = 0
+            elif piece.type == 2:
+                piece.can_move = True
+                piece.move_radius = float('inf')
+            else:
+                piece.can_move = True
+                piece.move_radius = 1
+            piece.hidden = False
+            board[piece.position] = piece
+        print(time.clock() - start)
+        return board
+
+    # def draw_setup(self, board):
+    #     if board is None:
+    #         board = self.board
+    #     chances_array = copy.deepcopy(self.chances_array)
+    #     pieces_left_to_assign = []
+    #     overall_counter = Counter([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
+    #
+    #     # now get all pieces of the enemy on the board
+    #     enemy_pieces = [piece for (pos, piece) in np.ndenumerate(board)
+    #                     if piece is not None and piece.team == self.other_team]
+    #     # all the unknowns
+    #     enemy_pieces_known = [piece for (pos, piece) in enemy_pieces if not piece.hidden]
+    #     enemy_pieces_unknown = [piece for (pos, piece) in enemy_pieces if piece.hidden]
+    #
+    #     # remove all dead enemy pieces from the list of pieces that need to be assigned to the unknown on the field
+    #     # then append the leftover pieces to pieces_left_to_assign
+    #     for piece_type, count in overall_counter.items():
+    #         # this many pieces of piece_type need to be asssigned
+    #         nr_remaining = count - self.deadPieces[self.other_team][piece_type]
+    #         if nr_remaining > 0:  # if equal 0, then all pieces of this type already dead
+    #             pieces_left_to_assign.extend([piece_type] * nr_remaining)
+    #     for piece in enemy_pieces_known:
+    #         pieces_left_to_assign.remove(piece.type)
+    #
+    #     # draw flag first
+    #     flag_candidates_idx = np.where(self.chances_array[0, 0:10] == 1)[0]
+    #     flag_candidates = np.array(self.ordered_opp_pieces)[flag_candidates_idx]
+    #     flag = None
+    #     for piece in np.nditer(flag_candidates):
+    #         if piece.position[0] in [0, 4]:  # in 0 if enemy is team 0, in 4 if enemy is team 1
+    #             neighbours = [neigh_piece for pos, neigh_piece in np.nditer(self.ordered_opp_pieces)
+    #                           if spatial.distance.cityblock(neigh_piece.position, piece.position) == 1]
+    #             if len(neighbours) >= 2:
+    #                 flag = piece
+    #                 break
+    #     if flag is None:
+    #         flag = np.random.choice(flag_candidates)
+    #     pieces_left_to_assign.remove(0)
+    #     already_assigned_indices = [self.ordered_opp_pieces.index(flag)]
+    #     for rem_piece_type in pieces_left_to_assign:
+    #         if rem_piece_type == 1:
+    #             ones_candidates_idx = np.where(chances_array[1, 0:9] == 1)[0]
+    #             ones_candidates = np.array(self.ordered_opp_pieces)[np.delete(ones_candidates_idx,
+    #                                                                           already_assigned_indices)]
+    #             for i in range(10):
+
     def update_chances_array(self):
+        pass
+
+    def update_chances_array_incomplete(self):
         # As x needs to be a vector, not a matrix, i associate the entries of the self.chances_array matrix
         # with the x as such:
         # x_0 x_10 x_20 x_30 ....
@@ -495,7 +608,8 @@ class ExpectiSmart(Agent):
             # in the linear prog. Since we need to turn a 10*10 matrix into a length 100 vector
             constr = np.zeros(100)
             constr[10*zero_entries[1][i] + zero_entries[0][i]] = 1
-            a_eq = np.append(a_eq, constr, axis=0)
+            a_eq = np.vstack((a_eq, constr))
+        a_eq = np.delete(a_eq, (0), axis=0)
         b_eq = np.zeros(len(zero_entries[0]))
 
         # The variables in each coloumn for the same piece-type have to take the same value
@@ -504,70 +618,68 @@ class ExpectiSmart(Agent):
             constr = np.zeros(100)
             constr[10 * j + 2] = self.chances_array[2, j]
             constr[10 * j + 3] = -self.chances_array[3, j]
-            a_eq = np.append(a_eq, constr, axis=0)
+            a_eq = np.vstack((a_eq, constr))
             b_eq = np.append(b_eq, 0)
             # 2.2 = 2.3
             constr = np.zeros(100)
             constr[10 * j + 3] = self.chances_array[3, j]
             constr[10 * j + 4] = -self.chances_array[4, j]
-            a_eq = np.append(a_eq, constr, axis=0)
+            a_eq = np.vstack((a_eq, constr))
             b_eq = np.append(b_eq, 0)
             # 3.1 = 3.2
             constr = np.zeros(100)
             constr[10 * j + 5] = self.chances_array[5, j]
             constr[10 * j + 6] = -self.chances_array[6, j]
-            a_eq = np.append(a_eq, constr, axis=0)
+            a_eq = np.vstack((a_eq, constr))
             b_eq = np.append(b_eq, 0)
             # 11.1 = 11.2
             constr = np.zeros(100)
             constr[10 * j + 8] = self.chances_array[8, j]
             constr[10 * j + 9] = -self.chances_array[9, j]
-            a_eq = np.append(a_eq, constr, axis=0)
+            a_eq = np.vstack((a_eq, constr))
             b_eq = np.append(b_eq, 0)
 
         # The row- and coloumn-sums aggregate to 1
         for i in range(10):
             # i-th coloumn
             constr = np.zeros(100)
+            #constr[(10 * i):(10 * i + 10)] = [1]*10
             constr[(10 * i):(10 * i + 10)] = self.chances_array[0:10, i]
-            a_eq = np.append(a_eq, constr, axis=0)
+            a_eq = np.vstack((a_eq, constr))
             b_eq = np.append(b_eq, 1)
             # i-th row
             constr = np.zeros(100)
+            #constr[i::10] = [1]*10
             constr[i::10] = self.chances_array[i, 0:10]
-            a_eq = np.append(a_eq, constr, axis=0)
+            a_eq = np.vstack((a_eq, constr))
             b_eq = np.append(b_eq, 1)
-        objective = np.ones(100)
+        objective = np.empty(100)
+        for i in range(100):
+            if i % 2 ==0:
+                objective[i] = 1
+            else:
+                objective[i] = -1
         solution = optimize.linprog(c=objective, A_eq=a_eq, b_eq=b_eq, method='simplex')
-        if solution[4] == 0:
-            x = solution[0]
-            x.resize((10, 10))
-            x.transpose()
+        if solution['status'] == 0:
+            x = solution['x']
+            x.resize(10, 10)
+            x = x.transpose()
             self.chances_array = np.multiply(self.chances_array, x)
         else:
-            print(solution[4])
+            print(solution['status'])
         return
-
-
-
 
     def undo_last_move(self, board):
         last_move = self.last_N_moves.pop()
         if last_move is None:
             raise ValueError("No last move to undo detected!")
-        board[last_move[0]] = self.pieces_last_N_Moves_beforePos.pop()
+        before_piece = self.pieces_last_N_Moves_beforePos.pop()
+        board[last_move[0]] = before_piece
+        # the piece at the 'before' position was the one that moved, so needs its
+        # last entry in the move history deleted
+        before_piece.position = last_move[0]
+        #before_piece.positions_history.pop()
         board[last_move[1]] = self.pieces_last_N_Moves_afterPos.pop()
-        return board
-
-    def update_board(self, updated_piece, board=None):
-        """
-        :param updated_piece: tuple (piece_board_position, piece_object)
-        :param board: the playboard that should be updated
-        :return: void
-        """
-        pos = updated_piece[0]
-        piece = updated_piece[1]
-        board[pos] = piece
         return board
 
 

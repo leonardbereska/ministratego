@@ -296,7 +296,7 @@ for pos in ((i, j) for i in range(2) for j in range(5)):
     setup_agent0[pos] = pieces.Piece(good_setup[pos], 0, (4-pos[0], 4-pos[1]))
     setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1, pos)
 #setup0 = np.flip(setup_agent0, 0)
-agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0)
+agent_0 = agent.ExpectiSmart(0, setup_agent0)
 agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1)
 game = Game(agent_0, agent_1)
 result = game.run_game()

@@ -1,12 +1,14 @@
 """
 Pieces
 """
-
+import numpy as np
 
 class Piece:
     def __init__(self, type, team, position):
         self.position = position
-        self.positions_history = [position]
+        #self.positions_history = [position]
+        self.unique_identifier = np.random.randint(0, 10000)
+        self.dead = False
         self.hidden = True
         assert(type in (0, 1, 2, 3, 10, 11, 88, 99))  # 0: flag, 11: bomb, 88: unknown, 99: obstacle
         self.type = type
@@ -52,7 +54,7 @@ class Piece:
                 return str(self.type)
 
     def change_position(self, new_pos):
-        self.positions_history.append(new_pos)
+        #self.positions_history.append(new_pos)
         self.position = new_pos
         self.has_moved = True
 
