@@ -266,10 +266,10 @@ class ExpectiSmart(Agent):
         return val, best_action
 
     def get_poss_actions(self, board, player):
-        '''
+        """
         :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
         :return: list of possible actions for opponent
-        '''
+        """
         actions_possible = []
         for pos, piece in np.ndenumerate(board):
             if piece is not None:  # board positions has a piece on it
