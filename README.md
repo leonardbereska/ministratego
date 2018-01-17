@@ -1,12 +1,14 @@
 # Mini Stratego
 Build a mini stratego AI
 
-next: 
-- [ ] minmax complete -> bootstrap to reinforce (monte carlo or TD)
-- [ ] program arena for testing AIs against each other
+Tasks: 
+overall strategy
+- [ ] heuristic minmax complete -> bootstrap to reinforce 
+- [ ] program arena for pitching AIs against each other
 
-minmax agent
+heuristic minmax agent
 - [ ] probability dist sampling
+- [ ] tweak or learn evaluation heuristic
 - [ ] construct dataset of games with minmax policy
 
 reinforce agent
