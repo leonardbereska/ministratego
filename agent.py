@@ -482,9 +482,6 @@ class ExpectiSmart(Agent):
         self.update_chances_array()
 
     def draw_consistent_enemy_setup(self, board):
-        start = time.clock()
-        print("recording time...")
-
         enemy_pieces = copy.deepcopy(self.ordered_opp_pieces)
         enemy_pieces_alive = [piece for piece in enemy_pieces if not piece.dead]
         types_alive = [piece.type for piece in enemy_pieces_alive]
@@ -531,7 +528,6 @@ class ExpectiSmart(Agent):
                 piece.move_radius = 1
             piece.hidden = False
             board[piece.position] = piece
-        print(time.clock() - start)
         return board
 
     # def draw_setup(self, board):
