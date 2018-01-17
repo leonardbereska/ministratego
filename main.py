@@ -251,7 +251,8 @@ def print_board(board):
     """
     board = copy.deepcopy(board)  # ensure to not accidentally change input
     plt.interactive(False)  # make plot stay? true: close plot, false: keep plot
-    fig = plt.figure()
+    plt.figure(1)
+    plt.clf()
     layout = np.add.outer(range(5), range(5)) % 2  # chess-pattern board
     plt.imshow(layout, cmap=plt.cm.magma, alpha=.5, interpolation='nearest')  # plot board
     for pos in ((i, j) for i in range(5) for j in range(5)):  # go through all board positions
@@ -271,12 +272,11 @@ def print_board(board):
             if piece.type == 0:
                 form = 'X'  # cross: flag
             piece_marker = ''.join(('-', color, form))
-            #plt.gca().invert_yaxis()  # own pieces down, others up
             # transpose pos[0], pos[1] to turn board
             plt.plot(pos[1], pos[0], piece_marker, markersize=37)  # plot markers for pieces
             plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
-    plt.show()
-    return fig
+    plt.gca().invert_yaxis()  # own pieces down, others up
+    plt.show(block=False)
 
 
 def simulation():
