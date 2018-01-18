@@ -3,6 +3,7 @@ import math
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import six
 from collections import namedtuple
 
 # torch dependencies
@@ -169,25 +170,41 @@ def train(env, num_episodes):
                 break
 
 
-BATCH_SIZE = 128
+import cProfile as profile
+
+# In outer section of code
+pr = profile.Profile()
+pr.disable()
+
+# In section you want to profile
+# code of interest
+
+# Back in outer section of code
+BATCH_SIZE = 8  # 128
 GAMMA = 0.999
 EPS_START = 0.8
-EPS_END = 0.0001
+EPS_END = 0.05
 EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
 
-num_episodes = 1000
+num_episodes = 100
 EPS_DECAY = 100
 N_SMOOTH = 10
 
-model = models.CNN()
-# model.load_state_dict(torch.load('./reinforce/saved_models/find_flag_CNN.pkl'))
-memory = ReplayMemory(10000)
+
+env = env.FindFlag()
+state_dim = env.get_state().shape[1]
+model = models.CNN(state_dim)
+# model.load_state_dict(torch.load('./saved_models/find_flag_CNN.pkl'))
 optimizer = optim.RMSprop(model.parameters())
+memory = ReplayMemory(10000)
 
-env = env.Escape()
-run_env(env, user_test=True)
 
-# train(env=env, num_episodes=num_episodes)
-# torch.save(model.state_dict(), './reinforce/saved_models/escape_CNN.pkl')
+# run_env(env, user_test=True)
 
-# run_env(env, user_test=False)
+train(env, num_episodes)
+
+torch.save(model.state_dict(), './saved_models/find_flag.pkl')
+pr.enable()
+run_env(env, False)
+pr.disable()
+pr.dump_stats('profile.pstat')
