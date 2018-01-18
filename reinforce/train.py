@@ -4,19 +4,15 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import namedtuple
-import copy as cp  # for deepcopy
 
 # torch dependencies
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 
 # own modules
-import pieces
-import game
-import env # env superclass
+import env  # env superclass
 import models
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))

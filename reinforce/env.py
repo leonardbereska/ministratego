@@ -190,8 +190,7 @@ class FindFlag(Env):
         super(FindFlag, self).__init__()
         self.reward_step = -0.1
         self.reward_illegal = -1
-        self.reward_win = 1
-        self.reward_loss = -1
+        self.reward_win = 10
 
     def decide_pieces(self):
         pieces_list = [pieces.Piece(3, 0), pieces.Piece(0, 1)]
