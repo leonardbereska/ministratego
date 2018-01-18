@@ -332,4 +332,3 @@ good_setup2[1, 4] = 3
 # game = Game(agent_0, agent_1)
 # result = game.run_game()
 # print(result)
-

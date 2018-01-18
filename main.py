@@ -60,3 +60,4 @@ def simulation():
 
 # watch_game(agent0=agent.RandomAgent(team=0), agent1=agent.RandomAgent(team=1), step_time=0.01)
 # simulation()
+
