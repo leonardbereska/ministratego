@@ -54,6 +54,8 @@ class Env:
         self.score = 0
         self.reward = 0
         self.steps = 0
+        self.death_thresh = None
+        self.illegal_moves = 0
 
         # rewards (to be overridden by subclass)
         self.reward_illegal = 0  # punish illegal moves
@@ -79,14 +81,18 @@ class Env:
 
     def step(self, action):
         self.reward = 0
+        self.steps += 1  # illegal move as step
+
         agent_move = self.action_to_move(action, team=0)
         if agent_move[1] == self.previous_pos:
             self.reward = self.reward_iter
 
         if not helpers.is_legal_move(self.board, agent_move):
             self.reward += self.reward_illegal
+            self.illegal_moves += 1
             self.score += self.reward
-            return self.reward, False  # environment does not change, agent should better choose only legal moves
+            done = self.goal_test()
+            return self.reward, done  # environment does not change, agent should better choose only legal moves
         self.do_move(agent_move, team=0)
         self.previous_pos = agent_move[0]
 
@@ -94,12 +100,11 @@ class Env:
             opp_move = self.random_move(team=1)
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 
-        self.steps += 1
         done = self.goal_test()
         self.score += self.reward
         return self.reward, done
 
-    def random_move(self, team):      # can be overwritten to give smarter opponent
+    def random_move(self, team):  # can be overwritten to give smarter opponent
         moves = helpers.get_poss_actions(self.board, team)
         if not moves:
             return None  # no move possible
@@ -177,10 +182,10 @@ class Env:
         if not helpers.get_poss_actions(self.board, team=0):
             self.reward += self.reward_loss
             return True
-        if self.score < -100:
-            self.reward += self.reward_loss
-            print("lost")
-            return True
+        if self.death_thresh is not None:
+            if self.score < self.death_thresh:
+                self.reward += self.reward_loss
+                return True
         return False
 
     def show(self):
@@ -190,20 +195,26 @@ class Env:
         fig.canvas.draw()  # updates plot
 
 
+########################################################
+
 class FindFlag(Env):
     def __init__(self):
         super(FindFlag, self).__init__()
-        self.reward_step = -0.1
+        self.reward_step = -0.01
         self.reward_illegal = -1
-        self.reward_win = 10
+        self.reward_win = 1
+        self.death_thresh = -1
 
     def decide_pieces(self):
-        known_place = [(pieces.Piece(0, 1, None), (4, 4))]
-        random_place = [pieces.Piece(3, 0, None)]
+        known_place = []
+        random_place = [pieces.Piece(3, 0, None), pieces.Piece(0, 1, None)]
         return known_place, random_place
 
+    # def decide_obstacles(self):
+    #     return []
+
     def get_state(self):
-        state_dim = 3
+        state_dim = 2
         board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
         for pos in self.board_positions:
             p = self.board[pos]
@@ -212,8 +223,8 @@ class FindFlag(Env):
                     board_state[tuple([0] + list(pos))] = p.type  # represent type
                 elif p.team == 1:  # opponents team
                     board_state[tuple([1] + list(pos))] = 1  # flag
-                else:
-                    board_state[tuple([2] + list(pos))] = 1  # obstacle
+                    # else:
+                    #     board_state[tuple([2] + list(pos))] = 1  # obstacle
 
         board_state = torch.FloatTensor(board_state)
         board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
@@ -230,8 +241,7 @@ class Escape(Env):
 
     def decide_pieces(self):
         known_place = []
-        random_place = [pieces.Piece(3, 0, None),
-                        pieces.Piece(10, 1, None),  # pieces.Piece(10, 1, None),
+        random_place = [pieces.Piece(3, 0, None), pieces.Piece(10, 1, None),  # pieces.Piece(10, 1, None),
                         pieces.Piece(0, 1, None)]
         return known_place, random_place
 
@@ -248,8 +258,8 @@ class Escape(Env):
                         board_state[tuple([1] + list(pos))] = 1  # flag
                     else:
                         board_state[tuple([2] + list(pos))] = 1  # opp piece
-                # else:
-                #     board_state[tuple([3] + list(pos))] = 1  # obstacle
+                        # else:
+                        #     board_state[tuple([3] + list(pos))] = 1  # obstacle
 
         board_state = torch.FloatTensor(board_state)
         board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
@@ -290,13 +300,14 @@ class Maze(Env):
         board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
         return board_state
 
-    # def get_state(self):
-    #     for pos in self.board_positions:
-    #         p = self.board[pos]
-    #         if p is not None:
-    #             if p.team == 0:
-    #                 board_state = pos
-    #     return torch.FloatTensor(board_state)
+        # def get_state(self):
+        #     for pos in self.board_positions:
+        #         p = self.board[pos]
+        #         if p is not None:
+        #             if p.team == 0:
+        #                 board_state = pos
+        #     return torch.FloatTensor(board_state)
+
 
 class Kill(Env):
     def __init__(self):
@@ -326,28 +337,29 @@ class Kill(Env):
         board_state = torch.FloatTensor(board_state)
         board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
         return board_state
-#
-# class SmallGame(Env):
-#     def __init__(self):
-#         super(SmallGame, self).__init__()
-#         self.reward_step = -0.1
-#         self.reward_illegal = -1
-#         self.reward_win = 10
-#
-#     def decide_pieces(self):
-#         pieces_list = [pieces.Piece(3, 0), pieces.Piece(0, 0), pieces.Piece(3, 1), pieces.Piece(0, 1)]
-#         return pieces_list
-#
-#
-# class MiniStratego(Env):
-#     def __init__(self):
-#         super(MiniStratego, self).__init__()
-#         self.reward_step = -0.1
-#         self.reward_illegal = -1
-#         self.reward_win = 10
-#
-#     def decide_pieces(self):
-#         pass
+
+    #
+    # class SmallGame(Env):
+    #     def __init__(self):
+    #         super(SmallGame, self).__init__()
+    #         self.reward_step = -0.1
+    #         self.reward_illegal = -1
+    #         self.reward_win = 10
+    #
+    #     def decide_pieces(self):
+    #         pieces_list = [pieces.Piece(3, 0), pieces.Piece(0, 0), pieces.Piece(3, 1), pieces.Piece(0, 1)]
+    #         return pieces_list
+    #
+    #
+    # class MiniStratego(Env):
+    #     def __init__(self):
+    #         super(MiniStratego, self).__init__()
+    #         self.reward_step = -0.1
+    #         self.reward_illegal = -1
+    #         self.reward_win = 10
+    #
+    #     def decide_pieces(self):
+    #         pass
 
     # TODO: fixed placement of pieces
     # TODO: agent integration

@@ -5,6 +5,32 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
+class Finder(nn.Module):
+    """
+    Agent for solving the Maze environment
+    """
+    def __init__(self, state_dim):
+        super(Finder, self).__init__()
+        self.feature_size = 10 * 25
+        self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
+        self.conv2 = nn.Conv2d(10, 10, padding=1, kernel_size=3)
+        self.lin1 = nn.Linear(self.feature_size, 16)
+
+        self.lin2 = nn.Linear(16, 4)
+        # self.lin2 = nn.Linear(16, 4)
+
+    def forward(self, x):
+
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+
+        x = x.view(-1, self.feature_size)
+        x = F.relu(self.lin1(x))
+        x = F.relu(self.lin2(x))
+        x = F.softmax(x)
+        return x
+
+
 class Mazer(nn.Module):
     """
     Agent for solving the Maze environment
@@ -47,7 +73,6 @@ class Escaper(nn.Module):
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin0(x))
         x = F.relu(self.lin1(x))
-        x = F.softmax(x)
         return x
 
 

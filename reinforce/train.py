@@ -87,15 +87,18 @@ def select_action(state, p_random):
     sample = random.random()
     if sample > p_random:
         # deterministic action selection
-        # action = model(Variable(state, volatile=True)).data.max(1)[1].view(1, 1)  # choose maximum index
+        # output = model(Variable(state, volatile=True)).data
+        # # print(output.numpy())
+        # action = output.max(1)[1].view(1, 1)  # choose maximum index
         # return action
 
-        # probabilistic
-        p = list(model(Variable(state, volatile=True)).data[0].numpy())  # probability distribution
-        p = [int(p_i * 1000) for p_i in p]
-        p = [p_i/1000 for p_i in p]
+        # probabilistic action selection, network outputs state-action values
+        state_action_values = model(Variable(state, volatile=True))
+        p = list(state_action_values.data[0].numpy())
+        p = [int(p_i * 1000)/1000 for p_i in p]
         p[3] = 1 - sum(p[0:3])  # artificially make probs sum to one
-        # print(p)
+        if VERBOSE > 1:  # print probabilities
+            print(p)
         action = np.random.choice(np.arange(0, 4), p=p)
         action = int(action)  # normal int not numpy int
         return torch.LongTensor([[action]])
@@ -153,6 +156,8 @@ def train(env, num_episodes):
             p_random = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * i_episode / EPS_DECAY)
             action = select_action(state, p_random)   # perform random action with with probability p = p_random
             reward_value, done = env.step(action[0, 0])  # environment step for action
+            if VERBOSE > 1:
+                print(action[0, 0] + 1, reward_value)
             reward = torch.FloatTensor([reward_value])
 
             # save transistion as memory and optimize model
@@ -165,15 +170,17 @@ def train(env, num_episodes):
             optimize_model()  # one step of optimization of target network
 
             if done:
-                print("\nEpisode {}/{}".format(i_episode, num_episodes))
+                print("Episode {}/{}".format(i_episode, num_episodes))
                 print("Score: {}".format(env.score))
                 print("Noise: {}".format(p_random))
-                print("Steps: {}".format(env.steps))
+                print("Illegal: {}/{}\n".format(env.illegal_moves, env.steps))
                 episode_scores.append(env.score)
-                plot_scores(episode_scores)  # takes run time
+                if VERBOSE > 1:
+                    plot_scores(episode_scores)  # takes run time
                 break
         if i_episode % 100 == 2:
-            run_env(env, False, 1)
+            if VERBOSE > 1:
+                run_env(env, False, 1)
 
 
 # for profiling
@@ -185,26 +192,27 @@ def train(env, num_episodes):
 # pr.dump_stats('profile.pstat')
 
 BATCH_SIZE = 128  # 128
-GAMMA = 0.999
-EPS_START = 0.05
-EPS_END = 0.01
+GAMMA = 0.99
+EPS_START = 0.02
+EPS_END = 0.001
 EPS_DECAY = 100
 N_SMOOTH = 10  # plotting scores averaged over this number of episodes
 EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
+VERBOSE = 1  # level of printed output verbosity
 
-num_episodes = 1000
+num_episodes = 10000
 
-env = env.Escape()
+env = env.FindFlag()
 state_dim = env.get_state().shape[1]
-model = models.Escaper(state_dim)
-# model.load_state_dict(torch.load('./saved_models/find_flag_CNN.pkl'))
+model = models.Finder(state_dim)
+model.load_state_dict(torch.load('./saved_models/finder.pkl'))
 optimizer = optim.RMSprop(model.parameters())
-memory = ReplayMemory(10000)
+memory = ReplayMemory(1000)
 
 # env.show()
 # run_env(env, user_test=True)
 
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/escaper.pkl')
+torch.save(model.state_dict(), './saved_models/finder.pkl')
 run_env(env, False)
 
