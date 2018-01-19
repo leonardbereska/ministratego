@@ -56,10 +56,10 @@ def plot_scores(episode_scores):
     plt.pause(0.001)  # pause a bit so that plots are updated
 
 
-def run_env(env, user_test):
+def run_env(env, user_test, n_runs=100):
     global EVAL
     EVAL = True  # switch evaluation mode on
-    while True:
+    for i in range(n_runs):
         env.reset()
         env.show()
         done = False
@@ -74,7 +74,7 @@ def run_env(env, user_test):
             env.show()
             if done and env.reward == env.reward_win:
                 print("Won!")
-            elif (done and env.reward == env.reward_loss) or env.score < -3:
+            elif (done and env.reward == env.reward_loss) or env.score < -5:
                 print("Lost")
                 break
 
@@ -86,16 +86,19 @@ def select_action(state, p_random):
     """
     sample = random.random()
     if sample > p_random:
-        action = model(Variable(state, volatile=True)).data.max(1)[1].view(1, 1)  # choose maximum index
-        # p = list(model(Variable(state, volatile=True)).data[0].numpy())  # probability distribution
-        # p = [int(p_i * 1000) for p_i in p]
-        # p = [p_i/1000 for p_i in p]
-        # p[3] = 1 - sum(p[0:3])  # artificially make probs sum to one
+        # deterministic action selection
+        # action = model(Variable(state, volatile=True)).data.max(1)[1].view(1, 1)  # choose maximum index
+        # return action
+
+        # probabilistic
+        p = list(model(Variable(state, volatile=True)).data[0].numpy())  # probability distribution
+        p = [int(p_i * 1000) for p_i in p]
+        p = [p_i/1000 for p_i in p]
+        p[3] = 1 - sum(p[0:3])  # artificially make probs sum to one
         # print(p)
-        # action = np.random.choice(np.arange(0, 4), p=p)
-        # action = int(action)  # normal int not numpy int
-        # return LongTensor([[action]])
-        return action
+        action = np.random.choice(np.arange(0, 4), p=p)
+        action = int(action)  # normal int not numpy int
+        return torch.LongTensor([[action]])
     else:
         return torch.LongTensor([[random.randint(0, 3)]])
 
@@ -164,47 +167,44 @@ def train(env, num_episodes):
             if done:
                 print("\nEpisode {}/{}".format(i_episode, num_episodes))
                 print("Score: {}".format(env.score))
-                print("Randomness: {}".format(p_random))
+                print("Noise: {}".format(p_random))
+                print("Steps: {}".format(env.steps))
                 episode_scores.append(env.score)
-                plot_scores(episode_scores)
+                plot_scores(episode_scores)  # takes run time
                 break
+        if i_episode % 100 == 2:
+            run_env(env, False, 1)
 
 
-import cProfile as profile
+# for profiling
+# import cProfile as profile
+# pr = profile.Profile()
+# pr.disable()
+# pr.enable()
+# pr.disable()
+# pr.dump_stats('profile.pstat')
 
-# In outer section of code
-pr = profile.Profile()
-pr.disable()
-
-# In section you want to profile
-# code of interest
-
-# Back in outer section of code
-BATCH_SIZE = 8  # 128
+BATCH_SIZE = 128  # 128
 GAMMA = 0.999
-EPS_START = 0.8
-EPS_END = 0.05
+EPS_START = 0.05
+EPS_END = 0.01
+EPS_DECAY = 100
+N_SMOOTH = 10  # plotting scores averaged over this number of episodes
 EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
 
-num_episodes = 100
-EPS_DECAY = 100
-N_SMOOTH = 10
+num_episodes = 1000
 
-
-env = env.FindFlag()
+env = env.Escape()
 state_dim = env.get_state().shape[1]
-model = models.CNN(state_dim)
+model = models.Escaper(state_dim)
 # model.load_state_dict(torch.load('./saved_models/find_flag_CNN.pkl'))
 optimizer = optim.RMSprop(model.parameters())
 memory = ReplayMemory(10000)
 
-
+# env.show()
 # run_env(env, user_test=True)
 
 train(env, num_episodes)
-
-torch.save(model.state_dict(), './saved_models/find_flag.pkl')
-pr.enable()
+torch.save(model.state_dict(), './saved_models/escaper.pkl')
 run_env(env, False)
-pr.disable()
-pr.dump_stats('profile.pstat')
+
