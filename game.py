@@ -24,18 +24,19 @@ class Game:
         self.board = np.empty((5, 5), dtype=object)
 
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
-        setup0, setup1 = agent0.decide_setup(self.types_available), agent1.decide_setup(self.types_available)
+        setup0, setup1 = agent0.setup, agent1.setup
         agent0.install_opp_setup(copy.deepcopy(setup1))
         agent1.install_opp_setup(copy.deepcopy(setup0))
 
-        self.board[3:5, 0:5] = copy.deepcopy(setup0)
-        self.board[0:2, 0:5] = copy.deepcopy(setup1)
+        for idx, piece in np.ndenumerate(setup0):
+            piece.hidden = False
+            self.board[piece.position] = piece
+        for idx, piece in np.ndenumerate(setup1):
+            piece.hidden = False
+            self.board[piece.position] = piece
         obstacle = pieces.Piece(99, 99, (2, 2))
         obstacle.hidden = False
         self.board[2, 2] = obstacle  # set obstacle
-        for pos, piece in np.ndenumerate(self.board):
-            if piece is not None:
-                piece.hidden = False
 
         self.move_count = 1  # agent 1 starts
 

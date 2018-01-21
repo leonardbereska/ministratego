@@ -82,16 +82,30 @@ good_setup2[1, 1] = 2
 good_setup2[1, 2] = 10
 good_setup2[1, 3] = 2
 good_setup2[1, 4] = 3
-#good_setup2 = np.flip(good_setup2, 0)
+
+rd_setup = np.empty((5, 5), )
+rd_setup[:, :] = None
+rd_setup[0, 1] = 0
+rd_setup[1, 0] = 11
+rd_setup[2, 3] = 10
+rd_setup[2, 1] = 10
+rd_setup[1, 2] = 2
+rd_setup[0, 4] = 1
+
+
+
 
 setup_agent0 = np.empty((2, 5), dtype=object)
-setup_agent1 = np.empty((2, 5), dtype=object)
+#setup_agent1 = np.empty((2, 5), dtype=object)
+setup_agent1 = []
 for pos in ((i, j) for i in range(2) for j in range(5)):
     setup_agent0[pos] = pieces.Piece(good_setup[pos], 0, (4-pos[0], 4-pos[1]))
-    setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1, pos)
-#setup0 = np.flip(setup_agent0, 0)
-agent_0 = agent.ExpectiSmart(0, setup_agent0)
-agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1)
+ #   setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1, pos)
+for pos, type in np.ndenumerate(rd_setup):
+    if not type != type:  # check if type is NaN
+        setup_agent1.append(pieces.Piece(int(type), 1, pos))
+agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0)
+agent_1 = agent.ExpectiSmart(1, np.array(setup_agent1))
 game = game.Game(agent_0, agent_1)
 result = game.run_game()
 print(result)

@@ -13,11 +13,15 @@ import helpers
 
 
 class Agent:
-    def __init__(self, team):
+    def __init__(self, team, setup):
         self.team = team
         self.other_team = (self.team + 1) % 2
-        self.setup = None
+        self.setup = setup
         self.board = np.empty((5, 5), dtype=object)
+        for idx, piece in np.ndenumerate(setup):
+            piece.hidden = False
+            self.board[piece.position] = piece
+
         self.move_count = 0
 
         self.last_N_moves = []
@@ -33,74 +37,22 @@ class Agent:
         # fallen pieces bookkeeping
         self.deadPieces = []
         dead_piecesdict = dict()
-        types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
-        for type_ in set(types_available):
+        self.types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
+        for type_ in set(self.types_available):
             dead_piecesdict[type_] = 0
         self.deadPieces.append(dead_piecesdict)
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
         self.ordered_opp_pieces = []
-        self.chances_array = np.ones((10, 10))
 
     def install_opp_setup(self, opp_setup):
-        # Agent 1 is always in 0:2,0:5 and agent 0 in 3:5, 0:5
-        if self.team == 1:
-            for pos in ((i, j) for i in range(3, 5) for j in range(5)):
-                piece = opp_setup[4-pos[0], 4-pos[1]]
-                piece.hidden = True
-                self.ordered_opp_pieces.append(piece)
-                self.board[pos] = piece
-            self.board[3:5, 0:5] = opp_setup
-        else:
-            for pos in ((i, j) for i in range(2) for j in range(5)):
-                piece = opp_setup[pos]
-                piece.hidden = True
-                self.ordered_opp_pieces.append(piece)
-                self.board[pos] = piece
-            self.board[0:2, 0:5] = opp_setup
-
-    def init_setup(self, *args):
-        """
-        Agent has to implement how to order his initial figures
-        """
-        raise NotImplementedError
-
-    def decide_setup(self, given_setup=None):
-        """
-        Communicate initial setup of the available figure types to game
-        """
-        if given_setup is not None:
-            types_setup = self.init_setup(given_setup)
-
-            # check if used only types available
-            check_setup = copy.deepcopy(types_setup)
-            check_setup.sort()
-            check_setup.resize(1,10)
-            check_setup = check_setup[0]
-            setup_valid = check_setup == given_setup
-
-            assert(np.all(setup_valid)), "cheated in setup!"
-        else:
-            if self.setup is not None:
-                types_setup = self.setup
-            else:
-                types_setup = np.random.choice(battleMatrix.get_smart_setups())
-
-        types_setup = np.array(types_setup)
-        types_setup.resize((2, 5))
-        if self.team == 0:
-            for pos, piece in np.ndenumerate(types_setup):
-                own_piece = pieces.Piece(piece, self.team, (4 - pos[0], 4 - pos[1]))
-                own_piece.hidden = False
-                self.board[4-pos[0], 4-pos[1]] = own_piece
-            self.setup = self.board[3:5,0:5]
-        else:
-            for pos, piece in np.ndenumerate(types_setup):
-                own_piece = pieces.Piece(piece, self.team, pos)
-                own_piece.hidden = False
-                self.board[pos] = own_piece
-            self.setup = self.board[0:2, 0:5]
-        return self.setup
+        self.assignment_dict = dict()
+        enemy_types = [piece.type for idx, piece in np.ndenumerate(opp_setup)]
+        for idx, piece in np.ndenumerate(opp_setup):
+            piece.potential_types = copy.copy(enemy_types)
+            self.ordered_opp_pieces.append(piece)
+            piece.hidden = True
+            self.board[piece.position] = piece
 
     def update_board(self, updated_piece, board=None):
         if board is None:
@@ -112,7 +64,7 @@ class Agent:
 
     def decide_move(self):
         """
-        Agent has to implement on which action to decide given the state
+        Agent has to implement which action to decide on given the state
         """
         raise NotImplementedError
 
@@ -206,10 +158,6 @@ class RandomAgent(Agent):
     def __init__(self, team):
         super(RandomAgent, self).__init__(team=team)
 
-    def init_setup(self, types_available):
-        # randomly order the available figures in a list
-        return np.random.choice(types_available, 10, replace=False)
-
     def decide_move(self):
         actions = helpers.get_poss_actions(self.board, self.team)
         # ignore state, do random action
@@ -225,16 +173,6 @@ class SmartSetup(Agent):
         super(SmartSetup, self).__init__(team=team)
         self.setup = setup
 
-    def init_setup(self, *args):
-        return self.setup
-
-    def decide_setup(self, *args):
-        if self.team == 0:
-            self.board[3:5, 0:5] = self.setup
-        else:
-            self.board[0:2, 0:5] = self.setup
-        return self.setup
-
     def decide_move(self):
         actions = helpers.get_poss_actions(self.board, self.team)
         # ignore state, do random action
@@ -243,19 +181,14 @@ class SmartSetup(Agent):
 
 
 class ExpectiSmart(Agent):
-    def __init__(self, team, setup=None):
-        super(ExpectiSmart, self).__init__(team=team)
-        self.setup = setup
+    def __init__(self, team, setup):
+        super(ExpectiSmart, self).__init__(team=team, setup=setup)
 
         self.winFightReward = 10
         self.neutralFightReward = 2
         self.winGameReward = 100
 
         self.battleMatrix = battleMatrix.get_battle_matrix()
-
-    def init_setup(self, given_setup):
-        # randomly order the available figures in a list
-        return np.random.choice(given_setup, 10, replace=False)
 
     def decide_move(self):
         return self.minimax(max_depth=4)
@@ -361,74 +294,36 @@ class ExpectiSmart(Agent):
             return False
 
     def update_prob_by_fight(self, enemy_piece):
-        for piece in self.ordered_opp_pieces:
-            if piece.unique_identifier == enemy_piece.unique_identifier:
-                equiv_piece_in_list = piece
-                break
-        idx_of_piece = self.ordered_opp_pieces.index(equiv_piece_in_list)
-        type = enemy_piece.type
-        if type == 1:
-            self.chances_array[1, idx_of_piece] = 1
-            self.chances_array[np.arange(10) != 1, idx_of_piece] = 0
-        elif type == 2:
-            self.chances_array[np.delete(np.arange(10), [2, 3, 4]), idx_of_piece] = 0
-        elif type == 3:
-            self.chances_array[np.delete(np.arange(10), [5, 6]), idx_of_piece] = 0
-        elif type == 10:
-            self.chances_array[7, idx_of_piece] = 1
-            self.chances_array[np.arange(10) != 7, idx_of_piece] = 0
-        elif type == 11:
-            self.chances_array[np.delete(np.arange(10), [8, 9]), idx_of_piece] = 0
+        enemy_piece.potential_types = [enemy_piece.type]
 
     def update_prob_by_move(self, move, moving_piece):
-        for piece in self.ordered_opp_pieces:
-            if piece.unique_identifier == moving_piece.unique_identifier:
-                equiv_piece_in_list = piece
-                break
-        idx_of_piece = self.ordered_opp_pieces.index(equiv_piece_in_list)
         move_dist = spatial.distance.cityblock(move[0], move[1])
         if move_dist > 1:
             moving_piece.hidden = False
-            self.chances_array[0:2, idx_of_piece] = 0
-            self.chances_array[5:10, idx_of_piece] = 0
+            moving_piece.potential_types = moving_piece.type
         else:
-            self.chances_array[0, idx_of_piece] = 0
-            self.chances_array[8:10, idx_of_piece] = 0
+            immobile_enemy_types = [idx for idx, type in enumerate(moving_piece.potential_types)
+                                    if type in [0, 11]]
+            moving_piece.potential_types = np.delete(moving_piece.potential_types, immobile_enemy_types)
+
+
 
     def draw_consistent_enemy_setup(self, board):
+        # get information about enemy pieces (how many, which alive, which types, and indices in assign. array)
         enemy_pieces = copy.deepcopy(self.ordered_opp_pieces)
         enemy_pieces_alive = [piece for piece in enemy_pieces if not piece.dead]
         types_alive = [piece.type for piece in enemy_pieces_alive]
-        indices_of_types_alive = [idx for idx, piece in enumerate(enemy_pieces) if not piece.dead]
 
+        # do the following as long as the drawn assignment is not consistent with the current knowledge about them
         consistent = False
+        sample = None
         while not consistent:
+            # choose len(types_alive) many pieces randomly
             sample = np.random.choice(types_alive, len(types_alive), replace=False)
-            temp_sample = copy.copy(sample)
-            ext_sample = []
-            for i in range(10):
-                if i in indices_of_types_alive:
-                    ext_sample.append(temp_sample[0])
-                    temp_sample = temp_sample[1:]
-                else:
-                    ext_sample.append(-1)
-            sample_assignment_array = np.zeros((10, 10))
-            for idx, s in enumerate(ext_sample):
-                if s == 0:
-                    sample_assignment_array[0, idx] = 1
-                elif s == 1:
-                    sample_assignment_array[1, idx] = 1
-                elif s == 2:
-                    sample_assignment_array[2:5, idx] = 1
-                elif s == 3:
-                    sample_assignment_array[5:7, idx] = 1
-                elif s == 10:
-                    sample_assignment_array[7, idx] = 1
-                elif s == 11:
-                    sample_assignment_array[8:10, idx] = 1
-            check = np.multiply(sample_assignment_array, self.chances_array)
-            if np.sum(check) == np.sum(sample_assignment_array):
-                consistent = True
+            consistent = True
+            for idx, piece in enumerate(enemy_pieces_alive):
+                if sample[idx] not in piece.potential_types:
+                    consistent = False
         for idx, piece in enumerate(enemy_pieces_alive):
             piece.type = sample[idx]
             if piece.type in [0, 11]:
@@ -443,92 +338,6 @@ class ExpectiSmart(Agent):
             piece.hidden = False
             board[piece.position] = piece
         return board
-
-    def update_chances_array_incomplete(self):
-        # As x needs to be a vector, not a matrix, i associate the entries of the self.chances_array matrix
-        # with the x as such:
-        # x_0 x_10 x_20 x_30 ....
-        # x_1 x_11 x_21 x_31 ....
-        # x_2 x_12 x_22 x_32 ....
-        # x_3 x_13 x_23 x_33 ....
-        #  .   .
-        #  .   .
-        #  .   .
-
-        # A_eq gives the constraints A_eq * x = b_eq. Our equality constraints are:
-        # Every previous 0-entry stays 0
-        # The variables in each coloumn for the same piece-type have to take the same value
-        # The row- and coloumn-sums aggregate to 1
-        #
-        a_eq = np.empty(100)
-
-        # Every previous 0-entry stays 0
-        zero_entries = np.where(self.chances_array == 0)
-        for i in range(len(zero_entries[0])):
-            # coloumn index (zero_entries[1]) gives the multiple of 10 for the variable vector of length 10*10
-            # in the linear prog. Since we need to turn a 10*10 matrix into a length 100 vector
-            constr = np.zeros(100)
-            constr[10*zero_entries[1][i] + zero_entries[0][i]] = 1
-            a_eq = np.vstack((a_eq, constr))
-        a_eq = np.delete(a_eq, (0), axis=0)
-        b_eq = np.zeros(len(zero_entries[0]))
-
-        # The variables in each coloumn for the same piece-type have to take the same value
-        for j in range(10):
-            # 2.1 = 2.2
-            constr = np.zeros(100)
-            constr[10 * j + 2] = self.chances_array[2, j]
-            constr[10 * j + 3] = -self.chances_array[3, j]
-            a_eq = np.vstack((a_eq, constr))
-            b_eq = np.append(b_eq, 0)
-            # 2.2 = 2.3
-            constr = np.zeros(100)
-            constr[10 * j + 3] = self.chances_array[3, j]
-            constr[10 * j + 4] = -self.chances_array[4, j]
-            a_eq = np.vstack((a_eq, constr))
-            b_eq = np.append(b_eq, 0)
-            # 3.1 = 3.2
-            constr = np.zeros(100)
-            constr[10 * j + 5] = self.chances_array[5, j]
-            constr[10 * j + 6] = -self.chances_array[6, j]
-            a_eq = np.vstack((a_eq, constr))
-            b_eq = np.append(b_eq, 0)
-            # 11.1 = 11.2
-            constr = np.zeros(100)
-            constr[10 * j + 8] = self.chances_array[8, j]
-            constr[10 * j + 9] = -self.chances_array[9, j]
-            a_eq = np.vstack((a_eq, constr))
-            b_eq = np.append(b_eq, 0)
-
-        # The row- and coloumn-sums aggregate to 1
-        for i in range(10):
-            # i-th coloumn
-            constr = np.zeros(100)
-            #constr[(10 * i):(10 * i + 10)] = [1]*10
-            constr[(10 * i):(10 * i + 10)] = self.chances_array[0:10, i]
-            a_eq = np.vstack((a_eq, constr))
-            b_eq = np.append(b_eq, 1)
-            # i-th row
-            constr = np.zeros(100)
-            #constr[i::10] = [1]*10
-            constr[i::10] = self.chances_array[i, 0:10]
-            a_eq = np.vstack((a_eq, constr))
-            b_eq = np.append(b_eq, 1)
-        objective = np.empty(100)
-        for i in range(100):
-            if i % 2 ==0:
-                objective[i] = 1
-            else:
-                objective[i] = -1
-        solution = optimize.linprog(c=objective, A_eq=a_eq, b_eq=b_eq, method='simplex')
-        if solution['status'] == 0:
-            x = solution['x']
-            x.resize(10, 10)
-            x = x.transpose()
-            self.chances_array = np.multiply(self.chances_array, x)
-        else:
-            print(solution['status'])
-        return
 
     def undo_last_move(self, board):
         last_move = self.last_N_moves.pop()
@@ -560,16 +369,6 @@ class OmniscientExpectiSmart(ExpectiSmart):
         for pos, piece in np.ndenumerate(self.board):
             if piece is not None:
                 piece.hidden = False
-
-    def init_setup(self, *args):
-        return self.setup
-
-    def decide_setup(self, *args):
-        if self.team == 0:
-            self.board[3:5, 0:5] = self.setup
-        else:
-            self.board[0:2, 0:5] = self.setup
-        return self.setup
 
     def minimax(self, max_depth):
         chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
