@@ -372,7 +372,7 @@ num_episodes = 1000
 EPS_DECAY = 100
 N_SMOOTH = 10
 
-model = CNN_double()
+model = CNN()
 # model.load_state_dict(torch.load('./reinforce/find_flag_CNN.pkl'))
 memory = ReplayMemory(memory_size)
 optimizer = optim.RMSprop(model.parameters())

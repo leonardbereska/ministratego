@@ -3,20 +3,17 @@ import math
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import six
 from collections import namedtuple
-import copy as cp  # for deepcopy
 
 # torch dependencies
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 
 # own modules
-import pieces
-import game
-import env # env superclass
+import env  # env superclass
 import models
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -59,10 +56,10 @@ def plot_scores(episode_scores):
     plt.pause(0.001)  # pause a bit so that plots are updated
 
 
-def run_env(env, user_test):
+def run_env(env, user_test, n_runs=100):
     global EVAL
     EVAL = True  # switch evaluation mode on
-    while True:
+    for i in range(n_runs):
         env.reset()
         env.show()
         done = False
@@ -75,10 +72,11 @@ def run_env(env, user_test):
                 action = action[0, 0]
             _, done = env.step(action)
             env.show()
-            if env.score < -3:  # stupid agent dies
+            if done and env.reward == env.reward_win:
+                print("Won!")
+            elif (done and env.reward == env.reward_loss) or env.score < -5:
                 print("Lost")
                 break
-        print("Won!")
 
 
 def select_action(state, p_random):
@@ -88,23 +86,29 @@ def select_action(state, p_random):
     """
     sample = random.random()
     if sample > p_random:
-        action = model(Variable(state, volatile=True)).data.max(1)[1].view(1, 1)  # choose maximum index
-        # p = list(model(Variable(state, volatile=True)).data[0].numpy())  # probability distribution
-        # p = [int(p_i * 1000) for p_i in p]
-        # p = [p_i/1000 for p_i in p]
-        # p[3] = 1 - sum(p[0:3])  # artificially make probs sum to one
-        # print(p)
-        # action = np.random.choice(np.arange(0, 4), p=p)
-        # action = int(action)  # normal int not numpy int
-        # return LongTensor([[action]])
-        return action
+        # deterministic action selection
+        # output = model(Variable(state, volatile=True)).data
+        # # print(output.numpy())
+        # action = output.max(1)[1].view(1, 1)  # choose maximum index
+        # return action
+
+        # probabilistic action selection, network outputs state-action values
+        state_action_values = model(Variable(state, volatile=True))
+        p = list(state_action_values.data[0].numpy())
+        p = [int(p_i * 1000)/1000 for p_i in p]
+        p[3] = 1 - sum(p[0:3])  # artificially make probs sum to one
+        if VERBOSE > 1:  # print probabilities
+            print(p)
+        action = np.random.choice(np.arange(0, 4), p=p)
+        action = int(action)  # normal int not numpy int
+        return torch.LongTensor([[action]])
     else:
         return torch.LongTensor([[random.randint(0, 3)]])
 
 
 def user_action():  # for testing the environment
     direction = input("Type direction\n")
-    keys = ('w', 's', 'a', 'd')
+    keys = ('w', 's', 'a', 'd', 'i', 'k', 'j', 'l')
     if direction not in keys:
         direction = input("Try typing again\n")
     return keys.index(direction)
@@ -152,6 +156,8 @@ def train(env, num_episodes):
             p_random = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * i_episode / EPS_DECAY)
             action = select_action(state, p_random)   # perform random action with with probability p = p_random
             reward_value, done = env.step(action[0, 0])  # environment step for action
+            if VERBOSE > 1:
+                print(action[0, 0] + 1, reward_value)
             reward = torch.FloatTensor([reward_value])
 
             # save transistion as memory and optimize model
@@ -164,33 +170,49 @@ def train(env, num_episodes):
             optimize_model()  # one step of optimization of target network
 
             if done:
-                print("\nEpisode {}/{}".format(i_episode, num_episodes))
+                print("Episode {}/{}".format(i_episode, num_episodes))
                 print("Score: {}".format(env.score))
-                print("Randomness: {}".format(p_random))
+                print("Noise: {}".format(p_random))
+                print("Illegal: {}/{}\n".format(env.illegal_moves, env.steps))
                 episode_scores.append(env.score)
-                plot_scores(episode_scores)
+                if VERBOSE > 1:
+                    plot_scores(episode_scores)  # takes run time
                 break
+        if i_episode % 100 == 2:
+            if VERBOSE > 1:
+                run_env(env, False, 1)
 
 
-BATCH_SIZE = 128
-GAMMA = 0.999
-EPS_START = 0.8
-EPS_END = 0.0001
-EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
+# for profiling
+# import cProfile as profile
+# pr = profile.Profile()
+# pr.disable()
+# pr.enable()
+# pr.disable()
+# pr.dump_stats('profile.pstat')
 
-num_episodes = 1000
+BATCH_SIZE = 128  # 128
+GAMMA = 0.99
+EPS_START = 0.02
+EPS_END = 0.001
 EPS_DECAY = 100
-N_SMOOTH = 10
+N_SMOOTH = 10  # plotting scores averaged over this number of episodes
+EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
+VERBOSE = 1  # level of printed output verbosity
 
-model = models.CNN()
-# model.load_state_dict(torch.load('./reinforce/saved_models/find_flag_CNN.pkl'))
-memory = ReplayMemory(10000)
-optimizer = optim.RMSprop(model.parameters())
+num_episodes = 10000
 
 env = env.FindFlag()
-run_env(env, user_test=True)
+state_dim = env.get_state().shape[1]
+model = models.Finder(state_dim)
+model.load_state_dict(torch.load('./saved_models/finder.pkl'))
+optimizer = optim.RMSprop(model.parameters())
+memory = ReplayMemory(1000)
 
-# train(env=env, num_episodes=num_episodes)
-# torch.save(model.state_dict(), './reinforce/saved_models/escape_CNN.pkl')
+# env.show()
+# run_env(env, user_test=True)
 
-# run_env(env, user_test=False)
+#train(env, num_episodes)
+#torch.save(model.state_dict(), './saved_models/finder.pkl')
+run_env(env, False)
+

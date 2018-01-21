@@ -6,6 +6,7 @@ import agent
 import copy
 import pickle
 import battleMatrix
+import helpers
 
 
 class Game:
@@ -23,11 +24,18 @@ class Game:
         self.board = np.empty((5, 5), dtype=object)
 
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
-        setup0 = self.agents[0].decide_setup(self.types_available)
-        setup1 = self.agents[1].decide_setup(self.types_available)
-        self.board[3:5, 0:5] = setup0
-        self.board[0:2, 0:5] = setup1
-        self.board[2, 2] = pieces.Piece(99, 99)  # set obstacle
+        setup0, setup1 = agent0.decide_setup(self.types_available), agent1.decide_setup(self.types_available)
+        agent0.install_opp_setup(copy.deepcopy(setup1))
+        agent1.install_opp_setup(copy.deepcopy(setup0))
+
+        self.board[3:5, 0:5] = copy.deepcopy(setup0)
+        self.board[0:2, 0:5] = copy.deepcopy(setup1)
+        obstacle = pieces.Piece(99, 99, (2, 2))
+        obstacle.hidden = False
+        self.board[2, 2] = obstacle  # set obstacle
+        for pos, piece in np.ndenumerate(self.board):
+            if piece is not None:
+                piece.hidden = False
 
         self.move_count = 1  # agent 1 starts
 
@@ -44,7 +52,7 @@ class Game:
         game_over = False
         rewards = None
         while not game_over:
-            print_board(self.board)
+            helpers.print_board(self.board)
             rewards = self.run_step()
             if rewards is not None:
                 game_over = True
@@ -52,8 +60,9 @@ class Game:
 
     def run_step(self):
         turn = self.move_count % 2  # player 1 or player 0
-        # print("Round: " + str(self.move_count))
-
+        print("Round: " + str(self.move_count))
+        for agent_ in self.agents:
+            agent_.move_count = self.move_count
         # test if game is over
         if self.goal_test():  # flag already discovered or no action possible
             if turn == 1:
@@ -78,83 +87,43 @@ class Game:
         """
         from_ = move[0]
         to_ = move[1]
+        # let agents update their boards too
+        for _agent in self.agents:
+            _agent.do_move(move, true_gameplay=True)
 
-        if not self.is_legal_move(move):
+        if not helpers.is_legal_move(self.board, move):
             return False  # illegal move chosen
+        self.board[from_].has_moved = True
         if not self.board[to_] is None:  # Target field is not empty, then has to fight
             fight_outcome = self.fight(self.board[from_], self.board[to_])
             if fight_outcome is None:
                 print('Warning, cant let pieces of same team fight!')
                 return False
             elif fight_outcome == 1:
-                self.update_board((to_, self.board[from_]), visible=True)
-                self.update_board((from_, None), visible=True)
+                self.update_board((to_, self.board[from_]))
+                self.update_board((from_, None))
             elif fight_outcome == 0:
-                self.update_board((to_, None), visible=True)
-                self.update_board((from_, None), visible=True)
+                self.update_board((to_, None))
+                self.update_board((from_, None))
             else:
-                self.update_board((from_, None), visible=True)
-                self.update_board((to_, self.board[to_]), visible=True)
+                self.update_board((from_, None))
+                self.update_board((to_, self.board[to_]))
         else:
-            self.update_board((to_, self.board[from_]), visible=False)
-            self.update_board((from_, None), visible=False)
+            self.update_board((to_, self.board[from_]))
+            self.update_board((from_, None))
 
         return True
 
-    def update_board(self, updated_piece, visible):
+    def update_board(self, updated_piece):
         """
         :param updated_piece: tuple (piece_board_position, piece_object)
-        :param visible: boolean, True if the piece is visible to the enemy team, False if hidden
-        :return: void
         """
         pos = updated_piece[0]
         piece = updated_piece[1]
-        if visible:
-            self.agents[0].updateBoard(updated_piece)
-            self.agents[1].updateBoard(updated_piece)
-        else:
-            if piece is not None:
-                if self.agents[0].omniscient:
-                    if self.agents[1].omniscient:
-                        # 0 and 1 is omniscient --> both know the piece
-                        self.agents[0].updateBoard(updated_piece)
-                        self.agents[1].updateBoard(updated_piece)
-                    else:
-                        # 0 is omniscient, but 1 isnt
-                        if piece.team == 0:
-                            # piece belongs to team 0, so 1 doesnt know it
-                            self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                            self.agents[0].updateBoard(updated_piece)
-                        else:
-                            # piece belongs to team 1, but both know the piece, as 0 is omniscient
-                            self.agents[0].updateBoard(updated_piece)
-                            self.agents[1].updateBoard(updated_piece)
-                elif self.agents[1].omniscient:
-                    if self.agents[0].omniscient:
-                        # 0 and 1 is omniscient --> both know the piece
-                        self.agents[0].updateBoard(updated_piece)
-                        self.agents[1].updateBoard(updated_piece)
-                    else:
-                        if piece.team == 1:
-                            # piece belongs to team 1, so 0 doesnt know it, because not omnsicient
-                            self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                            self.agents[1].updateBoard(updated_piece)
-                        else:
-                            # # piece belongs to team 0, but both know the piece, as 1 is omniscient
-                            self.agents[0].updateBoard(updated_piece)
-                            self.agents[1].updateBoard(updated_piece)
-                else:
-                    # none of the agents are omniscient, update by team dependency
-                    if piece.team == 0:
-                        self.agents[0].updateBoard(updated_piece)
-                        self.agents[1].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                    else:
-                        self.agents[0].updateBoard((pos, pieces.unknownPiece(piece.team)))
-                        self.agents[1].updateBoard(updated_piece)
-            else:
-                self.agents[0].updateBoard(updated_piece)
-                self.agents[1].updateBoard(updated_piece)
+        if piece is not None:
+            piece.change_position(pos)
         self.board[pos] = piece
+        return
 
     def fight(self, piece_att, piece_def):
         """
@@ -180,153 +149,13 @@ class Game:
             self.agents[1].deadPieces[piece_att.team][piece_att.type] += 1
         return outcome
 
-    def is_legal_move(self, move_to_check):
-        """
-
-        :param move_to_check: array/tuple with the coordinates of the position from and to
-        :return: True if warrants a legal move, False if not
-        """
-        pos_before = move_to_check[0]
-        pos_after = move_to_check[1]
-        if self.board[pos_before] is None:
-            return False  # no piece on field to move
-        if not self.board[pos_after] is None:
-            if self.board[pos_after].team == self.board[pos_before].team:
-                return False  # cant fight own pieces
-            if self.board[pos_after].type == 99:
-                return False  # cant fight obstacles
-        move_dist = spatial.distance.cityblock(pos_before, pos_after)
-        if move_dist > self.board[pos_before].move_radius:
-            return False  # move too far for selected piece
-        if move_dist > 1:
-            if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
-                return False  # no diagonal moves allowed
-            else:
-                if pos_after[0] == pos_before[0]:
-                    dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
-                    for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
-                        if self.board[(pos_before[0], k)] is not None:
-                            return False  # pieces in the way of the move
-                else:
-                    dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
-                    for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
-                        if self.board[(k, pos_before[1])] is not None:
-                            return False  # pieces in the way of the move
-        return True
-
-def get_poss_actions(board, player):
-    """
-    :param board: Fully set playboard! This function only works after enemy pieces have been assigned before!
-    :return: list of possible actions for opponent
-    """
-    actions_possible = []
-    for pos, piece in np.ndenumerate(board):
-        if piece is not None:  # board positions has a piece on it
-            if not piece.type == 99:  # that piece is not an obstacle
-                if piece.team == player:
-                    # check which moves are possible
-                    if piece.can_move:
-                        for pos_to in ((i, j) for i in range(5) for j in range(5)):
-                            move = (pos, pos_to)
-                            if self.is_legal_move(move):
-                                actions_possible.append(move)
-    return actions_possible
-
+    def is_legal_move(self, move_to_check):  # TODO: redirect all references to this function to helpers
+        return helpers.is_legal_move(self.board, move_to_check)
 
     def goal_test(self):
-        turn = self.move_count % 2
-        if not self.get_poss_actions(self.board, turn):  # if list of possible actions empty
-            return True
         if self.deadPieces[0][0] == 1 or self.deadPieces[1][0] == 1:
             # print('flag captured')
             return True
         else:
             return False
-
-    def show(self):
-        fig = plt.figure(1)
-        print_board(self.board)
-        if self.move_count % 2 == 0:
-            player = "Red"
-        else:
-            player = "Blue"
-        plt.title("{}'s turn ".format(player))
-        fig.canvas.draw()  # updates plot
-
-
-def print_board(board):
-    """
-    Plots a board object in a pyplot figure
-    """
-    board = copy.deepcopy(board)  # ensure to not accidentally change input
-    plt.interactive(False)  # make plot stay? true: close plot, false: keep plot
-    plt.figure(1)
-    plt.clf()
-    layout = np.add.outer(range(5), range(5)) % 2  # chess-pattern board
-    plt.imshow(layout, cmap=plt.cm.magma, alpha=.5, interpolation='nearest')  # plot board
-    for pos in ((i, j) for i in range(5) for j in range(5)):  # go through all board positions
-        piece = board[pos]  # select piece on respective board position
-        # decide which marker type to use for piece
-        if piece is not None:
-            if piece.team == 1:
-                color = 'b'  # blue: player 1
-            elif piece.team == 0:
-                color = 'r'  # red: player 0
-            else:
-                color = 'k'  # black: obstacle
-            if piece.can_move:
-                form = 'o'  # circle: for movable
-            else:
-                form = 's'  # square: either immovable or unknown piece
-            if piece.type == 0:
-                form = 'X'  # cross: flag
-            piece_marker = ''.join(('-', color, form))
-            # transpose pos[0], pos[1] to turn board
-            plt.plot(pos[1], pos[0], piece_marker, markersize=37)  # plot markers for pieces
-            plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
-    plt.gca().invert_yaxis()  # own pieces down, others up
-    plt.show(block=False)
-
-
-
-
-good_setup = np.empty((2,5), dtype=int)
-good_setup[0,0] = 3
-good_setup[0,1] = 11
-good_setup[0,2] = 0
-good_setup[0,3] = 11
-good_setup[0,4] = 1
-good_setup[1,0] = 2
-good_setup[1,1] = 2
-good_setup[1,2] = 10
-good_setup[1,3] = 2
-good_setup[1,4] = 3
-good_setup = np.flip(good_setup, 0)
-
-good_setup2 = np.empty((2,5), dtype=int)
-good_setup2[0,0] = 3
-good_setup2[0,1] = 11
-good_setup2[0,2] = 0
-good_setup2[0,3] = 11
-good_setup2[0,4] = 1
-good_setup2[1,0] = 2
-good_setup2[1,1] = 2
-good_setup2[1,2] = 10
-good_setup2[1,3] = 2
-good_setup2[1,4] = 3
-#good_setup2 = np.flip(good_setup2, 0)
-
-
-# please no more testing in game.py file!
-# setup_agent0 = np.empty((2,5), dtype=object)
-# setup_agent1 = np.empty((2,5), dtype=object)
-# for pos in ((i,j) for i in range(2) for j in range(5)):
-#     setup_agent0[pos] = pieces.Piece(good_setup[pos], 0)
-#     setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1)
-#setup0 = np.flip(setup_agent0, 0)
-# agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0, setup_agent1)
-# agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1, setup_agent0)
-# game = Game(agent_0, agent_1)
-# result = game.run_game()
-# print(result)
 

@@ -1,5 +1,6 @@
 import game
 import agent
+import pieces
 from matplotlib import pyplot as plt
 import numpy as np
 
@@ -57,6 +58,44 @@ def simulation():
 
     print('\nAgent 0 (Blue) wins {} out of {} games'.format(blue_won, num_simulations))
 
+good_setup = np.empty((2, 5), dtype=int)
+good_setup[0, 0] = 3
+good_setup[0, 1] = 11
+good_setup[0, 2] = 0
+good_setup[0, 3] = 11
+good_setup[0, 4] = 1
+good_setup[1, 0] = 2
+good_setup[1, 1] = 2
+good_setup[1, 2] = 10
+good_setup[1, 3] = 2
+good_setup[1, 4] = 3
+good_setup = np.flip(good_setup, 0)
+
+good_setup2 = np.empty((2, 5), dtype=int)
+good_setup2[0, 0] = 3
+good_setup2[0, 1] = 11
+good_setup2[0, 2] = 0
+good_setup2[0, 3] = 11
+good_setup2[0, 4] = 1
+good_setup2[1, 0] = 2
+good_setup2[1, 1] = 2
+good_setup2[1, 2] = 10
+good_setup2[1, 3] = 2
+good_setup2[1, 4] = 3
+#good_setup2 = np.flip(good_setup2, 0)
+
+setup_agent0 = np.empty((2, 5), dtype=object)
+setup_agent1 = np.empty((2, 5), dtype=object)
+for pos in ((i, j) for i in range(2) for j in range(5)):
+    setup_agent0[pos] = pieces.Piece(good_setup[pos], 0, (4-pos[0], 4-pos[1]))
+    setup_agent1[pos] = pieces.Piece(good_setup2[pos], 1, pos)
+#setup0 = np.flip(setup_agent0, 0)
+agent_0 = agent.ExpectiSmart(0, setup_agent0)
+agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1)
+game = game.Game(agent_0, agent_1)
+result = game.run_game()
+print(result)
 
 # watch_game(agent0=agent.RandomAgent(team=0), agent1=agent.RandomAgent(team=1), step_time=0.01)
 # simulation()
+

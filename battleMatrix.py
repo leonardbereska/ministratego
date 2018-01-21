@@ -1,3 +1,5 @@
+import numpy as np
+
 def get_battle_matrix():
     battleMatrix = dict()
     battleMatrix[1, 11] = -1
@@ -25,3 +27,30 @@ def get_battle_matrix():
     battleMatrix[10, 3] = 1
     battleMatrix[10, 10] = 0
     return battleMatrix
+
+def get_smart_setups():
+    setups = []
+    good_setup = np.empty((2, 5), dtype=int)
+    good_setup[0, 0] = 3
+    good_setup[0, 1] = 11
+    good_setup[0, 2] = 0
+    good_setup[0, 3] = 11
+    good_setup[0, 4] = 1
+    good_setup[1, 0] = 2
+    good_setup[1, 1] = 2
+    good_setup[1, 2] = 10
+    good_setup[1, 3] = 2
+    good_setup[1, 4] = 3
+    setups.append(good_setup)
+
+    good_setup = np.empty((2, 5), dtype=int)
+    good_setup[0, 0] = 0
+    good_setup[0, 1] = 11
+    good_setup[0, 2] = 0
+    good_setup[0, 3] = 11
+    good_setup[0, 4] = 1
+    good_setup[1, 0] = 2
+    good_setup[1, 1] = 2
+    good_setup[1, 2] = 10
+    good_setup[1, 3] = 2
+    good_setup[1, 4] = 3
