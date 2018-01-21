@@ -95,9 +95,6 @@ class Game:
             return False  # illegal move chosen
         self.board[from_].has_moved = True
         if not self.board[to_] is None:  # Target field is not empty, then has to fight
-            self.board[to_].hidden = False
-            self.board[from_].hidden = False
-
             fight_outcome = self.fight(self.board[from_], self.board[to_])
             if fight_outcome is None:
                 print('Warning, cant let pieces of same team fight!')
@@ -161,5 +158,4 @@ class Game:
             return True
         else:
             return False
-
 

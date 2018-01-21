@@ -145,7 +145,7 @@ class Env:
                 self.reward += self.reward_step
 
     def action_to_move(self, action, team):
-        i = int(action / 4)  # which piece: 0-3 is first 4-7 second etc.
+        i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
         piece = self.living_pieces[team][i]
         piece_pos = self.find_piece(piece)  # where is the piece
         if piece_pos is None:

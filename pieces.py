@@ -40,22 +40,17 @@ class Piece:
     # CAVEAT: Turning this specific form into __repr__ fucks up numpy arrays that hold objects of class pieces
     #         thus we either need to read further into __repr__ in combo with numpy or leave it as __str__ atm
     def __str__(self):  # for printing pieces on the board return type of piece
-        # if self.hidden:
-        #  this fucks up my visualization,
-        # can we do that some other way?
-        # maybe as a choice in print_board?
-        #     return "?"
-        # else:
-        if self.type == 0:
-            return "f"
-        if self.type == 11:
-            return "b"
-        if self.type == 88:
+        if self.hidden:
             return "?"
-        if self.type == 99:
-            return "X"
         else:
-            return str(self.type)
+            if self.type == 0:
+                return "f"
+            if self.type == 11:
+                return "b"
+            if self.type == 99:
+                return "X"
+            else:
+                return str(self.type)
 
     def change_position(self, new_pos):
         #self.positions_history.append(new_pos)

@@ -69,7 +69,8 @@ def print_board(board):
             piece_marker = ''.join(('-', color, form))
             plt.plot(pos[1], pos[0], piece_marker, markersize=37)  # plot markers for pieces
             plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
-    plt.gca().invert_yaxis()  # own pieces down, others up
+    #plt.gca().invert_yaxis()  # own pieces down, others up
+    plt.pause(0.01)
     plt.show(block=False)
 
 

@@ -212,7 +212,7 @@ memory = ReplayMemory(1000)
 # env.show()
 # run_env(env, user_test=True)
 
-train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/finder.pkl')
+#train(env, num_episodes)
+#torch.save(model.state_dict(), './saved_models/finder.pkl')
 run_env(env, False)
 

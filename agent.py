@@ -360,42 +360,6 @@ class ExpectiSmart(Agent):
         else:
             return False
 
-    def assign_pieces_by_highest_probability(self, board):
-        # get all enemy pieces
-        pieces_left_to_assign = []
-        overall_counter = Counter([0,1,2,2,2,3,3,10,11,11])
-
-        # now get all pieces of the enemy on the board
-        enemy_pieces = [(pos, board[pos]) for (pos, piece) in np.ndenumerate(board)
-                        if piece is not None and piece.team == self.other_team]
-        # all the unknowns
-        enemy_pieces_known = [piece.type for (pos, piece) in enemy_pieces if not piece.hidden]
-        enemy_pieces_unknown = [(pos, piece) for (pos, piece) in enemy_pieces if piece.hidden]
-
-        # remove all dead enemy pieces from the list of pieces that need to be assigned to the unknown on the field
-        # then append the leftover pieces to pieces_left_to_assign
-        for piece_type, count in overall_counter.items():
-            # this many pieces of piece_type need to be asssigned
-            nr_remaining = count - self.deadPieces[self.other_team][piece_type]
-            if nr_remaining > 0:  # if equal 0, then all pieces of this type already dead
-                pieces_left_to_assign.extend([piece_type]*nr_remaining)
-        for piece in enemy_pieces_known:
-            pieces_left_to_assign.remove(piece)
-
-        # find the piece on the board with the highest likelihood of being the current piece in the loop
-        for piece_type in pieces_left_to_assign:
-            likeliest_current_prob = 0
-            current_assignment = None
-            chosen_piece = None
-            for pos, enemy_piece in enemy_pieces_unknown:
-                if enemy_piece.piece_probabilites[piece_type] > likeliest_current_prob:
-                    likeliest_current_prob = enemy_piece.piece_probabilites[piece_type]
-                    current_assignment = pos
-                    chosen_piece = enemy_piece
-            enemy_pieces_unknown.remove((current_assignment, chosen_piece))
-            board[current_assignment] = pieces.Piece(piece_type, self.other_team)
-        return board
-
     def update_prob_by_fight(self, enemy_piece):
         for piece in self.ordered_opp_pieces:
             if piece.unique_identifier == enemy_piece.unique_identifier:
@@ -415,7 +379,6 @@ class ExpectiSmart(Agent):
             self.chances_array[np.arange(10) != 7, idx_of_piece] = 0
         elif type == 11:
             self.chances_array[np.delete(np.arange(10), [8, 9]), idx_of_piece] = 0
-        self.update_chances_array()
 
     def update_prob_by_move(self, move, moving_piece):
         for piece in self.ordered_opp_pieces:
@@ -431,7 +394,6 @@ class ExpectiSmart(Agent):
         else:
             self.chances_array[0, idx_of_piece] = 0
             self.chances_array[8:10, idx_of_piece] = 0
-        self.update_chances_array()
 
     def draw_consistent_enemy_setup(self, board):
         enemy_pieces = copy.deepcopy(self.ordered_opp_pieces)
@@ -481,55 +443,6 @@ class ExpectiSmart(Agent):
             piece.hidden = False
             board[piece.position] = piece
         return board
-
-    # def draw_setup(self, board):
-    #     if board is None:
-    #         board = self.board
-    #     chances_array = copy.deepcopy(self.chances_array)
-    #     pieces_left_to_assign = []
-    #     overall_counter = Counter([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
-    #
-    #     # now get all pieces of the enemy on the board
-    #     enemy_pieces = [piece for (pos, piece) in np.ndenumerate(board)
-    #                     if piece is not None and piece.team == self.other_team]
-    #     # all the unknowns
-    #     enemy_pieces_known = [piece for (pos, piece) in enemy_pieces if not piece.hidden]
-    #     enemy_pieces_unknown = [piece for (pos, piece) in enemy_pieces if piece.hidden]
-    #
-    #     # remove all dead enemy pieces from the list of pieces that need to be assigned to the unknown on the field
-    #     # then append the leftover pieces to pieces_left_to_assign
-    #     for piece_type, count in overall_counter.items():
-    #         # this many pieces of piece_type need to be asssigned
-    #         nr_remaining = count - self.deadPieces[self.other_team][piece_type]
-    #         if nr_remaining > 0:  # if equal 0, then all pieces of this type already dead
-    #             pieces_left_to_assign.extend([piece_type] * nr_remaining)
-    #     for piece in enemy_pieces_known:
-    #         pieces_left_to_assign.remove(piece.type)
-    #
-    #     # draw flag first
-    #     flag_candidates_idx = np.where(self.chances_array[0, 0:10] == 1)[0]
-    #     flag_candidates = np.array(self.ordered_opp_pieces)[flag_candidates_idx]
-    #     flag = None
-    #     for piece in np.nditer(flag_candidates):
-    #         if piece.position[0] in [0, 4]:  # in 0 if enemy is team 0, in 4 if enemy is team 1
-    #             neighbours = [neigh_piece for pos, neigh_piece in np.nditer(self.ordered_opp_pieces)
-    #                           if spatial.distance.cityblock(neigh_piece.position, piece.position) == 1]
-    #             if len(neighbours) >= 2:
-    #                 flag = piece
-    #                 break
-    #     if flag is None:
-    #         flag = np.random.choice(flag_candidates)
-    #     pieces_left_to_assign.remove(0)
-    #     already_assigned_indices = [self.ordered_opp_pieces.index(flag)]
-    #     for rem_piece_type in pieces_left_to_assign:
-    #         if rem_piece_type == 1:
-    #             ones_candidates_idx = np.where(chances_array[1, 0:9] == 1)[0]
-    #             ones_candidates = np.array(self.ordered_opp_pieces)[np.delete(ones_candidates_idx,
-    #                                                                           already_assigned_indices)]
-    #             for i in range(10):
-
-    def update_chances_array(self):
-        pass
 
     def update_chances_array_incomplete(self):
         # As x needs to be a vector, not a matrix, i associate the entries of the self.chances_array matrix
