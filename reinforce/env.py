@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import agent
 import numpy as np
 import copy as cp
 import random
@@ -15,34 +16,37 @@ class Env:
     Environment superclass
     """
 
-    def __init__(self, board_size=(5, 5)):
+    def __init__(self, agent0, agent1, board_size=(5, 5)):
 
+        self.agents = (agent0, agent1)
+        setup0, setup1 = agent0.decide_setup(self.types_available), agent1.decide_setup(self.types_available)
+        agent0.install_opp_setup(cp.deepcopy(setup1))
+        agent1.install_opp_setup(cp.deepcopy(setup0))
         self.board = np.empty(board_size, dtype=object)
         self.board_positions = [(i, j) for i in range(board_size[0]) for j in range(board_size[1])]
         positions = cp.deepcopy(self.board_positions)
 
         # place obstacles
         obstacle_pos = self.decide_obstacles()
-        for o in obstacle_pos:
-            positions.remove(o)  # remove obstacle positions from possible piece positions
-            self.board[o] = pieces.Piece(99, 99, None)  # place obstacles
+        for o_pos in obstacle_pos:
+            positions.remove(o_pos)  # remove obstacle positions from possible piece positions
+            self.board[o_pos] = pieces.Piece(99, 99, o_pos)  # place obstacles
 
         self.living_pieces = [[], []]  # team 0,  team 1
         self.dead_pieces = [[], []]
         known_pieces, random_pieces = self.decide_pieces()
 
         # place known pieces
-        for (p, pos) in known_pieces:
-            self.board[pos] = p
-            positions.remove(pos)
-            self.living_pieces[p.team].append(p)
+        for piece in known_pieces:
+            self.board[piece.position] = piece
+            positions.remove(piece.position)
+            self.living_pieces[piece.team].append(piece)
         # place random pieces
         c = list(np.random.choice(len(positions), len(random_pieces), replace=False))
         for p in random_pieces:
             self.board[positions[c.pop()]] = p
             self.living_pieces[p.team].append(p)
 
-        self.previous_pos = self.find_piece(self.living_pieces[0][0])
 
         self.fight = battleMatrix.get_battle_matrix()
 
@@ -67,7 +71,7 @@ class Env:
         self.reward_iter = 0  # no iteration
 
     def reset(self):  # resetting means freshly initializing
-        self.__init__()
+        self.__init__(agent0=self.agents[0], agent1=self.agents[1])
 
     def decide_pieces(self):
         raise NotImplementedError
@@ -84,8 +88,8 @@ class Env:
         self.steps += 1  # illegal move as step
 
         agent_move = self.action_to_move(action, team=0)
-        if agent_move[1] == self.previous_pos:
-            self.reward = self.reward_iter
+        #if agent_move[1] == self.previous_pos:
+         #   self.reward = self.reward_iter
 
         if not helpers.is_legal_move(self.board, agent_move):
             self.reward += self.reward_illegal
@@ -94,7 +98,7 @@ class Env:
             done = self.goal_test()
             return self.reward, done  # environment does not change, agent should better choose only legal moves
         self.do_move(agent_move, team=0)
-        self.previous_pos = agent_move[0]
+        #self.previous_pos = agent_move[0]
 
         if self.opp_can_move:
             opp_move = self.random_move(team=1)
@@ -147,7 +151,7 @@ class Env:
     def action_to_move(self, action, team):
         i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
         piece = self.living_pieces[team][i]
-        piece_pos = self.find_piece(piece)  # where is the piece
+        piece_pos = self.piece.position # where is the piece
         if piece_pos is None:
             move = (None, None)  # return illegal move
             return move
@@ -159,12 +163,6 @@ class Env:
         pos_to = tuple(pos_to)
         move = (piece_pos, pos_to)
         return move
-
-    def find_piece(self, piece):
-        for pos in self.board_positions:
-            if self.board[pos] == piece:
-                return pos
-        print("Error: Piece not found!")
 
     def goal_test(self):
         for p in self.dead_pieces[1]:
@@ -274,6 +272,9 @@ class Maze(Env):
         self.reward_win = 10
         self.reward_iter = -1
         self.reward_loss = -1
+
+        # TODO: Deprecate this
+        self.previous_pos = self.living_pieces[0][0]
 
     def decide_pieces(self):
         known_place = [(pieces.Piece(0, 1, None), (4, 4))]

@@ -35,7 +35,7 @@ class Game:
         self.board[2, 2] = obstacle  # set obstacle
         for pos, piece in np.ndenumerate(self.board):
             if piece is not None:
-                piece.hidden = False  # shouldn't it be True?
+                piece.hidden = False
 
         self.move_count = 1  # agent 1 starts
 
