@@ -2,6 +2,9 @@ import numpy as np
 from scipy import spatial
 from matplotlib import pyplot as plt
 import copy
+from collections import namedtuple
+import random
+import torch
 
 
 def is_legal_move(board, move_to_check):

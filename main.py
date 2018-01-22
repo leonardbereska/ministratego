@@ -91,7 +91,7 @@ rd_setup[1, 0] = 11
 rd_setup[2, 3] = 10
 rd_setup[2, 1] = 10
 rd_setup[1, 2] = 2
-rd_setup[0, 4] = 1
+rd_setup[0, 4] = 10
 
 
 
@@ -106,7 +106,7 @@ for pos, type in np.ndenumerate(rd_setup):
     if not type != type:  # check if type is NaN
         setup_agent1.append(pieces.Piece(int(type), 1, pos))
 agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0)
-agent_1 = agent.ExpectiSmart(1, np.array(setup_agent1))
+agent_1 = agent.OmniscientExpectiSmart(1, np.array(setup_agent1))
 game = game.Game(agent_0, agent_1)
 result = game.run_game()
 print(result)
