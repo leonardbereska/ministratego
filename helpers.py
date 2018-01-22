@@ -54,6 +54,8 @@ def print_board(board):
         piece = board[pos]  # select piece on respective board position
         # decide which marker type to use for piece
         if piece is not None:
+            piece.hidden = False  # not the best but ensures everything is printed without "?"
+
             if piece.team == 1:
                 color = 'b'  # blue: player 1
             elif piece.team == 0:
@@ -90,3 +92,47 @@ def get_poss_actions(board, team):
                             if is_legal_move(board, move):
                                 actions_possible.append(move)
     return actions_possible
+
+
+def plot_scores(episode_scores):
+    global N_SMOOTH
+    plt.figure(2)
+    plt.clf()
+    scores_t = torch.FloatTensor(episode_scores)
+    plt.xlabel('Episode')
+    plt.ylabel('Score')
+    average = [0]
+    if len(scores_t) >= N_SMOOTH:
+        means = scores_t.unfold(0, N_SMOOTH, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(N_SMOOTH-1), means))
+        average = means.numpy()
+        plt.plot(average)
+    plt.title('Average Score over last {} Episodes: {}'.format(N_SMOOTH, int(average[-1]*10)/10))
+    plt.pause(0.001)  # pause a bit so that plots are updated
+
+
+class ReplayMemory(object):
+    """
+    Stores a state-transition (s, a, s', r) quadruple
+    for approximating Q-values with q(s, a) <- r + gamma * max_a' q(s', a') updates
+    """
+
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.memory = []
+        self.position = 0
+
+    def __len__(self):
+        return len(self.memory)
+
+    def push(self, *args):
+        """Saves a transition."""
+        if len(self.memory) < self.capacity:
+            self.memory.append(None)
+        self.memory[self.position] = Transition(*args)
+        self.position = (self.position + 1) % self.capacity
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
