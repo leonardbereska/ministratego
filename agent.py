@@ -159,8 +159,8 @@ class RandomAgent(Agent):
     """
     Agent who chooses his initial setup and actions at random
     """
-    def __init__(self, team):
-        super(RandomAgent, self).__init__(team=team)
+    def __init__(self, team, setup):
+        super(RandomAgent, self).__init__(team=team, setup=setup)
 
     def decide_move(self):
         actions = helpers.get_poss_actions(self.board, self.team)

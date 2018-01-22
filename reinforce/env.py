@@ -1,5 +1,4 @@
 from matplotlib import pyplot as plt
-import agent
 import numpy as np
 import copy as cp
 import random
@@ -462,6 +461,8 @@ for pos in ((i, j) for i in range(2) for j in range(5)):
 for pos, type in np.ndenumerate(rd_setup):
     if not type != type:  # check if type is NaN
         setup_agent1.append(pieces.Piece(int(type), 1, pos))
-env = MiniStratego(agent.OmniscientExpectiSmart(0, setup_agent0), agent.RandomAgent(1, setup_agent1))
+agent0 = agent.OmniscientExpectiSmart(0, setup_agent0)
+agent1 = agent.RandomAgent(1, setup_agent1)
+env = MiniStratego(agent0, agent1)
 while True:
     watch_game(env, 0.001)
