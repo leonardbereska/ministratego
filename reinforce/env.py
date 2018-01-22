@@ -4,11 +4,12 @@ import numpy as np
 import copy as cp
 import random
 import torch
+
 import pieces
 import helpers
 import battleMatrix
 import agent
-import six
+# import train
 
 
 class Env:
@@ -41,8 +42,10 @@ class Env:
         # place random position pieces
         c = list(np.random.choice(len(positions), len(random_pieces), replace=False))
         for p in random_pieces:
-            self.board[positions[c.pop()]] = p
+            pos = c.pop()
+            self.board[positions[pos]] = p
             self.living_pieces[p.team].append(p)
+            p.position = pos
 
         # give agents board
         self.agents = (agent0, agent1)
@@ -61,6 +64,7 @@ class Env:
         self.steps = 0
         self.death_thresh = None
         self.illegal_moves = 0
+        self.Train = True  # if true can insert action in env_step
 
         # rewards (to be overridden by subclass environment)
         self.reward_illegal = 0  # punish illegal moves
@@ -84,19 +88,19 @@ class Env:
     def get_state(self):
         raise NotImplementedError
 
-    def step(self):
+    def step(self, move):
         self.reward = 0
         self.steps += 1  # illegal move as step
 
-        # agent_move = self.action_to_move(action, team=0)
-
-        # are actions possible? -> if not: lose
         if not helpers.get_poss_actions(self.board, team=0):
             self.reward += self.reward_loss
             self.score += self.reward
             return self.reward, True
-        # state = self.get_state()
-        agent_move = self.agents[0].decide_move()
+        state = self.get_state()
+        if self.Train:
+            agent_move = move
+        else:
+            agent_move = self.agents[0].decide_move(state)
         # if not legal -> not change env, receive reward_illegal
         if not helpers.is_legal_move(self.board, agent_move):
             self.reward += self.reward_illegal
@@ -118,6 +122,21 @@ class Env:
         done = self.goal_test()
         self.score += self.reward
         return self.reward, done
+
+    def action_to_move(self, action, team):
+        i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
+        piece = self.living_pieces[team][i]  # TODO connect to environment
+        piece_pos = piece.position  # where is the piece
+        if piece_pos is None:
+            move = (None, None)  # return illegal move
+            return move
+        action = action % 4  # 0-3 as direction
+        moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
+        direction = moves[action]  # action: 0-3
+        pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
+        pos_to = tuple(pos_to)
+        move = (piece_pos, pos_to)
+        return move
 
     def do_move(self, move, team):
         if move is None:  # no move chosen (network)?
@@ -198,7 +217,7 @@ class Env:
         fig.canvas.draw()  # updates plot
 
 
-########################################################
+################################################################################################################
 
 class FindFlag(Env):
     def __init__(self, agent0, agent1):
@@ -394,22 +413,6 @@ class MiniStratego(Env):
                 known_place.append(pieces.Piece(setup[i], team, setup_pos[i]))
         random_place = []  # random_place is across whole board
         return known_place, random_place
-# max 7 channels
-# own: movable,
-#      immovable
-# opp: known, movable
-#             bomb
-#      unknown, moved
-#               not_moved
-# obstacles
-
-# own
-# opp
-
-# obstacles yes/no?
-# own movable/immovable?
-# opp movable/immovable?
-# opp known/unknown?
 
 
 def watch_game(env, step_time):
@@ -433,6 +436,23 @@ def watch_game(env, step_time):
     plt.show(block=True)  # keep plot
 
 
-env = MiniStratego(agent.OmniscientExpectiSmart(0), agent.RandomAgent(1))
-while True:
-    watch_game(env, 0.001)
+# test = MiniStratego(agent.OmniscientExpectiSmart(0), agent.RandomAgent(1))
+# while True:
+#     watch_game(test, 0.001)
+
+
+# State representation?
+# max 7 channels
+# own: movable,
+#      immovable
+# opp: known, movable
+#             bomb
+#      unknown, moved
+#               not_moved
+# obstacles
+# own
+# opp
+# obstacles yes/no?
+# own movable/immovable?
+# opp movable/immovable?
+# opp known/unknown?
