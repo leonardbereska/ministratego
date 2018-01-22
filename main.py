@@ -58,6 +58,7 @@ def simulation():
 
     print('\nAgent 0 (Blue) wins {} out of {} games'.format(blue_won, num_simulations))
 
+
 good_setup = np.empty((2, 5), dtype=int)
 good_setup[0, 0] = 3
 good_setup[0, 1] = 11

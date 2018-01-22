@@ -54,3 +54,4 @@ def get_smart_setups():
     good_setup[1, 2] = 10
     good_setup[1, 3] = 2
     good_setup[1, 4] = 3
+
