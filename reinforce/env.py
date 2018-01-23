@@ -1,13 +1,15 @@
 from matplotlib import pyplot as plt
+import agent
 import numpy as np
 import copy as cp
 import random
 import torch
+
 import pieces
 import helpers
 import battleMatrix
-import agent
-import six
+import agents
+# import train
 
 
 class Env:
@@ -16,6 +18,8 @@ class Env:
     """
 
     def __init__(self, agent0, agent1, board_size=(5, 5)):
+        self.Train = True  # if true can insert action in env_step
+
         # initialize board
         self.board = np.empty(board_size, dtype=object)
         self.board_positions = [(i, j) for i in range(board_size[0]) for j in range(board_size[1])]
@@ -40,13 +44,25 @@ class Env:
         # place random position pieces
         c = list(np.random.choice(len(positions), len(random_pieces), replace=False))
         for p in random_pieces:
-            self.board[positions[c.pop()]] = p
+            i_pos = c.pop()
+            p.position = positions[i_pos]
+            self.board[p.position] = p
             self.living_pieces[p.team].append(p)
 
-        # give agents board
-        self.agents = (agent0, agent1)
+        # give agents board and actors
         agent0.board = cp.deepcopy(self.board)
         agent1.board = cp.deepcopy(self.board)
+        self.agents = (agent0, agent1)
+        for team in (0, 1):
+            actors = []
+            for pos in self.board_positions:
+                p = self.board[pos]
+                if p is not None:
+                    if p.team == team:
+                        if p.can_move:
+                            actors.append(p)
+            actors = sorted(actors, key=lambda actor: actor.type)  # train for unique actor sequence
+            self.agents[team].action_represent(actors)
 
         self.battleMatrix = battleMatrix.get_battle_matrix()
 
@@ -80,26 +96,23 @@ class Env:
         obstacle_pos = [(2, 2)]
         return obstacle_pos
 
-    def get_state(self):
-        raise NotImplementedError
-
-    def step(self):
+    def step(self, move):
         self.reward = 0
         self.steps += 1  # illegal move as step
-
-        # agent_move = self.action_to_move(action, team=0)
-
-        # are actions possible? -> if not: lose
-        if not helpers.get_poss_actions(self.board, team=0):
+        if not helpers.get_poss_moves(self.board, team=0):
             self.reward += self.reward_loss
             self.score += self.reward
             return self.reward, True
-        # state = self.get_state()
-        agent_move = self.agents[0].decide_move()
+        if self.Train:
+            agent_move = move
+        else:
+            self.agents[0].living_pieces = self.living_pieces  # give agents pieces
+            agent_move = self.agents[0].decide_move()
         # if not legal -> not change env, receive reward_illegal
         if not helpers.is_legal_move(self.board, agent_move):
             self.reward += self.reward_illegal
             self.illegal_moves += 1
+            print("illegal")
             self.score += self.reward
             done = self.goal_test()
             return self.reward, done  # environment does not change, agent should better choose only legal moves
@@ -107,16 +120,32 @@ class Env:
 
         # opponents move
         if self.opp_can_move:  # only if opponent is playing, killing his pieces wins
-            if not helpers.get_poss_actions(self.board, team=1):
+            if not helpers.get_poss_moves(self.board, team=1):
                 self.reward += self.reward_win
                 self.score = self.reward
                 return self.reward, True
+            self.agents[1].living_pieces = self.living_pieces  # give agents pieces
             opp_move = self.agents[1].decide_move()
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 
         done = self.goal_test()
         self.score += self.reward
         return self.reward, done
+
+    def action_to_move(self, action, team):
+        i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
+        piece = self.living_pieces[team][i]  # TODO connect to environment
+        piece_pos = piece.position  # where is the piece
+        if piece_pos is None:
+            move = (None, None)  # return illegal move
+            return move
+        action = action % 4  # 0-3 as direction
+        moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
+        direction = moves[action]  # action: 0-3
+        pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
+        pos_to = tuple(pos_to)
+        move = (piece_pos, pos_to)
+        return move
 
     def do_move(self, move, team):
         if move is None:  # no move chosen (network)?
@@ -197,15 +226,15 @@ class Env:
         fig.canvas.draw()  # updates plot
 
 
-########################################################
+################################################################################################################
 
 class FindFlag(Env):
     def __init__(self, agent0, agent1):
         super(FindFlag, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.01
+        self.reward_step = -0.05
         self.reward_illegal = -1
         self.reward_win = 1
-        self.death_thresh = -100
+        self.death_thresh = -1
 
     def decide_pieces(self):
         known_place = []
@@ -216,38 +245,6 @@ class FindFlag(Env):
     #     return []
 
     def get_state(self):
-        state_dim = 2
-        board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
-        for pos in self.board_positions:
-            p = self.board[pos]
-            if p is not None:  # piece on this field
-                if p.team == 0:  # agents team
-                    board_state[tuple([0] + list(pos))] = p.type  # represent type
-                elif p.team == 1:  # opponents team
-                    board_state[tuple([1] + list(pos))] = 1  # flag
-                    # else:
-                    #     board_state[tuple([2] + list(pos))] = 1  # obstacle
-
-        board_state = torch.FloatTensor(board_state)
-        board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
-        return board_state
-
-
-class Escape(Env):
-    def __init__(self, agent0, agent1):
-        super(Escape, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_illegal = -1
-        self.reward_win = 100
-        self.reward_loss = -10
-        self.reward_iter = -1
-
-    def decide_pieces(self):
-        known_place = []
-        random_place = [pieces.Piece(3, 0, None), pieces.Piece(10, 1, None),  # pieces.Piece(10, 1, None),
-                        pieces.Piece(0, 1, None)]
-        return known_place, random_place
-
-    def get_state(self):
         state_dim = 3
         board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
         for pos in self.board_positions:
@@ -256,12 +253,9 @@ class Escape(Env):
                 if p.team == 0:  # agents team
                     board_state[tuple([0] + list(pos))] = p.type  # represent type
                 elif p.team == 1:  # opponents team
-                    if p.type == 0:
-                        board_state[tuple([1] + list(pos))] = 1  # flag
-                    else:
-                        board_state[tuple([2] + list(pos))] = 1  # opp piece
-                        # else:
-                        #     board_state[tuple([3] + list(pos))] = 1  # obstacle
+                    board_state[tuple([1] + list(pos))] = 1  # flag
+                else:
+                    board_state[tuple([2] + list(pos))] = 1  # obstacle
 
         board_state = torch.FloatTensor(board_state)
         board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
@@ -288,71 +282,24 @@ class Maze(Env):
     def decide_obstacles(self):
         return [(3, 1), (3, 2), (3, 3), (3, 4), (1, 0), (1, 1), (1, 2), (1, 3)]
 
-    def get_state(self):
-        state_dim = 3
-        board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
-        for pos in self.board_positions:
-            p = self.board[pos]
-            if p is not None:  # piece on this field
-                if p.team == 0:  # agents team
-                    board_state[tuple([0] + list(pos))] = 1  # represent type
-                elif p.team == 1:
-                    board_state[tuple([1] + list(pos))] = 1  # flag
-                else:
-                    board_state[tuple([2] + list(pos))] = 1  # obstacle
 
-        board_state = torch.FloatTensor(board_state)
-        board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
-        return board_state
-
-        # def get_state(self):
-        #     for pos in self.board_positions:
-        #         p = self.board[pos]
-        #         if p is not None:
-        #             if p.team == 0:
-        #                 board_state = pos
-        #     return torch.FloatTensor(board_state)
-
-
-class Kill(Env):
+class Survive(Env):
     def __init__(self, agent0, agent1):
-        super(Kill, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.1
-        self.reward_illegal = -1
-        self.reward_win = 10
-        self.reward_kill = 1
+        super(Survive, self).__init__(agent0=agent0, agent1=agent1)
+        # self.reward_step = -0.01
+        self.reward_illegal = -0.1
+        self.reward_win = 1
+        self.reward_kill = 0.1
+        self.reward_die = -0.1
+        self.reward_loss = -1
+        self.death_thresh = -100
 
     def decide_pieces(self):
-        random_place = [pieces.Piece(10, 0, None), pieces.Piece(3, 1, None), pieces.Piece(3, 1, None)]
-        return [], random_place
-
-    def get_state(self):
-        state_dim = 3
-        board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
-        for pos in self.board_positions:
-            p = self.board[pos]
-            if p is not None:  # piece on this field
-                if p.team == 0:  # agents team
-                    board_state[tuple([0] + list(pos))] = p.type  # represent type
-                elif p.team == 1:
-                    board_state[tuple([1] + list(pos))] = 1  # other team
-                else:
-                    board_state[tuple([2] + list(pos))] = 1  # obstacle
-
-        board_state = torch.FloatTensor(board_state)
-        board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
-        return board_state
-
-    # class SmallGame(Env):
-    #     def __init__(self):
-    #         super(SmallGame, self).__init__()
-    #         self.reward_step = -0.1
-    #         self.reward_illegal = -1
-    #         self.reward_win = 10
-    #
-    #     def decide_pieces(self):
-    #         pieces_list = [pieces.Piece(3, 0), pieces.Piece(0, 0), pieces.Piece(3, 1), pieces.Piece(0, 1)]
-    #         return pieces_list
+        known_place = [pieces.Piece(0, 0, (0, 0)), pieces.Piece(0, 1, (4, 4)),
+                       pieces.Piece(3, 0, (0, 1)), pieces.Piece(10, 0, (1, 0))]
+        random_place = [pieces.Piece(3, 1, (4, 3)), pieces.Piece(10, 1, (3, 4)),
+                        pieces.Piece(3, 1, (3, 3))]
+        return known_place, random_place
 
 
 class MiniMiniStratego(Env):
@@ -393,22 +340,6 @@ class MiniStratego(Env):
                 known_place.append(pieces.Piece(setup[i], team, setup_pos[i]))
         random_place = []  # random_place is across whole board
         return known_place, random_place
-# max 7 channels
-# own: movable,
-#      immovable
-# opp: known, movable
-#             bomb
-#      unknown, moved
-#               not_moved
-# obstacles
-
-# own
-# opp
-
-# obstacles yes/no?
-# own movable/immovable?
-# opp movable/immovable?
-# opp known/unknown?
 
 
 def watch_game(env, step_time):
@@ -416,9 +347,11 @@ def watch_game(env, step_time):
     Watch two agents play against each other, step_time is
     """
     new_game = env
+    env.Train = False
     done = False
     while not done:
-        _, done = new_game.step()
+        move = 0
+        _, done = new_game.step(move)
         # print(env.reward)
         new_game.show()
         plt.pause(step_time)
@@ -431,38 +364,19 @@ def watch_game(env, step_time):
     plt.title(outcome)
     plt.show(block=True)  # keep plot
 
-# for testing the ministratego!
-good_setup2 = np.empty((2, 5), dtype=int)
-good_setup2[0, 0] = 3
-good_setup2[0, 1] = 11
-good_setup2[0, 2] = 0
-good_setup2[0, 3] = 11
-good_setup2[0, 4] = 1
-good_setup2[1, 0] = 2
-good_setup2[1, 1] = 2
-good_setup2[1, 2] = 10
-good_setup2[1, 3] = 2
-good_setup2[1, 4] = 3
 
-rd_setup = np.empty((5, 5), )
-rd_setup[:, :] = None
-rd_setup[0, 1] = 0
-rd_setup[1, 0] = 11
-rd_setup[2, 3] = 10
-rd_setup[2, 1] = 10
-rd_setup[1, 2] = 10
-rd_setup[0, 4] = 10
-
-setup_agent0 = np.empty((2, 5), dtype=object)
-#setup_agent1 = np.empty((2, 5), dtype=object)
-setup_agent1 = []
-for pos in ((i, j) for i in range(2) for j in range(5)):
-    setup_agent0[pos] = pieces.Piece(good_setup2[pos], 0, (4-pos[0], 4-pos[1]))
-for pos, type in np.ndenumerate(rd_setup):
-    if not type != type:  # check if type is NaN
-        setup_agent1.append(pieces.Piece(int(type), 1, pos))
-agent0 = agent.OmniscientExpectiSmart(0, setup_agent0)
-agent1 = agent.RandomAgent(1, setup_agent1)
-env = MiniStratego(agent0, agent1)
-while True:
-    watch_game(env, 0.001)
+    # State representation?
+# max 7 channels
+# own: movable,
+#      immovable
+# opp: known, movable
+#             bomb
+#      unknown, moved
+#               not_moved
+# obstacles
+# own
+# opp
+# obstacles yes/no?
+# own movable/immovable?
+# opp movable/immovable?
+# opp known/unknown?
