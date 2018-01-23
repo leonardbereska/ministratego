@@ -1,29 +1,29 @@
-"""
-Agent decides the initial setup and decides which action to take
-"""
 import random
 import numpy as np
 import pieces
 import copy
-from collections import Counter
+# from collections import Counter
 from scipy import spatial
-from scipy import optimize
+# from scipy import optimize
 import helpers
 from torch.autograd import Variable
 import torch
-
 import battleMatrix
 import models
 
 class Agent:
-    def __init__(self, team):
+    """
+    Agent decides the initial setup and decides which action to take
+    """
+    def __init__(self, team, setup=None):
         self.team = team
         self.other_team = (self.team + 1) % 2
-        # self.setup = None
+        self.setup = setup
         self.board = np.empty((5, 5), dtype=object)
-        # for idx, piece in np.ndenumerate(setup):  # board is initialized in environment
-        #     piece.hidden = False
-        #     self.board[piece.position] = piece
+        if setup is not None:
+            for idx, piece in np.ndenumerate(setup):  # board is initialized in environment
+                piece.hidden = False
+                self.board[piece.position] = piece
         self.living_pieces = []  # to be filled by environment
         self.board_positions = [(i, j) for i in range(5) for j in range(5)]
 
@@ -167,7 +167,7 @@ class RandomAgent(Agent):
     """
     Agent who chooses his initial setup and actions at random
     """
-    def __init__(self, team):
+    def __init__(self, team, setup=None):
         super(RandomAgent, self).__init__(team=team)
 
     def decide_move(self):
@@ -181,8 +181,8 @@ class Reinforce(Agent):
     Agent approximating action-value functions with an artificial neural network
     trained with Q-learning
     """
-    def __init__(self, team):
-        super(Reinforce, self).__init__(team=team)
+    def __init__(self, team, setup=None):
+        super(Reinforce, self).__init__(team=team, setup=setup)
         self.state_dim = NotImplementedError
         self.action_dim = NotImplementedError
         self.model = NotImplementedError
@@ -333,8 +333,8 @@ class Survivor(Reinforce):
 
 
 class ExpectiSmart(Agent):
-    def __init__(self, team):
-        super(ExpectiSmart, self).__init__(team=team)
+    def __init__(self, team, setup):
+        super(ExpectiSmart, self).__init__(team=team, setup=setup)
 
         self.kill_reward = 10
         self.neutral_fight = 2
@@ -516,8 +516,8 @@ class ExpectiSmart(Agent):
 
 
 class OmniscientExpectiSmart(ExpectiSmart):
-    def __init__(self, team):
-        super(OmniscientExpectiSmart, self).__init__(team=team)
+    def __init__(self, team, setup):
+        super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
         self.setup = setup
         self.winFightReward = 10
         self.neutralFightReward = 5
