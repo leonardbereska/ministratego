@@ -168,13 +168,17 @@ class RandomAgent(Agent):
     Agent who chooses his initial setup and actions at random
     """
     def __init__(self, team, setup=None):
-        super(RandomAgent, self).__init__(team=team)
+        super(RandomAgent, self).__init__(team=team, setup=setup)
 
     def decide_move(self):
         actions = helpers.get_poss_moves(self.board, self.team)
         # ignore state, do random action
-        action = random.choice(actions)
-        return action
+        if not actions:
+            return (None, None)
+        else:
+            return random.choice(actions)
+
+
 
 class Reinforce(Agent):
     """
@@ -331,9 +335,8 @@ class Survivor(Reinforce):
         return own_team_three, own_team_ten, own_team_flag, opp_team_three, opp_team_ten, opp_team_flag,obstacle
 
 
-
 class ExpectiSmart(Agent):
-    def __init__(self, team, setup):
+    def __init__(self, team, setup=None):
         super(ExpectiSmart, self).__init__(team=team, setup=setup)
 
         self.kill_reward = 10
@@ -344,7 +347,15 @@ class ExpectiSmart(Agent):
         self.battleMatrix = battleMatrix.get_battle_matrix()
 
     def decide_move(self):
-        return self.minimax(max_depth=6)
+        nr_dead_enemies = sum(self.deadPieces[self.other_team].values())
+        depth=1
+        if nr_dead_enemies <=1:
+            depth = 2
+        elif nr_dead_enemies >=3 and nr_dead_enemies <=5:
+            depth = 4
+        elif nr_dead_enemies > 5 and nr_dead_enemies <=10:
+            depth = 6
+        return self.minimax(max_depth=depth)
 
     def minimax(self, max_depth):
         curr_board = copy.deepcopy(self.board)
@@ -367,9 +378,7 @@ class ExpectiSmart(Agent):
         val = -float('inf')
         best_action = None
         for action in my_doable_actions:
-            board = self.do_move(action, board=board,  bookkeeping=False, true_gameplay=False)
-            fight_result = board[1]
-            board = board[0]
+            board, fight_result = self.do_move(action, board=board,  bookkeeping=False, true_gameplay=False)
             temp_reward = current_reward
             if fight_result is not None:
                 if fight_result == 1:
@@ -408,9 +417,7 @@ class ExpectiSmart(Agent):
         val = float('inf')  # inital value set, so min comparison later possible
         best_action = None
         for action in my_doable_actions:
-            board = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
-            fight_result = board[1]
-            board = board[0]
+            board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
             temp_reward = current_reward
             if fight_result is not None:
                 if fight_result == 1:
@@ -461,13 +468,11 @@ class ExpectiSmart(Agent):
         move_dist = spatial.distance.cityblock(move[0], move[1])
         if move_dist > 1:
             moving_piece.hidden = False
-            moving_piece.potential_types = moving_piece.type
+            moving_piece.potential_types = [moving_piece.type]
         else:
             immobile_enemy_types = [idx for idx, type in enumerate(moving_piece.potential_types)
                                     if type in [0, 11]]
             moving_piece.potential_types = np.delete(moving_piece.potential_types, immobile_enemy_types)
-
-
 
     def draw_consistent_enemy_setup(self, board):
         # get information about enemy pieces (how many, which alive, which types, and indices in assign. array)
@@ -536,4 +541,8 @@ class OmniscientExpectiSmart(ExpectiSmart):
         chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
         return chosen_action
 
+    def update_prob_by_fight(self, enemy_piece):
+        pass
 
+    def update_prob_by_move(self, move, moving_piece):
+        pass

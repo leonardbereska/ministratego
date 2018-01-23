@@ -132,20 +132,11 @@ class Game:
         outcome = self.battleMatrix[piece_att.type, piece_def.type]
         if outcome == 1:
             self.deadPieces[piece_def.team][piece_def.type] += 1
-            self.agents[0].deadPieces[piece_def.team][piece_def.type] += 1
-            self.agents[1].deadPieces[piece_def.team][piece_def.type] += 1
         elif outcome == 0:
             self.deadPieces[piece_def.team][piece_def.type] += 1
-            self.agents[0].deadPieces[piece_def.team][piece_def.type] += 1
-            self.agents[1].deadPieces[piece_def.team][piece_def.type] += 1
-
             self.deadPieces[piece_att.team][piece_att.type] += 1
-            self.agents[0].deadPieces[piece_att.team][piece_att.type] += 1
-            self.agents[1].deadPieces[piece_att.team][piece_att.type] += 1
         elif outcome == -1:
             self.deadPieces[piece_att.team][piece_att.type] += 1
-            self.agents[0].deadPieces[piece_att.team][piece_att.type] += 1
-            self.agents[1].deadPieces[piece_att.team][piece_att.type] += 1
         return outcome
 
     def is_legal_move(self, move_to_check):  # TODO: redirect all references to this function to helpers

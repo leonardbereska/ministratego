@@ -53,9 +53,9 @@ def optimize_model():
 def run_env(env, n_runs=100):
     """
     Plots simulated games in an environment for visualization
-    :param env: environement to be run
+    :param env: environment to be run
     :param n_runs: how many episodes should be run
-    :return: plot of each step in the environement
+    :return: plot of each step in the environment
     """
     global EVAL
     EVAL = True  # switch evaluation mode on:
@@ -141,7 +141,7 @@ VERBOSE = 2  # level of printed output verbosity:
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 1000  # training for how many episodes
+num_episodes = 100  # training for how many episodes
 
 env = env.FindFlag(agent.Finder(0), agent.RandomAgent(1))
 env.Train = True  # for externally determining move in train function (usually determined in agent)
