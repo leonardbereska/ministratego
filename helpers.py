@@ -2,9 +2,9 @@ import numpy as np
 from scipy import spatial
 from matplotlib import pyplot as plt
 import copy
+import torch
 from collections import namedtuple
 import random
-import torch
 
 
 def is_legal_move(board, move_to_check):
@@ -79,7 +79,7 @@ def print_board(board):
     plt.show(block=False)
 
 
-def get_poss_actions(board, team):
+def get_poss_moves(board, team):
     """
     :return: List of possible actions for agent of team
     """
@@ -97,20 +97,19 @@ def get_poss_actions(board, team):
     return actions_possible
 
 
-def plot_scores(episode_scores):
-    global N_SMOOTH
+def plot_scores(episode_scores, n_smooth):
     plt.figure(2)
     plt.clf()
     scores_t = torch.FloatTensor(episode_scores)
     plt.xlabel('Episode')
     plt.ylabel('Score')
     average = [0]
-    if len(scores_t) >= N_SMOOTH:
-        means = scores_t.unfold(0, N_SMOOTH, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(N_SMOOTH-1), means))
+    if len(scores_t) >= n_smooth:
+        means = scores_t.unfold(0, n_smooth, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(n_smooth-1), means))
         average = means.numpy()
         plt.plot(average)
-    plt.title('Average Score over last {} Episodes: {}'.format(N_SMOOTH, int(average[-1]*10)/10))
+    plt.title('Average Score over last {} Episodes: {}'.format(n_smooth, int(average[-1]*10)/10))
     plt.pause(0.001)  # pause a bit so that plots are updated
 
 

@@ -1,14 +1,14 @@
-from matplotlib import pyplot as plt
-import agent
-import numpy as np
 import copy as cp
-import random
-import torch
 
-import pieces
-import helpers
+import numpy as np
+import torch
+from matplotlib import pyplot as plt
+
 import battleMatrix
-import agents
+import helpers
+import pieces
+
+
 # import train
 
 
@@ -49,10 +49,13 @@ class Env:
             self.board[p.position] = p
             self.living_pieces[p.team].append(p)
 
-        # give agents board and actors
+        # give agents board
         agent0.board = cp.deepcopy(self.board)
         agent1.board = cp.deepcopy(self.board)
         self.agents = (agent0, agent1)
+
+        # give agent actors
+        # actors are pieces which are under control of the agent
         for team in (0, 1):
             actors = []
             for pos in self.board_positions:

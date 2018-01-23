@@ -8,19 +8,24 @@ import copy
 from collections import Counter
 from scipy import spatial
 from scipy import optimize
-import battleMatrix
 import helpers
+from torch.autograd import Variable
+import torch
 
+import battleMatrix
+import models
 
 class Agent:
-    def __init__(self, team, setup):
+    def __init__(self, team):
         self.team = team
         self.other_team = (self.team + 1) % 2
-        self.setup = setup
+        # self.setup = None
         self.board = np.empty((5, 5), dtype=object)
-        for idx, piece in np.ndenumerate(setup):
-            piece.hidden = False
-            self.board[piece.position] = piece
+        # for idx, piece in np.ndenumerate(setup):  # board is initialized in environment
+        #     piece.hidden = False
+        #     self.board[piece.position] = piece
+        self.living_pieces = []  # to be filled by environment
+        self.board_positions = [(i, j) for i in range(5) for j in range(5)]
 
         self.move_count = 0
 
@@ -44,6 +49,9 @@ class Agent:
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
         self.ordered_opp_pieces = []
+
+    def action_represent(self, actors):  # does nothing but is important for Reinforce
+        return
 
     def install_opp_setup(self, opp_setup):
         self.assignment_dict = dict()
@@ -146,7 +154,7 @@ class Agent:
         pass
 
     def get_poss_actions(self, board, team):  # TODO: change references to helper's version
-        return helpers.get_poss_actions(board, team)
+        return helpers.get_poss_moves(board, team)
 
     def is_legal_move(self, move_to_check, board):  # TODO: change references to helper's version
         return helpers.is_legal_move(board, move_to_check)
@@ -159,11 +167,11 @@ class RandomAgent(Agent):
     """
     Agent who chooses his initial setup and actions at random
     """
-    def __init__(self, team, setup):
-        super(RandomAgent, self).__init__(team=team, setup=setup)
+    def __init__(self, team):
+        super(RandomAgent, self).__init__(team=team)
 
     def decide_move(self):
-        actions = helpers.get_poss_actions(self.board, self.team)
+        actions = helpers.get_poss_moves(self.board, self.team)
         # ignore state, do random action
         action = random.choice(actions)
         return action
@@ -280,7 +288,7 @@ class Finder(Reinforce):
         self.action_dim = 4
         self.state_dim = len(self.state_represent())
         self.model = models.Finder(self.state_dim)
-        self.model.load_state_dict(torch.load('./saved_models/finder.pkl'))
+        # self.model.load_state_dict(torch.load('./saved_models/finder.pkl'))
 
     def state_represent(self):
         own_team = lambda piece: (piece.team == 0, piece.type)
@@ -295,7 +303,7 @@ class Mazer(Reinforce):
         self.action_dim = 4
         self.state_dim = len(self.state_represent())
         self.model = models.Mazer(self.state_dim)
-        self.model.load_state_dict(torch.load('./saved_models/mazer.pkl'))
+        # self.model.load_state_dict(torch.load('./saved_models/mazer.pkl'))
 
     def state_represent(self):
         own_team = lambda piece: (piece.team == 0, 1)
@@ -325,8 +333,8 @@ class Survivor(Reinforce):
 
 
 class ExpectiSmart(Agent):
-    def __init__(self, team, setup):
-        super(ExpectiSmart, self).__init__(team=team, setup=setup)
+    def __init__(self, team):
+        super(ExpectiSmart, self).__init__(team=team)
 
         self.kill_reward = 10
         self.neutral_fight = 2
@@ -347,7 +355,7 @@ class ExpectiSmart(Agent):
     def max_val(self, board, current_reward, alpha, beta, depth):
         # this is what the expectimax agent will think
 
-        my_doable_actions = helpers.get_poss_actions(board, self.team)
+        my_doable_actions = helpers.get_poss_moves(board, self.team)
 
         # check for end-state scenario
         goal_check = self.goal_test(my_doable_actions, board)
@@ -389,7 +397,7 @@ class ExpectiSmart(Agent):
     def min_val(self, board, current_reward, alpha, beta, depth):
         # this is what the opponent will think, the min-player
 
-        my_doable_actions = helpers.get_poss_actions(board, self.other_team)
+        my_doable_actions = helpers.get_poss_moves(board, self.other_team)
         # check for end-state scenario first
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
@@ -508,8 +516,8 @@ class ExpectiSmart(Agent):
 
 
 class OmniscientExpectiSmart(ExpectiSmart):
-    def __init__(self, team, setup=None):
-        super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
+    def __init__(self, team):
+        super(OmniscientExpectiSmart, self).__init__(team=team)
         self.setup = setup
         self.winFightReward = 10
         self.neutralFightReward = 5
@@ -529,169 +537,3 @@ class OmniscientExpectiSmart(ExpectiSmart):
         return chosen_action
 
 
-class Reinforce(Agent):
-    """
-    Agent approximating action-value functions with an artificial neural network
-    trained with Q-learning
-    """
-    def __init__(self, team):
-        super(Reinforce, self).__init__(team=team)
-        self.BATCH_SIZE = 128  # 128
-        self.GAMMA = 0.99
-        self.EPS_START = 0.02
-        self.EPS_END = 0.001
-        self.EPS_DECAY = 100
-        self.N_SMOOTH = 10  # plotting scores averaged over this number of episodes
-        self.EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
-        self.VERBOSE = 1  # level of printed output verbosity
-
-        self.num_episodes = 10000  # training for how many episodes
-
-        state_dim = env.get_state().shape[1]  # state has state_dim*5*5 values (board_size * depth of representation)
-        self.model = models.Finder(state_dim)
-        self.model.load_state_dict(torch.load('./saved_models/finder.pkl'))
-        self.optimizer = optim.RMSprop(self.model.parameters())
-        self.memory = helpers.ReplayMemory(1000)
-
-    def decide_move(self):
-        action = self.select_action(state, p_random=0.1)
-        # action -> to train function
-        move = self.action_to_move(action, self.team)
-        return move
-
-    def user_action(self):
-        direction = input("Type direction\n")
-        keys = ('w', 's', 'a', 'd', 'i', 'k', 'j', 'l')
-        if direction not in keys:
-            direction = input("Try typing again\n")
-        return keys.index(direction)
-
-    def select_action(self, state, p_random):
-        """
-        Agents action is one of four directions
-        :return: action 0: up, 1: down, 2: left, 3: right (cross in prayer)
-        """
-        sample = random.random()
-        if sample > p_random:
-            # deterministic action selection
-            # output = model(Variable(state, volatile=True)).data
-            # # print(output.numpy())
-            # action = output.max(1)[1].view(1, 1)  # choose maximum index
-            # return action
-
-            # probabilistic action selection, network outputs state-action values in (0, 1)
-            state_action_values = self.model(Variable(state, volatile=True))
-            p = list(state_action_values.data[0].numpy())
-            p = [int(p_i * 1000) / 1000 for p_i in p]
-            p[3] = 1 - sum(p[0:3])  # artificially make probs sum to one
-            # print(p)  # print probabilities
-            action = np.random.choice(np.arange(0, 4), p=p)
-            action = int(action)  # normal int not numpy int
-            return torch.LongTensor([[action]])
-        else:
-            return torch.LongTensor([[random.randint(0, 3)]])
-
-    def action_to_move(self, action, team):
-        i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
-        piece = env.living_pieces[team][i]
-        piece_pos = piece.position  # where is the piece
-        if piece_pos is None:
-            move = (None, None)  # return illegal move
-            return move
-        action = action % 4  # 0-3 as direction
-        moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
-        direction = moves[action]  # action: 0-3
-        pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
-        pos_to = tuple(pos_to)
-        move = (piece_pos, pos_to)
-        return move
-
-    def optimize_model(self):
-        if len(self.memory) < self.BATCH_SIZE:
-            return  # not optimizing for not enough memory
-        transitions = self.memory.sample(self.BATCH_SIZE)  # sample memories batch
-        batch = helpers.Transition(*zip(*transitions))  # transpose the batch
-
-        # Compute a mask of non-final states and concatenate the batch elements
-        non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state)))
-        non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]), volatile=True)
-        state_batch = Variable(torch.cat(batch.state))
-        action_batch = Variable(torch.cat(batch.action))
-        reward_batch = Variable(torch.cat(batch.reward))
-
-        # Compute Q(s_t, a) - the model computes Q(s_t), then we select the columns of actions taken
-        state_action_values = self.model(state_batch).gather(1, action_batch)
-
-        # Compute V(s_{t+1}) for all next states.
-        next_state_values = Variable(torch.zeros(self.BATCH_SIZE).type(torch.FloatTensor))  # zero for teminal states
-        next_state_values[non_final_mask] = self.model(non_final_next_states).max(1)[
-            0]  # what would the model predict for next
-        next_state_values.volatile = False  # requires_grad = False to not mess with loss
-        expected_state_action_values = (next_state_values * self.GAMMA) + reward_batch  # compute the expected Q values
-
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)  # compute Huber loss
-
-        # optimize network
-        self.optimizer.zero_grad()  # optimize towards expected q-values
-        loss.backward()
-        for param in self.model.parameters():
-            param.grad.data.clamp_(-1, 1)
-        self.optimizer.step()
-
-    def train(self, env, num_episodes):
-        episode_scores = []  # score = total reward
-        for i_episode in range(num_episodes):
-            env.reset()  # initialize environment
-            state = env.get_state()  # initialize state
-            while True:
-                # act in environment
-                p_random = self.EPS_END + (self.EPS_START - self.EPS_END) * math.exp(-1. * i_episode / EPS_DECAY)
-                action = env.agents[0].select_action(state, p_random)  # random action with probability p_random
-                reward_value, done = env.step()  # environment step for action
-                if self.VERBOSE > 1:
-                    print(action[0, 0] + 1, reward_value)
-                reward = torch.FloatTensor([reward_value])
-
-                # save transition as memory and optimize model
-                if done:  # if terminal state
-                    next_state = None
-                else:
-                    next_state = env.get_state()
-                self.memory.push(state, action, next_state, reward)  # store the transition in memory
-                state = next_state  # move to the next state
-                sefl.optimize_model()  # one step of optimization of target network
-
-                if done:
-                    print("Episode {}/{}".format(i_episode, num_episodes))
-                    print("Score: {}".format(env.score))
-                    print("Noise: {}".format(p_random))
-                    print("Illegal: {}/{}\n".format(env.illegal_moves, env.steps))
-                    episode_scores.append(env.score)
-                    if self.VERBOSE > 1:
-                        helpers.plot_scores(episode_scores)  # takes run time
-                    break
-            if i_episode % 100 == 2:
-                if self.VERBOSE > 1:
-                    self.run_env(env, False, 1)
-
-    def run_env(self, env, user_test, n_runs=100):
-        global EVAL
-        EVAL = True  # switch evaluation mode on
-        for i in range(n_runs):
-            env.reset()
-            env.show()
-            done = False
-            while not done:
-                state = env.get_state()
-                if user_test:
-                    action = self.user_action()
-                else:
-                    action = self.select_action(state, 0.00)
-                    action = action[0, 0]
-                _, done = env.step(action)
-                env.show()
-                if done and env.reward == env.reward_win:
-                    print("Won!")
-                elif (done and env.reward == env.reward_loss) or env.score < -5:
-                    print("Lost")
-                    break

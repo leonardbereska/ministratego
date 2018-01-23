@@ -1,15 +1,14 @@
-import random
-import numpy as np
-import torch
 import math
-from torch.autograd import Variable
-import torch.optim as optim
-import torch.nn.functional as F
 
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.autograd import Variable
+
+import agent
+import env
 import helpers
 import models
-import env
-import agents
 
 
 def optimize_model():
@@ -116,7 +115,7 @@ VERBOSE = 2  # level of printed output verbosity
 
 num_episodes = 1000  # training for how many episodes
 
-env = env.FindFlag(agents.Finder(0), agents.RandomAgent(1))
+env = env.FindFlag(agent.Finder(0), agent.RandomAgent(1))
 env.Train = True
 
 state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values

@@ -1,12 +1,10 @@
-import numpy as np
-from scipy import spatial
-from matplotlib import pyplot as plt
-import pieces
-import agent
 import copy
-import pickle
+
+import numpy as np
+
 import battleMatrix
 import helpers
+import pieces
 
 
 class Game:
