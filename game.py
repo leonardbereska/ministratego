@@ -159,3 +159,23 @@ class Game:
         else:
             return False
 
+
+def watch_game(agent0, agent1, step_time):
+    """
+    Watch two agents play against each other, step_time is
+    """
+    new_game = game.Game(agent0, agent1)
+    done = False
+    while not done:
+        new_game.run_step()
+        new_game.show()
+        done = new_game.goal_test()
+        plt.pause(step_time)
+
+    if new_game.move_count % 2 == 1:
+        outcome = "Red won!"
+    else:
+        outcome = "Blue won!"
+    print(outcome)
+    plt.title(outcome)
+    plt.show(block=True)  # keep plot

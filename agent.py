@@ -190,7 +190,7 @@ class Agent:
         pass
 
     def get_poss_actions(self, board, team):  # TODO: change references to helper's version
-        return helpers.get_poss_actions(board, team)
+        return helpers.get_poss_moves(board, team)
 
     def is_legal_move(self, move_to_check, board):  # TODO: change references to helper's version
         return helpers.is_legal_move(board, move_to_check)
@@ -211,7 +211,7 @@ class RandomAgent(Agent):
         return np.random.choice(types_available, 10, replace=False)
 
     def decide_move(self):
-        actions = helpers.get_poss_actions(self.board, self.team)
+        actions = helpers.get_poss_moves(self.board, self.team)
         # ignore state, do random action
         action = random.choice(actions)
         return action
@@ -236,7 +236,7 @@ class SmartSetup(Agent):
         return self.setup
 
     def decide_move(self):
-        actions = helpers.get_poss_actions(self.board, self.team)
+        actions = helpers.get_poss_moves(self.board, self.team)
         # ignore state, do random action
         action = random.choice(actions)
         return action
@@ -269,7 +269,7 @@ class ExpectiSmart(Agent):
     def max_val(self, board, current_reward, alpha, beta, depth):
         # this is what the expectimax agent will think
 
-        my_doable_actions = helpers.get_poss_actions(board, self.team)
+        my_doable_actions = helpers.get_poss_moves(board, self.team)
 
         # check for end-state scenario
         goal_check = self.goal_test(my_doable_actions, board)
@@ -307,7 +307,7 @@ class ExpectiSmart(Agent):
     def min_val(self, board, current_reward, alpha, beta, depth):
         # this is what the opponent will think, the min-player
 
-        my_doable_actions = helpers.get_poss_actions(board, self.other_team)
+        my_doable_actions = helpers.get_poss_moves(board, self.other_team)
         # check for end-state scenario first
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:

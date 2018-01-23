@@ -8,7 +8,7 @@ class Piece:
     def __init__(self, type, team, position):
         self.position = position
         # self.positions_history = [position]
-        self.unique_identifier = np.random.randint(0, 10000)
+        self.unique_identifier = np.random.randint(0, 10000)  # p ≈ 0.99 to draw no one equal for 20
         self.dead = False
         self.hidden = True
         assert(type in (0, 1, 2, 3, 10, 11, 88, 99))  # 0: flag, 11: bomb, 88: unknown, 99: obstacle

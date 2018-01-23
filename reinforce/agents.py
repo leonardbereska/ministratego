@@ -15,7 +15,6 @@ import helpers
 import models
 
 
-
 class Agent:
     def __init__(self, team):
         self.team = team
@@ -23,6 +22,8 @@ class Agent:
         self.setup = None
         self.board = np.empty((5, 5), dtype=object)
         self.move_count = 0
+        self.living_pieces = []  # to be filled by environment
+        self.board_positions = [(i, j) for i in range(5) for j in range(5)]
 
         self.last_N_moves = []
         self.pieces_last_N_Moves_beforePos = []
@@ -71,11 +72,14 @@ class Agent:
         board[updated_piece[0]] = updated_piece[1]
         return board
 
-    def decide_move(self, state):
+    def decide_move(self):
         """
         Agent has to implement on which action to decide given the state
         """
         raise NotImplementedError
+
+    def action_represent(self, actors):  # does nothing but is important for Reinforce
+        return
 
     def do_move(self, move, board=None, bookkeeping=True, true_gameplay=False):
         """
@@ -151,7 +155,7 @@ class Agent:
         pass
 
     def get_poss_actions(self, board, team):  # TODO: change references to helper's version
-        return helpers.get_poss_actions(board, team)
+        return helpers.get_poss_moves(board, team)
 
     def is_legal_move(self, move_to_check, board):  # TODO: change references to helper's version
         return helpers.is_legal_move(board, move_to_check)
@@ -167,8 +171,8 @@ class RandomAgent(Agent):
     def __init__(self, team):
         super(RandomAgent, self).__init__(team=team)
 
-    def decide_move(self, state):
-        actions = helpers.get_poss_actions(self.board, self.team)
+    def decide_move(self):
+        actions = helpers.get_poss_moves(self.board, self.team)
         # ignore state, do random action
         action = random.choice(actions)
         return action
@@ -181,87 +185,160 @@ class Reinforce(Agent):
     """
     def __init__(self, team):
         super(Reinforce, self).__init__(team=team)
+        self.state_dim = NotImplementedError
+        self.action_dim = NotImplementedError
         self.model = NotImplementedError
-        # self.model.load_state_dict(torch.load('./saved_models/finder.pkl'))
 
-    def decide_move(self, state):
+    def decide_move(self):
+        state = self.board_to_state()
         action = self.select_action(state, p_random=0.00)
-        move = self.action_to_move(action, self.team)
+        move = self.action_to_move(action[0, 0])
         return move
 
-    # ## deprecated since RandomAgent
-    # def user_action(self):
-    #     direction = input("Type direction\n")
-    #     keys = ('w', 's', 'a', 'd', 'i', 'k', 'j', 'l')
-    #     if direction not in keys:
-    #         direction = input("Try typing again\n")
-    #     return keys.index(direction)
+    def state_represent(self):
+        """
+        Specify the state representation as input for the network
+        """
+        return NotImplementedError
 
-    def select_action(self, state, p_random):
+    def action_represent(self, actors):
+        """
+        Initialize pieces to be controlled by agent (self.actors) (only known and to be set by environment)
+        and list of (piece number, action number)
+        e.g. for two pieces with 4 actions each: ((0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3))
+        """
+        self.actors = actors
+        piece_action = []
+        for i, a in enumerate(self.actors):
+            if a.type == 2:
+                piece_action += [(i, j) for j in range(16)]
+            else:
+                piece_action += [(i, j) for j in range(4)]
+        self.piece_action = piece_action
+
+    def select_action(self, state, p_random, action_dim):
         """
         Agents action is one of four directions
         :return: action 0: up, 1: down, 2: left, 3: right (cross in prayer)
         """
+        poss_actions = self.poss_actions(action_dim=action_dim)
+        if not poss_actions:
+            return torch.LongTensor([[random.randint(0, action_dim-1)]])
         sample = random.random()
         if sample > p_random:
-            # deterministic action selection
-            # output = model(Variable(state, volatile=True)).data
-            # # print(output.numpy())
-            # action = output.max(1)[1].view(1, 1)  # choose maximum index
-            # return action
-
-            # probabilistic action selection, network outputs state-action values in (0, 1)
             state_action_values = self.model(Variable(state, volatile=True))
             p = list(state_action_values.data[0].numpy())
-            p = [int(p_i * 1000) / 1000 for p_i in p]
-            p[3] = 1 - sum(p[0:3])  # artificially make probs sum to one
-            # print(p)  # print probabilities
-            action = np.random.choice(np.arange(0, 4), p=p)
+            # print("net: {}".format(np.round(p, 3)))
+
+            for action in range(len(p)):  # mask out impossible actions
+                if action not in poss_actions:
+                    p[action] = 0
+            normed = [float(i) / sum(p) for i in p]
+            # print("mask: {}".format(np.round(normed, 3)))
+            action = np.random.choice(np.arange(0, action_dim), p=normed)
             action = int(action)  # normal int not numpy int
             return torch.LongTensor([[action]])
         else:
-            return torch.LongTensor([[random.randint(0, 3)]])
+            while True:
+                # select action at random, but make sure it is a possible move
+                i = random.randint(0, len(poss_actions) - 1)
+                random_action = poss_actions[i]
+                return torch.LongTensor([[random_action]])
 
-    def action_to_move(self, action, team):
-        i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
-        piece = env.living_pieces[team][i]  # TODO connect to environment
+            # TODO : properly mask out actions if not possible
+    def poss_actions(self, action_dim):
+        poss_moves = helpers.get_poss_moves(self.board, 0)
+        poss_actions = []
+        all_actions = range(0, action_dim)
+        for action in all_actions:
+            move = self.action_to_move(action)
+            if move in poss_moves:
+                poss_actions.append(action)
+        return poss_actions
+
+    def action_to_move(self, action):
+        i, action = self.piece_action[action]
+        piece = self.actors[i]
         piece_pos = piece.position  # where is the piece
         if piece_pos is None:
             move = (None, None)  # return illegal move
             return move
-        action = action % 4  # 0-3 as direction
-        moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
+        moves = []
+        for i in range(1, 5):
+            moves += [(i, 0), (-i, 0), (0, -i), (0, i)]
         direction = moves[action]  # action: 0-3
         pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
         pos_to = tuple(pos_to)
         move = (piece_pos, pos_to)
         return move
 
-    # def run_env(self, env, n_runs=100):
-    #     global EVAL
-    #     EVAL = True  # switch evaluation mode on
-    #     for i in range(n_runs):
-    #         env.reset()
-    #         env.show()
-    #         done = False
-    #         while not done:
-    #             state = env.get_state()
-    #             action = self.select_action(state, 0.00)
-    #             action = action[0, 0]
-    #             _, done = env.step(action)
-    #             env.show()
-    #             if done and env.reward == env.reward_win:
-    #                 print("Won!")
-    #             elif (done and env.reward == env.reward_loss) or env.score < -5:
-    #                 print("Lost")
-    #                 break
+
+    def board_to_state(self):
+        conditions = self.state_represent()
+        state_dim = len(conditions)
+        board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
+        for pos in self.board_positions:
+            p = self.board[pos]
+            if p is not None:  # piece on this field
+                for i, cond in enumerate(conditions):
+                    condition, value = cond(p)
+                    if condition:
+                        board_state[tuple([i] + list(pos))] = value  # represent type
+        board_state = torch.FloatTensor(board_state)
+        board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
+        return board_state
 
 
 class Finder(Reinforce):
     def __init__(self, team):
         super(Finder, self).__init__(team=team)
-        self.model = models.Finder
+        self.action_dim = 4
+        self.state_dim = len(self.state_represent())
+        self.model = models.Finder(self.state_dim)
         self.model.load_state_dict(torch.load('./saved_models/finder.pkl'))
+
+    def state_represent(self):
+        own_team = lambda piece: (piece.team == 0, piece.type)
+        other_flag = lambda piece: (piece.team == 1, 1)
+        obstacle = lambda piece: (piece.type == 99, 1)
+        return own_team, other_flag, obstacle
+
+
+class Mazer(Reinforce):
+    def __init__(self, team):
+        super(Mazer, self).__init__(team=team)
+        self.action_dim = 4
+        self.state_dim = len(self.state_represent())
+        self.model = models.Mazer(self.state_dim)
+        self.model.load_state_dict(torch.load('./saved_models/mazer.pkl'))
+
+    def state_represent(self):
+        own_team = lambda piece: (piece.team == 0, 1)
+        obstacle = lambda piece: (piece.type == 99, 1)
+        other_flag = lambda piece: (piece.team == 1 and piece.type == 0, 1)
+        return own_team, other_flag, obstacle
+
+
+class Survivor(Reinforce):
+    def __init__(self, team):
+        super(Survivor, self).__init__(team=team)
+        self.action_dim = 8
+        self.state_dim = len(self.state_represent())
+        self.model = models.Survivor(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/survivor.pkl'))
+
+    def state_represent(self):
+        own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
+        own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
+        opp_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
+        opp_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team_three, own_team_ten, own_team_flag, opp_team_three, opp_team_ten, opp_team_flag,obstacle
+
+
+
 
 
 class ExpectiSmart(Agent):
@@ -275,7 +352,7 @@ class ExpectiSmart(Agent):
 
         self.battleMatrix = battleMatrix.get_battle_matrix()
 
-    def decide_move(self, state):
+    def decide_move(self):
         return self.minimax(max_depth=4)
 
     def minimax(self, max_depth):
@@ -287,7 +364,7 @@ class ExpectiSmart(Agent):
     def max_val(self, board, current_reward, alpha, beta, depth):
         # this is what the expectimax agent will think
 
-        my_doable_actions = helpers.get_poss_actions(board, self.team)
+        my_doable_actions = helpers.get_poss_moves(board, self.team)
 
         # check for end-state scenario
         goal_check = self.goal_test(my_doable_actions, board)
@@ -325,7 +402,7 @@ class ExpectiSmart(Agent):
     def min_val(self, board, current_reward, alpha, beta, depth):
         # this is what the opponent will think, the min-player
 
-        my_doable_actions = helpers.get_poss_actions(board, self.other_team)
+        my_doable_actions = helpers.get_poss_moves(board, self.other_team)
         # check for end-state scenario first
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
@@ -582,3 +659,4 @@ class OmniscientExpectiSmart(ExpectiSmart):
     def minimax(self, max_depth):
         chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
         return chosen_action
+
