@@ -114,13 +114,18 @@ class Agent:
                     self.update_prob_by_fight(attacked_field)
                 else:
                     self.update_prob_by_fight(moving_piece)
+                return board, fight_outcome
+            else:
+                return board, fight_outcome, (moving_piece, attacked_field)
         else:
             self.update_board((to_, moving_piece), board=board)
             self.update_board((from_, None), board=board)
             if true_gameplay:
                 if turn == self.other_team:
                     self.update_prob_by_move(move, moving_piece)
-        return board, fight_outcome
+                return board, fight_outcome,
+            else:
+                return board, fight_outcome, (moving_piece, attacked_field)
 
     def fight(self, piece_att, piece_def, collect_dead_pieces=True):
         """
@@ -344,18 +349,19 @@ class ExpectiSmart(Agent):
         self.winGameReward = 100
         self.certainty_multiplier = 1.2
 
+        self.max_depth = 1
+
         self.battleMatrix = battleMatrix.get_battle_matrix()
 
     def decide_move(self):
         nr_dead_enemies = sum(self.deadPieces[self.other_team].values())
-        depth=1
         if nr_dead_enemies <=1:
-            depth = 2
+            self.max_depth = 2
         elif nr_dead_enemies >=3 and nr_dead_enemies <=5:
-            depth = 4
+            self.max_depth = 4
         elif nr_dead_enemies > 5 and nr_dead_enemies <=10:
-            depth = 6
-        return self.minimax(max_depth=depth)
+            self.max_depth = 6
+        return self.minimax(max_depth=self.max_depth)
 
     def minimax(self, max_depth):
         curr_board = copy.deepcopy(self.board)
@@ -367,7 +373,7 @@ class ExpectiSmart(Agent):
         # this is what the expectimax agent will think
 
         my_doable_actions = helpers.get_poss_moves(board, self.team)
-
+        np.random.shuffle(my_doable_actions)
         # check for end-state scenario
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
@@ -378,20 +384,26 @@ class ExpectiSmart(Agent):
         val = -float('inf')
         best_action = None
         for action in my_doable_actions:
-            board, fight_result = self.do_move(action, board=board,  bookkeeping=False, true_gameplay=False)
+            board, fight_result, (attacker, defender) = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
             temp_reward = current_reward
             if fight_result is not None:
-                if fight_result == 1:
-                    temp_reward += self.kill_reward
-                elif fight_result == 2:
-                    temp_reward += int(self.certainty_multiplier*self.kill_reward)
-                elif fight_result == 0:
-                    temp_reward += self.neutral_fight  # both pieces die
-                elif fight_result == -1:
-                    temp_reward += -self.kill_reward
-                elif fight_result == -2:
-                    temp_reward += -int(self.certainty_multiplier * self.kill_reward)
-            new_val = self.min_val(board, temp_reward, alpha, beta, depth-1)[0]
+                if defender.type == 0:
+                    temp_reward += self.winGameReward - (self.max_depth - depth)/(self.winGameReward/self.kill_reward)
+                    new_val = temp_reward
+                else:
+                    if fight_result == 1:
+                        temp_reward += self.kill_reward
+                    elif fight_result == 2:
+                        temp_reward += int(self.certainty_multiplier*self.kill_reward)
+                    elif fight_result == 0:
+                        temp_reward += self.neutral_fight  # both pieces die
+                    elif fight_result == -1:
+                        temp_reward += -self.kill_reward
+                    elif fight_result == -2:
+                        temp_reward += -int(self.certainty_multiplier * self.kill_reward)
+                    new_val = self.min_val(board, temp_reward, alpha, beta, depth - 1)[0]
+            else:
+                new_val = self.min_val(board, temp_reward, alpha, beta, depth-1)[0]
             if val < new_val:
                 val = new_val
                 best_action = action
@@ -407,6 +419,7 @@ class ExpectiSmart(Agent):
         # this is what the opponent will think, the min-player
 
         my_doable_actions = helpers.get_poss_moves(board, self.other_team)
+        np.random.shuffle(my_doable_actions)
         # check for end-state scenario first
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
@@ -417,20 +430,26 @@ class ExpectiSmart(Agent):
         val = float('inf')  # inital value set, so min comparison later possible
         best_action = None
         for action in my_doable_actions:
-            board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
+            board, fight_result, (attacker, defender) = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
             temp_reward = current_reward
             if fight_result is not None:
-                if fight_result == 1:
-                    temp_reward += -self.kill_reward
-                elif fight_result == 2:
-                    temp_reward += -int(self.certainty_multiplier*self.kill_reward)
-                elif fight_result == 0:
-                    temp_reward += self.neutral_fight  # both pieces die
-                elif fight_result == -1:
-                    temp_reward += self.kill_reward
-                elif fight_result == -2:
-                    temp_reward += int(self.certainty_multiplier * self.kill_reward)
-            new_val = self.max_val(board, temp_reward, alpha, beta, depth-1)[0]
+                if defender.type == 0:
+                    temp_reward -= self.winGameReward - (self.max_depth - depth)/(self.winGameReward/self.kill_reward)
+                    new_val = temp_reward
+                else:
+                    if fight_result == 1:
+                        temp_reward += -self.kill_reward
+                    elif fight_result == 2:
+                        temp_reward += -int(self.certainty_multiplier*self.kill_reward)
+                    elif fight_result == 0:
+                        temp_reward += -self.neutral_fight  # both pieces die
+                    elif fight_result == -1:
+                        temp_reward += self.kill_reward
+                    elif fight_result == -2:
+                        temp_reward += int(self.certainty_multiplier * self.kill_reward)
+                    new_val = self.max_val(board, temp_reward, alpha, beta, depth - 1)[0]
+            else:
+                new_val = self.max_val(board, temp_reward, alpha, beta, depth-1)[0]
             if val > new_val:
                 val = new_val
                 best_action = action

@@ -37,16 +37,29 @@ def simulation(setup0=None, setup1=None):
     num_simulations = 100
     blue_won = 0
     red_won = 0
-    if setup0 is not None:
-        setup_agent0 = setup0
-    else:
-        setup_agent0 = np.random.choice(types_available, 10, replace=False)
-    if setup1 is not None:
-        setup_agent1 = setup1
-    else:
-        setup_agent1 = np.random.choice(types_available, 10, replace=False)
 
     for simu in range(num_simulations):  # simulate games
+        # reset setup with new setup if none given
+        if setup0 is not None:
+            setup_agent0 = setup0
+        else:
+            types_draw = np.random.choice(types_available, 10, replace=False)
+            pos_agent0 = [(i, j) for i in range(3, 5) for j in range(5)]
+            setup_agent0 = np.empty((2, 5), dtype=object)
+            for idx in range(10):
+                pos = pos_agent0[idx]
+                setup_agent0[(4 - pos[0], 4 - pos[1])] = pieces.Piece(types_draw[idx], 0, pos)
+        if setup1 is not None:
+            setup_agent1 = setup1
+        else:
+            types_draw = np.random.choice(types_available, 10, replace=False)
+            pos_agent1 = [(i, j) for i in range(2) for j in range(5)]
+            setup_agent1 = np.empty((2, 5), dtype=object)
+            for idx in range(10):
+                pos = pos_agent1[idx]
+                setup_agent1[pos] = pieces.Piece(types_draw[idx], 1, pos)
+
+        # restart game
         print("Game number: " + str(simu+1))
         agent0 = agent.ExpectiSmart(team=0, setup=copy.deepcopy(setup_agent0))  # not smart in this case!
         agent1 = agent.OmniscientExpectiSmart(team=1, setup=copy.deepcopy(setup_agent1))
@@ -80,16 +93,16 @@ good_setup[1, 4] = 3
 #good_setup = np.flip(good_setup, 0)
 
 good_setup2 = np.empty((2, 5), dtype=int)
-good_setup2[0, 0] = 3
+good_setup2[0, 0] = 1
 good_setup2[0, 1] = 11
 good_setup2[0, 2] = 0
 good_setup2[0, 3] = 11
 good_setup2[0, 4] = 1
-good_setup2[1, 0] = 2
-good_setup2[1, 1] = 2
-good_setup2[1, 2] = 10
-good_setup2[1, 3] = 2
-good_setup2[1, 4] = 3
+good_setup2[1, 0] = 1
+good_setup2[1, 1] = 1
+good_setup2[1, 2] = 1
+good_setup2[1, 3] = 1
+good_setup2[1, 4] = 1
 
 rd_setup = np.empty((5, 5), )
 rd_setup[:, :] = None
@@ -105,7 +118,7 @@ rd_setup[0, 4] = 10
 
 setup_agent0 = np.empty((2, 5), dtype=object)
 setup_agent1 = np.empty((2, 5), dtype=object)
-for pos, piece in np.ndenumerate(good_setup):
+for pos, piece in np.ndenumerate(good_setup2):
     setup_agent0[pos] = pieces.Piece(piece, 0, (4-pos[0], 4-pos[1]))
     setup_agent1[pos] = pieces.Piece(piece, 1, pos)
 # for pos, type in np.ndenumerate(rd_setup):
@@ -113,7 +126,8 @@ for pos, piece in np.ndenumerate(good_setup):
 #         setup_agent1.append(pieces.Piece(int(type), 1, pos))
 #agent_0 = agent.OmniscientExpectiSmart(0, setup_agent0)
 #agent_1 = agent.OmniscientExpectiSmart(1, setup_agent1)
-simulation(setup_agent0, setup_agent1)
+#simulation(setup_agent0, setup_agent1)
+simulation()
 #print(result)
 
 # watch_game(agent0=agent.RandomAgent(team=0), agent1=agent.RandomAgent(team=1), step_time=0.01)
