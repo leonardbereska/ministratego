@@ -153,7 +153,6 @@ model = env.agents[0].model
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
-
 # model.load_state_dict(torch.load('./saved_models/finder.pkl'))
 train(env, num_episodes)
 torch.save(model.state_dict(), './saved_models/survivor.pkl')

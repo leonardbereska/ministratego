@@ -253,11 +253,11 @@ class Reinforce(Agent):
             return torch.LongTensor([[action]])
         else:
             # 1. random from possible (not-illegal) actions
-            # i = random.randint(0, len(poss_actions) - 1)
-            # random_action = poss_actions[i]
-            # return torch.LongTensor([[random_action]])
+            i = random.randint(0, len(poss_actions) - 1)
+            random_action = poss_actions[i]
+            return torch.LongTensor([[random_action]])
             # 2. truly random (including illegal moves)
-            return torch.LongTensor([[random.randint(0, action_dim - 1)]])
+            # return torch.LongTensor([[random.randint(0, action_dim - 1)]])
 
     def poss_actions(self, action_dim):
         """
