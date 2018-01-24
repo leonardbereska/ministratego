@@ -115,7 +115,7 @@ class Env:
         if not helpers.is_legal_move(self.board, agent_move):
             self.reward += self.reward_illegal
             self.illegal_moves += 1
-            print("illegal")
+            # print("illegal")
             self.score += self.reward
             done = self.goal_test()
             return self.reward, done  # environment does not change, agent should better choose only legal moves
@@ -234,35 +234,15 @@ class Env:
 class FindFlag(Env):
     def __init__(self, agent0, agent1):
         super(FindFlag, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.05
+        self.reward_step = -0.1
         self.reward_illegal = -1
-        self.reward_win = 1
-        self.death_thresh = -1
+        self.reward_win = 10
+        # self.death_thresh = -100
 
     def decide_pieces(self):
         known_place = []
         random_place = [pieces.Piece(3, 0, None), pieces.Piece(0, 1, None)]
         return known_place, random_place
-
-    # def decide_obstacles(self):
-    #     return []
-
-    def get_state(self):
-        state_dim = 3
-        board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
-        for pos in self.board_positions:
-            p = self.board[pos]
-            if p is not None:  # piece on this field
-                if p.team == 0:  # agents team
-                    board_state[tuple([0] + list(pos))] = p.type  # represent type
-                elif p.team == 1:  # opponents team
-                    board_state[tuple([1] + list(pos))] = 1  # flag
-                else:
-                    board_state[tuple([2] + list(pos))] = 1  # obstacle
-
-        board_state = torch.FloatTensor(board_state)
-        board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
-        return board_state
 
 
 class Maze(Env):
@@ -273,9 +253,9 @@ class Maze(Env):
         self.reward_win = 10
         self.reward_iter = -1
         self.reward_loss = -1
-
-        # TODO: Deprecate this
-        self.previous_pos = self.living_pieces[0][0]
+        #
+        # # TODO: Deprecate this
+        # self.previous_pos = self.living_pieces[0][0]
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 1, (4, 4))]

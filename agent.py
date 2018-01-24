@@ -229,22 +229,37 @@ class Reinforce(Agent):
         sample = random.random()
         if sample > p_random:
             state_action_values = self.model(Variable(state, volatile=True))
+            # 1. deterministic action selection (always select maximum q-value
+            # print(list(state_action_values.data[0].numpy()))
+            # action = state_action_values.data.max(1)[1].view(1, 1)
+            # return action
+            # 2. probabilistic: interpret q-value as probability
             p = list(state_action_values.data[0].numpy())
-            for action in range(len(p)):  # mask out impossible actions
-                if action not in poss_actions:
-                    p[action] = 0
+            # (optional) mask out impossible actions
+            # print("raw net : {}".format(p))
+            # for action in range(len(p)):
+            #     if action not in poss_actions:
+            #         p[action] = 0
+            # renormalize
             normed = [float(i) / sum(p) for i in p]
+            # print("masked: {}".format(normed))
             action = np.random.choice(np.arange(0, action_dim), p=normed)
             action = int(action)  # normal int not numpy int
             return torch.LongTensor([[action]])
         else:
-            while True:
-                # select action at random, but make sure it is a possible move
-                i = random.randint(0, len(poss_actions) - 1)
-                random_action = poss_actions[i]
-                return torch.LongTensor([[random_action]])
+            # 1. random from possible (not-illegal) actions
+            i = random.randint(0, len(poss_actions) - 1)
+            random_action = poss_actions[i]
+            return torch.LongTensor([[random_action]])
+            # 2. truly random (including illegal moves)
+            # return torch.LongTensor([[random.randint(0, action_dim - 1)]])
 
     def poss_actions(self, action_dim):
+        """
+
+        :param action_dim:
+        :return:
+        """
         poss_moves = helpers.get_poss_moves(self.board, 0)
         poss_actions = []
         all_actions = range(0, action_dim)
@@ -255,6 +270,12 @@ class Reinforce(Agent):
         return poss_actions
 
     def action_to_move(self, action):
+        """
+        Converting an action (integer between 0 and action_dim) to a move on the board,
+        according to the action representation specified in self.piece_action
+        :param action: action integer e.g. 3
+        :return: move e.g. ((0, 0), (0, 1))
+        """
         i, action = self.piece_action[action]
         piece = self.actors[i]
         piece_pos = piece.position  # where is the piece
@@ -271,6 +292,12 @@ class Reinforce(Agent):
         return move
 
     def board_to_state(self):
+        """
+        Converts the board of pieces (aka self.board) to the state input for a neural network,
+        according to the environment for which the agent is specified
+        (e.g. Finder only needs his own position, but MiniStratego will need all opponents pieces also)
+        :return: state_dim * 5 * 5 Tensor
+        """
         conditions = self.state_represent()
         state_dim = len(conditions)
         board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
@@ -297,8 +324,8 @@ class Finder(Reinforce):
     def state_represent(self):
         own_team = lambda piece: (piece.team == 0, piece.type)
         other_flag = lambda piece: (piece.team == 1, 1)
-        obstacle = lambda piece: (piece.type == 99, 1)
-        return own_team, other_flag, obstacle
+        # obstacle = lambda piece: (piece.type == 99, 1)
+        return [own_team, other_flag]
 
 
 class Mazer(Reinforce):
