@@ -14,9 +14,7 @@ class Finder(nn.Module):
         self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
         self.conv2 = nn.Conv2d(10, 10, padding=1, kernel_size=3)
         self.lin1 = nn.Linear(self.feature_size, 16)
-
         self.lin2 = nn.Linear(16, 4)
-        # self.lin2 = nn.Linear(16, 4)
 
     def forward(self, x):
 
