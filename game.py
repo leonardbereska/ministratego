@@ -62,21 +62,23 @@ class Game:
         print("Round: " + str(self.move_count))
         for agent_ in self.agents:
             agent_.move_count = self.move_count
-        # test if game is over
-        if self.goal_test():  # flag already discovered or no action possible
-            if turn == 1:
-                return 1, -1  # agent0 wins
-            elif turn == 0:
-                return -1, 1  # agent1 wins
+
         if self.move_count > 1000:  # if game lasts longer than 1000 turns => tie
             return 0, 0  # each agent gets reward 0
         new_move = self.agents[turn].decide_move()
-        if new_move == (None, None):  # agent cant move anymore --> lost
+        # test if agent can't move anymore
+        if new_move is None:
             if turn == 1:
-                return 1, -1  # agent0 wins
+                return 2, -2  # agent0 wins
             elif turn == 0:
-                return -1, 1  # agent1 wins
+                return -2, 2  # agent1 wins
         self.do_move(new_move)  # execute agent's choice
+        # test if game is over
+        if self.goal_test():  # flag discovered
+            if turn == 1:
+                return -1, 1  # agent1 wins
+            elif turn == 0:
+                return 1, -1  # agent0 wins
         self.move_count += 1
         return None
 
