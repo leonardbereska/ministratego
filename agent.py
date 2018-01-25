@@ -284,8 +284,13 @@ class Reinforce(Agent):
             move = (None, None)  # return illegal move
             return move
         moves = []
-        for i in range(1, 5):
-            moves += [(i, 0), (-i, 0), (0, -i), (0, i)]
+        if self.team == 0:
+            for i in range(1, 5):
+                moves += [(i, 0), (-i, 0), (0, -i), (0, i)]
+        else:
+            for i in range(1, 5):
+                moves += [(-i, 0), (i, 0), (0, i), (0, -i)]  # directions reversed
+
         direction = moves[action]  # action: 0-3
         pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
         pos_to = tuple(pos_to)
@@ -392,7 +397,7 @@ class MiniStrat(Reinforce):
         self.action_dim = 8
         self.state_dim = len(self.state_represent())
         self.model = models.MiniStrat(self.state_dim, self.action_dim)
-        self.model.load_state_dict(torch.load('./saved_models/Ministrat.pkl'))
+        self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)

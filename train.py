@@ -130,9 +130,9 @@ def train(env, num_episodes):
 BATCH_SIZE = 128  # for faster training take a smaller batch size
 GAMMA = 0.99
 EPS_START = 0.5  # for instable models take higher randomness first
-EPS_END = 0.01
+EPS_END = 0.001
 EPS_DECAY = 200
-N_SMOOTH = 100  # plotting scores averaged over this number of episodes
+N_SMOOTH = 1000  # plotting scores averaged over this number of episodes
 EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
 VERBOSE = 3  # level of printed output verbosity:
                 # 1: plot averaged episode scores
@@ -140,7 +140,7 @@ VERBOSE = 3  # level of printed output verbosity:
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 1000  # training for how many episodes
+num_episodes = 10000  # training for how many episodes
 
 env = env.MiniStratego(agent.MiniStrat(0), agent.MiniStrat(1))
 env.Train = True  # for externally determining move in train function (usually determined in agent)
@@ -149,11 +149,15 @@ state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 valu
 ACTION_DIM = 8  # how many agents * how many possible directions to go per agent
 model = env.agents[0].model
 
-optimizer = optim.RMSprop(model.parameters())
+# optimizer = optim.RMSprop(model.parameters())
+# TODO try ADAM
+optimizer = optim.Adam(model.parameters())
+
 memory = helpers.ReplayMemory(10000)
 
-model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))  # trained against Random
+
+model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/ministrat3.pkl')  # trained against AI
+torch.save(model.state_dict(), './saved_models/ministrat3.pkl')
 
 run_env(env, 10000)

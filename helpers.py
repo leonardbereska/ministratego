@@ -76,7 +76,7 @@ def print_board(board):
             plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
     #plt.gca().invert_yaxis()  # own pieces down, others up
     # plt.pause(1)
-    # plt.pause(0.5)
+    plt.pause(0.2)
 
     plt.show(block=False)
 
