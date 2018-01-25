@@ -105,7 +105,7 @@ class Env:
         if not helpers.get_poss_moves(self.board, team=0):
             self.reward += self.reward_loss
             self.score += self.reward
-            return self.reward, True
+            return self.reward, True, False  # 0 for lost
         if self.Train:
             agent_move = move
         else:
@@ -117,8 +117,8 @@ class Env:
             self.illegal_moves += 1
             # print("illegal")
             self.score += self.reward
-            done = self.goal_test()
-            return self.reward, done  # environment does not change, agent should better choose only legal moves
+            done, won = self.goal_test()
+            return self.reward, done, won  # environment does not change, agent should better choose only legal moves
         self.do_move(agent_move, team=0)
 
         # opponents move
@@ -126,14 +126,14 @@ class Env:
             if not helpers.get_poss_moves(self.board, team=1):
                 self.reward += self.reward_win
                 self.score = self.reward
-                return self.reward, True
-            self.agents[1].living_pieces = self.living_pieces  # give agents pieces
+                return self.reward, True, True  # 1 for won
+            self.agents[1].living_pieces = self.living_pieces  # give agents pieces TODO do i need this?
             opp_move = self.agents[1].decide_move()
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 
-        done = self.goal_test()
+        done, won = self.goal_test()
         self.score += self.reward
-        return self.reward, done
+        return self.reward, done, won
 
     def action_to_move(self, action, team):
         i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
@@ -206,21 +206,24 @@ class Env:
         return
 
     def goal_test(self):
+        """
+        :return: (bool: is environment in a terminal state, bool: is it won (True) or lost (False)
+        """
         for p in self.dead_pieces[1]:
             if p.type == 0:
                 self.reward += self.reward_win
                 # print("Red won, captured flag")
-                return True
+                return True, True
         for p in self.dead_pieces[0]:
             if p.type == 0:
                 self.reward += self.reward_loss
                 # print("Blue won, captured flag")
-                return True
+                return True, False
         if self.death_thresh is not None:
             if self.score < self.death_thresh:
                 self.reward += self.reward_loss
-                return True
-        return False
+                return True, False
+        return False, False
 
     def show(self):
         fig = plt.figure(1)
@@ -270,12 +273,12 @@ class Survive(Env):
     def __init__(self, agent0, agent1):
         super(Survive, self).__init__(agent0=agent0, agent1=agent1)
         # self.reward_step = -0.01
-        self.reward_illegal = -0.1
+        self.reward_illegal = -1
         self.reward_win = 1
-        self.reward_kill = 0.1
-        self.reward_die = -0.1
+        self.reward_kill = 1
+        self.reward_die = -1
         self.reward_loss = -1
-        self.death_thresh = -100
+        self.death_thresh = -10
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 0, (0, 0)), pieces.Piece(0, 1, (4, 4)),
@@ -285,15 +288,38 @@ class Survive(Env):
         return known_place, random_place
 
 
-class MiniMiniStratego(Env):
+class ControlTheTwo(Env):
     def __init__(self, agent0, agent1):
-        super(MiniMiniStratego, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.1
+        super(ControlTheTwo, self).__init__(agent0=agent0, agent1=agent1)
+        # self.reward_step = -0.01
         self.reward_illegal = -1
         self.reward_win = 10
+        self.reward_kill = 1
+        self.reward_die = -1
+        self.reward_loss = -10
+        self.death_thresh = -20
 
     def decide_pieces(self):
-        self.types_available = np.array([0, 1, 2, 2, 3, 10, 11])
+        known_place = [pieces.Piece(0, 0, (0, 0)), pieces.Piece(0, 1, (4, 4)),
+                       pieces.Piece(2, 0, (1, 1))]
+
+        random_place = [pieces.Piece(3, 1, (4, 3)), pieces.Piece(10, 1, (3, 4)),
+                        pieces.Piece(3, 1, (3, 3))]
+        return known_place, random_place
+
+
+class MiniStratego(Env):
+    def __init__(self, agent0, agent1):
+        super(MiniStratego, self).__init__(agent0=agent0, agent1=agent1)
+        self.reward_illegal = -0.1
+        self.reward_kill = 0.1
+        self.reward_die = -0.1
+        self.reward_loss = -1
+        self.reward_win = 1
+        self.death_thresh = -10
+
+    def decide_pieces(self):
+        self.types_available = np.array([0, 1, 10])
         known_place = []
         # draw random setup for 10 figures for each team
         for team in (0, 1):
@@ -305,9 +331,9 @@ class MiniMiniStratego(Env):
         return known_place, random_place
 
 
-class MiniStratego(Env):
+class Stratego(Env):
     def __init__(self, agent0, agent1):
-        super(MiniStratego, self).__init__(agent0=agent0, agent1=agent1)
+        super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_step = -0.1
         self.reward_illegal = -1
         self.reward_win = 10

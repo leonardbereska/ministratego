@@ -36,6 +36,7 @@ def optimize_model():
 
     # Compute V(s_{t+1}) for all next states.
     next_state_values = Variable(torch.zeros(BATCH_SIZE).type(torch.FloatTensor))  # zero for teminal states
+    # TODO next state value should be masked by possible actions too
     next_state_values[non_final_mask] = model(non_final_next_states).max(1)[0]  # what would the model predict
     next_state_values.volatile = False  # requires_grad = False to not mess with loss
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch  # compute the expected Q values
@@ -68,11 +69,11 @@ def run_env(env, n_runs=100):
             action = env.agents[0].select_action(state, 0.00, ACTION_DIM)
             action = action[0, 0]  # action is unwrapped from the LongTensor
             move = env.agents[0].action_to_move(action)  # e.g. action = 1 -> move = ((0, 0), (0, 1))
-            _, done = env.step(move)
+            _, done, won = env.step(move)
             env.show()
-            if done and env.reward == env.reward_win:
+            if done and won:
                 print("Won!")
-            elif (done and env.reward == env.reward_loss) or env.score < -5:
+            elif done and not won or env.score < -3:
                 print("Lost")
                 break
 
@@ -97,7 +98,7 @@ def train(env, num_episodes):
                     p_random = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * i_episode / EPS_DECAY)
                     action = env.agents[0].select_action(state, p_random, ACTION_DIM)  # random action with p_random
                     move = env.agents[0].action_to_move(action[0, 0])
-                    reward_value, done = env.step(move)  # environment step for action
+                    reward_value, done, won = env.step(move)  # environment step for action
                     if VERBOSE > 2:
                             print(action[0, 0], reward_value)
                     reward = torch.FloatTensor([reward_value])
@@ -130,20 +131,20 @@ def train(env, num_episodes):
 # hyperparameters
 BATCH_SIZE = 128  # for faster training take a smaller batch size
 GAMMA = 0.99
-EPS_START = 0.9  # for instable models take higher randomness first
-EPS_END = 0.05
-EPS_DECAY = 100
-N_SMOOTH = 10  # plotting scores averaged over this number of episodes
+EPS_START = 0.3  # for instable models take higher randomness first
+EPS_END = 0.01
+EPS_DECAY = 200
+N_SMOOTH = 100  # plotting scores averaged over this number of episodes
 EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
-VERBOSE = 0  # level of printed output verbosity:
+VERBOSE = 3  # level of printed output verbosity:
                 # 1: plot averaged episode scores
                 # 2: also print actions taken and rewards
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 1000  # training for how many episodes
+num_episodes = 10000  # training for how many episodes
 
-env = env.Survive(agent.Survivor(0), agent.RandomAgent(1))
+env = env.MiniStratego(agent.MiniStrat(0), agent.MiniStrat(1))
 env.Train = True  # for externally determining move in train function (usually determined in agent)
 
 state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values
@@ -153,8 +154,8 @@ model = env.agents[0].model
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
-# model.load_state_dict(torch.load('./saved_models/finder.pkl'))
+model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/survivor.pkl')
+torch.save(model.state_dict(), './saved_models/ministrat2.pkl')
 
 run_env(env, 10000)
