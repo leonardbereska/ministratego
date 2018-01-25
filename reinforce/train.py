@@ -58,8 +58,6 @@ def run_env(env, n_runs=100):
     :param n_runs: how many episodes should be run
     :return: plot of each step in the environment
     """
-    global EVAL
-    EVAL = True  # switch evaluation mode on:
     for i in range(n_runs):
         env.reset()
         env.show()
@@ -131,10 +129,10 @@ def train(env, num_episodes):
 # hyperparameters
 BATCH_SIZE = 128  # for faster training take a smaller batch size
 GAMMA = 0.99
-EPS_START = 0.3  # for instable models take higher randomness first
+EPS_START = 0.5  # for instable models take higher randomness first
 EPS_END = 0.01
 EPS_DECAY = 200
-N_SMOOTH = 100  # plotting scores averaged over this number of episodes
+N_SMOOTH = 10  # plotting scores averaged over this number of episodes
 EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
 VERBOSE = 3  # level of printed output verbosity:
                 # 1: plot averaged episode scores
@@ -142,7 +140,7 @@ VERBOSE = 3  # level of printed output verbosity:
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 10000  # training for how many episodes
+num_episodes = 100  # training for how many episodes
 
 env = env.MiniStratego(agent.MiniStrat(0), agent.RandomAgent(1))
 env.Train = True  # for externally determining move in train function (usually determined in agent)
@@ -154,8 +152,8 @@ model = env.agents[0].model
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
-model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))
-# train(env, num_episodes)
-# torch.save(model.state_dict(), './saved_models/ministrat2.pkl')
+# model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))
+train(env, num_episodes)
+torch.save(model.state_dict(), './saved_models/ministrat2.pkl')
 
 run_env(env, 10000)

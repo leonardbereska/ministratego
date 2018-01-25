@@ -11,6 +11,7 @@ import torch
 import battleMatrix
 import models
 
+
 class Agent:
     """
     Agent decides the initial setup and decides which action to take
@@ -165,7 +166,7 @@ class Agent:
 
 class RandomAgent(Agent):
     """
-    Agent who chooses his initial setup and actions at random
+    Agent who chooses his actions at random
     """
     def __init__(self, team, setup=None):
         super(RandomAgent, self).__init__(team=team, setup=setup)
@@ -177,7 +178,6 @@ class RandomAgent(Agent):
             return None
         else:
             return random.choice(actions)
-
 
 
 class Reinforce(Agent):
@@ -261,7 +261,7 @@ class Reinforce(Agent):
         :param action_dim:
         :return:
         """
-        poss_moves = helpers.get_poss_moves(self.board, 0)
+        poss_moves = helpers.get_poss_moves(self.board, self.team)
         poss_actions = []
         all_actions = range(0, action_dim)
         for action in all_actions:
@@ -304,6 +304,9 @@ class Reinforce(Agent):
         board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
         for pos in self.board_positions:
             p = self.board[pos]
+            # for reinforce as team 1, reverse board to have same state representation
+            if self.team == 1:
+                pos = (4 - pos[0], 4 - pos[1])
             if p is not None:  # piece on this field
                 for i, cond in enumerate(conditions):
                     condition, value = cond(p)
@@ -392,15 +395,15 @@ class MiniStrat(Reinforce):
         self.model.load_state_dict(torch.load('./saved_models/Ministrat.pkl'))
 
     def state_represent(self):
-        own_team_one = lambda p: (p.team == 0 and p.type == 1, 1)
-        own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
-        own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
-        # own_team = lambda p: (p.team == 0 and p.can_move, p.type)
-        own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
-        opp_team_one = lambda p: (p.team == 1 and p.type == 1, 1)
-        opp_team_three = lambda p: (p.team == 1 and p.type == 3, 1)
-        opp_team_ten = lambda p: (p.team == 1 and p.type == 10, 1)
-        opp_team_flag = lambda p: (p.team == 1 and not p.can_move, 1)
+        own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+        opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
         obstacle = lambda p: (p.type == 99, 1)
         return own_team_one, own_team_three, own_team_ten, own_team_flag, \
                opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
