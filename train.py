@@ -88,6 +88,8 @@ def train(env, num_episodes):
     :return:
     """
     episode_scores = []  # score = total reward
+    episode_won = []  # win-ratio win = 1 loss = -1
+
     for i_episode in range(num_episodes):
             env.reset()  # initialize environment
             state = env.agents[0].board_to_state()  # initialize state
@@ -106,21 +108,26 @@ def train(env, num_episodes):
                             next_state = None
                     else:
                             next_state = env.agents[0].board_to_state()
+
                     memory.push(state, action, next_state, reward)  # store the transition in memory
                     state = next_state  # move to the next state
                     optimize_model()  # one step of optimization of target network
+                    # env.agents[1].model = model  # TODO real self play?
 
                     if done:
                         # after each episode print stats
-                            print("Episode {}/{}".format(i_episode, num_episodes))
-                            print("Score: {}".format(env.score))
-                            print("Noise: {}".format(p_random))
-                            print("Illegal: {}/{}\n".format(env.illegal_moves, env.steps))
-                            episode_scores.append(env.score)
-                            if VERBOSE > 0:
-                                global N_SMOOTH
-                                helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
-                            break
+                        print("Episode {}/{}".format(i_episode, num_episodes))
+                        print("Score: {}".format(env.score))
+                        print("Won: {}".format(won))
+                        print("Noise: {}".format(p_random))
+                        print("Illegal: {}/{}\n".format(env.illegal_moves, env.steps))
+                        episode_scores.append(env.score)
+                        episode_won.append(won)
+                        if VERBOSE > 0:
+                            global N_SMOOTH
+                            helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
+                            helpers.plot_stats(episode_won, N_SMOOTH)  # takes run time
+                        break
             if i_episode % 100 == 2:
                     if VERBOSE > 3:
                             run_env(env, 1)
@@ -129,9 +136,9 @@ def train(env, num_episodes):
 # hyperparameters
 BATCH_SIZE = 128  # for faster training take a smaller batch size
 GAMMA = 0.99
-EPS_START = 0.5  # for instable models take higher randomness first
+EPS_START = 0.01  # for instable models take higher randomness first
 EPS_END = 0.001
-EPS_DECAY = 200
+EPS_DECAY = 50
 N_SMOOTH = 1000  # plotting scores averaged over this number of episodes
 EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
 VERBOSE = 3  # level of printed output verbosity:
@@ -142,22 +149,18 @@ VERBOSE = 3  # level of printed output verbosity:
 
 num_episodes = 10000  # training for how many episodes
 
-env = env.MiniStratego(agent.MiniStrat(0), agent.MiniStrat(1))
+env = env.ThreePieces(agent.ThreePieces(0), agent.RandomAgent(1))
 env.Train = True  # for externally determining move in train function (usually determined in agent)
 
 state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values
-ACTION_DIM = 8  # how many agents * how many possible directions to go per agent
-model = env.agents[0].model
+ACTION_DIM = 12  # how many agents * how many possible directions to go per agent
+model = env.agents[0].model  # this is key for optimizing the policy which is interacting in environment
 
-# optimizer = optim.RMSprop(model.parameters())
-# TODO try ADAM
-optimizer = optim.Adam(model.parameters())
-
+optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
-
-model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+# model.load_state_dict(torch.load('./saved_models/threepiece.pkl'))  # trained against Random
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/ministrat3.pkl')
+torch.save(model.state_dict(), './saved_models/threepiece.pkl')
 
 run_env(env, 10000)

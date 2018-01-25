@@ -235,6 +235,6 @@ def watch_env(env, n_runs=100):
                 break
 
 
-env = env.MiniStratego(agent.MiniStrat(0), agent.MiniStrat(1))
+env = env.ThreePieces(agent.RandomAgent(0), agent.RandomAgent(1))
 watch_env(env, 10000)
 

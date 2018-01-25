@@ -100,6 +100,12 @@ def get_poss_moves(board, team):
 
 
 def plot_scores(episode_scores, n_smooth):
+    """
+    Plots the scores (accumulated reward over one episode) for a RL agent
+    :param episode_scores: list of the episode scores
+    :param n_smooth: averaged over this number of episodes
+    :return: plot
+    """
     plt.figure(2)
     plt.clf()
     scores_t = torch.FloatTensor(episode_scores)
@@ -112,6 +118,28 @@ def plot_scores(episode_scores, n_smooth):
         average = means.numpy()
         plt.plot(average)
     plt.title('Average Score over last {} Episodes: {}'.format(n_smooth, int(average[-1]*10)/10))
+    plt.pause(0.001)  # pause a bit so that plots are updated
+
+
+def plot_stats(episode_won, n_smooth):
+    """
+    Plots the winning/losing ratio
+    :param episode_scores:
+    :param n_smooth:
+    :return:
+    """
+    plt.figure(3)
+    plt.clf()
+    scores_t = torch.FloatTensor(episode_won)
+    plt.xlabel('Episode')
+    plt.ylabel('Score')
+    average = [0]
+    if len(scores_t) >= n_smooth:
+        means = scores_t.unfold(0, n_smooth, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(n_smooth-1), means))
+        average = means.numpy()
+        plt.plot(average)
+    plt.title('Average Win Percentage over last {} Episodes: {}'.format(n_smooth, int(average[-1]*100)/100))
     plt.pause(0.001)  # pause a bit so that plots are updated
 
 
