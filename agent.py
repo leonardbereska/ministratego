@@ -193,7 +193,7 @@ class Reinforce(Agent):
 
     def decide_move(self):
         state = self.board_to_state()
-        action = self.select_action(state, p_random=0.00)
+        action = self.select_action(state, p_random=0.00, action_dim=self.action_dim)
         move = self.action_to_move(action[0, 0])
         return move
 
@@ -236,23 +236,24 @@ class Reinforce(Agent):
             # 2. probabilistic: interpret q-value as probability
             p = list(state_action_values.data[0].numpy())
             # (optional) mask out impossible actions
-            # print("raw net : {}".format(p))
-            # for action in range(len(p)):
-            #     if action not in poss_actions:
-            #         p[action] = 0
+            print("raw net : {}".format(np.round(p, 2)))
+            for action in range(len(p)):
+                if action not in poss_actions:
+                    p[action] = p[action] * 0.0
+            print("masked: {}".format(np.round(p, 2)))
             # renormalize
             normed = [float(i) / sum(p) for i in p]
-            # print("masked: {}".format(normed))
+            # print("normed: {}".format(np.round(normed, 2)))
             action = np.random.choice(np.arange(0, action_dim), p=normed)
             action = int(action)  # normal int not numpy int
             return torch.LongTensor([[action]])
         else:
             # 1. random from possible (not-illegal) actions
-            i = random.randint(0, len(poss_actions) - 1)
-            random_action = poss_actions[i]
-            return torch.LongTensor([[random_action]])
+            # i = random.randint(0, len(poss_actions) - 1)
+            # random_action = poss_actions[i]
+            # return torch.LongTensor([[random_action]])
             # 2. truly random (including illegal moves)
-            # return torch.LongTensor([[random.randint(0, action_dim - 1)]])
+            return torch.LongTensor([[random.randint(0, action_dim - 1)]])
 
     def poss_actions(self, action_dim):
         """
@@ -280,7 +281,7 @@ class Reinforce(Agent):
         piece = self.actors[i]
         piece_pos = piece.position  # where is the piece
         if piece_pos is None:
-            move = None # return illegal move
+            move = (None, None)  # return illegal move
             return move
         moves = []
         for i in range(1, 5):
@@ -355,12 +356,54 @@ class Survivor(Reinforce):
         own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
         own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
         own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
-        opp_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
-        opp_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
-        opp_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
+        opp_team_three = lambda p: (p.team == 1 and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == 1 and p.type == 10, 1)
+        opp_team_flag = lambda p: (p.team == 1 and not p.can_move, 1)
         obstacle = lambda p: (p.type == 99, 1)
         return own_team_three, own_team_ten, own_team_flag, opp_team_three, opp_team_ten, opp_team_flag,obstacle
 
+
+class Control(Reinforce):
+    def __init__(self, team):
+        super(Control, self).__init__(team=team)
+        self.action_dim = 16
+        self.state_dim = len(self.state_represent())
+        self.model = models.Control(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/survivor.pkl'))
+
+    def state_represent(self):
+        # own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
+        own_team_two = lambda p: (p.team == 0 and p.type == 2, 1)
+        # own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
+        own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
+        opp_team_three = lambda p: (p.team == 1 and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == 1 and p.type == 10, 1)
+        opp_team_flag = lambda p: (p.team == 1 and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team_two, own_team_flag, opp_team_three, opp_team_ten, opp_team_flag,obstacle
+
+
+class MiniStrat(Reinforce):
+    def __init__(self, team):
+        super(MiniStrat, self).__init__(team=team)
+        self.action_dim = 8
+        self.state_dim = len(self.state_represent())
+        self.model = models.MiniStrat(self.state_dim, self.action_dim)
+        self.model.load_state_dict(torch.load('./saved_models/Ministrat.pkl'))
+
+    def state_represent(self):
+        own_team_one = lambda p: (p.team == 0 and p.type == 1, 1)
+        own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
+        # own_team = lambda p: (p.team == 0 and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
+        opp_team_one = lambda p: (p.team == 1 and p.type == 1, 1)
+        opp_team_three = lambda p: (p.team == 1 and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == 1 and p.type == 10, 1)
+        opp_team_flag = lambda p: (p.team == 1 and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team_one, own_team_three, own_team_ten, own_team_flag, \
+               opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
 
 class ExpectiSmart(Agent):
     def __init__(self, team, setup=None):

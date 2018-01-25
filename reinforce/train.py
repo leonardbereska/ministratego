@@ -144,7 +144,7 @@ VERBOSE = 3  # level of printed output verbosity:
 
 num_episodes = 10000  # training for how many episodes
 
-env = env.MiniStratego(agent.MiniStrat(0), agent.MiniStrat(1))
+env = env.MiniStratego(agent.MiniStrat(0), agent.RandomAgent(1))
 env.Train = True  # for externally determining move in train function (usually determined in agent)
 
 state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values
@@ -155,7 +155,7 @@ optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
 model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))
-train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/ministrat2.pkl')
+# train(env, num_episodes)
+# torch.save(model.state_dict(), './saved_models/ministrat2.pkl')
 
 run_env(env, 10000)
