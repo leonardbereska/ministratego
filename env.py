@@ -18,7 +18,7 @@ class Env:
     """
 
     def __init__(self, agent0, agent1, board_size=(5, 5)):
-        self.Train = True  # if true can insert action in env_step
+        # self.Train = True  # if true can insert action in env_step
 
         # initialize board
         self.board = np.empty(board_size, dtype=object)
@@ -99,17 +99,17 @@ class Env:
         obstacle_pos = [(2, 2)]
         return obstacle_pos
 
-    def step(self, move):
+    def step(self, move=None):
         self.reward = 0
         self.steps += 1  # illegal move as step
         if not helpers.get_poss_moves(self.board, team=0):
             self.reward += self.reward_loss
             self.score += self.reward
             return self.reward, True, False  # 0 for lost
-        if self.Train:
+        if move is not None:
             agent_move = move
         else:
-            self.agents[0].living_pieces = self.living_pieces  # give agents pieces
+            # self.agents[0].living_pieces = self.living_pieces  # give agents pieces
             agent_move = self.agents[0].decide_move()
         # if not legal -> not change env, receive reward_illegal
         if not helpers.is_legal_move(self.board, agent_move):
@@ -127,8 +127,10 @@ class Env:
                 self.reward += self.reward_win
                 self.score = self.reward
                 return self.reward, True, True  # 1 for won
-            self.agents[1].living_pieces = self.living_pieces  # give agents pieces TODO do i need this?
+            # self.agents[1].living_pieces = self.living_pieces  # give agents pieces TODO do i need this?
             opp_move = self.agents[1].decide_move()
+            if not helpers.is_legal_move(self.board, opp_move):
+                print("Warning: selected illegal move!")
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 
         done, won = self.goal_test()
@@ -311,32 +313,117 @@ class ControlTheTwo(Env):
 class MiniStratego(Env):
     def __init__(self, agent0, agent1):
         super(MiniStratego, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_illegal = -0.1
+        self.reward_step = -0.1
+        self.reward_illegal = -0.5
+        self.reward_kill = 0.5
+        self.reward_die = -0.5
+        self.reward_loss = -2
+        self.reward_win = 2
+        self.death_thresh = -20
+
+    def decide_pieces(self):
+        self.types_available = [0, 1, 10]
+        known_place = []
+        # draw random setup for 10 figures for each team
+        for team in (0, 1):
+            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
+            for i, piece_type in enumerate(self.types_available):
+                # print(setup_pos[index[i]])
+                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
+        random_place = []  # random_place is across whole board
+        return known_place, random_place
+
+
+class ThreePieces(Env):
+    def __init__(self, agent0, agent1):
+        super(ThreePieces, self).__init__(agent0=agent0, agent1=agent1)
+        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
+        # self.reward_illegal = -0.1  # no illegal moves allowed
+        self.reward_kill = 1
+        self.reward_die = -1
+        self.reward_loss = -1
+        self.reward_win = 1
+        # self.death_thresh = -20
+
+    def decide_pieces(self):
+        self.types_available = [[0, 1, 3, 10], [0, 1, 1, 3, 3, 10, 10]]
+        known_place = []
+        # draw random setup for 10 figures for each team
+        for team in (0, 1):
+            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
+            for i, piece_type in enumerate(self.types_available[team]):
+                # print(setup_pos[index[i]])
+                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
+        random_place = []  # random_place is across whole board
+        return known_place, random_place
+
+
+class FourPieces(Env):
+    def __init__(self, agent0, agent1):
+        super(FourPieces, self).__init__(agent0=agent0, agent1=agent1)
+        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
+        # self.reward_illegal = -0.1  # no illegal moves allowed
         self.reward_kill = 0.1
         self.reward_die = -0.1
         self.reward_loss = -1
         self.reward_win = 1
-        self.death_thresh = -10
+        # self.death_thresh = -20
 
     def decide_pieces(self):
-        self.types_available = np.array([0, 1, 10])
+        self.types_available = [[0, 1, 2, 3, 10], [0, 1, 2, 3, 10]]
         known_place = []
         # draw random setup for 10 figures for each team
         for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 5) for j in range(5)]
-            setup = np.random.choice(self.types_available, len(self.types_available), replace=False)
-            for i, pos in enumerate(setup):
-                known_place.append(pieces.Piece(setup[i], team, setup_pos[i]))
+            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
+            for i, piece_type in enumerate(self.types_available[team]):
+                # print(setup_pos[index[i]])
+                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
         random_place = []  # random_place is across whole board
         return known_place, random_place
+
+
+class FourPiecesBomb(Env):
+    def __init__(self, agent0, agent1):
+        super(FourPiecesBomb, self).__init__(agent0=agent0, agent1=agent1)
+        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
+        # self.reward_illegal = -0.1  # no illegal moves allowed
+        self.reward_kill = 0.1
+        self.reward_die = -0.1
+        self.reward_loss = -1
+        self.reward_win = 1
+        # self.death_thresh = -20
+
+    def decide_pieces(self):
+        self.types_available = [[0, 1, 2, 3, 10, 11, 11], [0, 1, 2, 3, 10, 11, 11]]
+        known_place = []
+        # draw random setup for 10 figures for each team
+        for team in (0, 1):
+            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
+            for i, piece_type in enumerate(self.types_available[team]):
+                # print(setup_pos[index[i]])
+                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
+        random_place = []  # random_place is across whole board
+        return known_place, random_place
+
+
+# Unknown
+# Same Pieces Control
+#
 
 
 class Stratego(Env):
     def __init__(self, agent0, agent1):
         super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.1
+        # self.reward_step = -0.1
+        self.reward_kill = 0.1
+        self.reward_die = -0.1
         self.reward_illegal = -1
-        self.reward_win = 10
+        self.reward_win = 1
+        self.reward_loss = -1
 
     def decide_pieces(self):
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])  # has to be here for correct order

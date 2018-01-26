@@ -6,7 +6,7 @@ import pieces
 import agent
 import helpers
 import copy
-
+import env
 
 def watch_game(agent0, agent1, step_time):
     """
@@ -208,6 +208,7 @@ for pos, piece in np.ndenumerate(good_setup):
 
 #simulation(setup_agent0, setup_agent1)
 simulation(agent_type_0="random", agent_type_1="expectimax")
+# simulation()
 
 
 # watch_game(agent0=agent.RandomAgent(team=0), agent1=agent.RandomAgent(team=1), step_time=0.01)
@@ -257,3 +258,34 @@ simulation(agent_type_0="random", agent_type_1="expectimax")
 # env = MiniStratego(agent0, agent1)
 # while True:
 #     watch_game(env, 0.001)
+
+
+def watch_env(env, n_runs=100):
+    """
+    Plots simulated games in an environment for visualization
+    :param env: environment to be run
+    :param n_runs: how many episodes should be run
+    :return: plot of each step in the environment
+    """
+    for i in range(n_runs):
+        env.reset()
+        env.show()
+        done = False
+        while not done:
+            # state = env.agents[0].board_to_state()  # for the reinforcement agent convert board to state input
+            # action = env.agents[0].select_action(state, 0.00, action_dim)
+            # action = action[0, 0]  # action is unwrapped from the LongTensor
+            # move = env.agents[0].action_to_move(action)  # e.g. action = 1 -> move = ((0, 0), (0, 1))
+
+            _, done, won = env.step()
+            env.show()
+            if done and won:
+                print("Won!")
+            elif done and not won or env.score < -3:
+                print("Lost")
+                break
+
+
+env = env.ThreePieces(agent.RandomAgent(0), agent.RandomAgent(1))
+watch_env(env, 10000)
+

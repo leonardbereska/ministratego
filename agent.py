@@ -11,6 +11,7 @@ import torch
 import battleMatrix
 import models
 
+
 class Agent:
     """
     Agent decides the initial setup and decides which action to take
@@ -220,7 +221,6 @@ class RandomAgent(Agent):
             return random.choice(actions)
 
 
-
 class Reinforce(Agent):
     """
     Agent approximating action-value functions with an artificial neural network
@@ -290,11 +290,11 @@ class Reinforce(Agent):
             return torch.LongTensor([[action]])
         else:
             # 1. random from possible (not-illegal) actions
-            # i = random.randint(0, len(poss_actions) - 1)
-            # random_action = poss_actions[i]
-            # return torch.LongTensor([[random_action]])
+            i = random.randint(0, len(poss_actions) - 1)
+            random_action = poss_actions[i]
+            return torch.LongTensor([[random_action]])
             # 2. truly random (including illegal moves)
-            return torch.LongTensor([[random.randint(0, action_dim - 1)]])
+            # return torch.LongTensor([[random.randint(0, action_dim - 1)]])
 
     def poss_actions(self, action_dim):
         """
@@ -302,7 +302,7 @@ class Reinforce(Agent):
         :param action_dim:
         :return:
         """
-        poss_moves = helpers.get_poss_moves(self.board, 0)
+        poss_moves = helpers.get_poss_moves(self.board, self.team)
         poss_actions = []
         all_actions = range(0, action_dim)
         for action in all_actions:
@@ -325,8 +325,13 @@ class Reinforce(Agent):
             move = (None, None)  # return illegal move
             return move
         moves = []
-        for i in range(1, 5):
-            moves += [(i, 0), (-i, 0), (0, -i), (0, i)]
+        if self.team == 0:
+            for i in range(1, 5):
+                moves += [(i, 0), (-i, 0), (0, -i), (0, i)]
+        else:
+            for i in range(1, 5):
+                moves += [(-i, 0), (i, 0), (0, i), (0, -i)]  # directions reversed
+
         direction = moves[action]  # action: 0-3
         pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
         pos_to = tuple(pos_to)
@@ -345,6 +350,9 @@ class Reinforce(Agent):
         board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
         for pos, val in np.ndenumerate(self.board):
             p = self.board[pos]
+            # for reinforce as team 1, reverse board to have same state representation
+            if self.team == 1:
+                pos = (4 - pos[0], 4 - pos[1])
             if p is not None:  # piece on this field
                 for i, cond in enumerate(conditions):
                     condition, value = cond(p)
@@ -430,21 +438,102 @@ class MiniStrat(Reinforce):
         self.action_dim = 8
         self.state_dim = len(self.state_represent())
         self.model = models.MiniStrat(self.state_dim, self.action_dim)
-        self.model.load_state_dict(torch.load('./saved_models/Ministrat.pkl'))
+        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
 
     def state_represent(self):
-        own_team_one = lambda p: (p.team == 0 and p.type == 1, 1)
-        own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
-        own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
-        # own_team = lambda p: (p.team == 0 and p.can_move, p.type)
-        own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
-        opp_team_one = lambda p: (p.team == 1 and p.type == 1, 1)
-        opp_team_three = lambda p: (p.team == 1 and p.type == 3, 1)
-        opp_team_ten = lambda p: (p.team == 1 and p.type == 10, 1)
-        opp_team_flag = lambda p: (p.team == 1 and not p.can_move, 1)
+        # too informative state-representation, but trained models on this
+        own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+        opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
         obstacle = lambda p: (p.type == 99, 1)
         return own_team_one, own_team_three, own_team_ten, own_team_flag, \
                opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+
+
+class ThreePieces(Reinforce):
+    def __init__(self, team):
+        super(ThreePieces, self).__init__(team=team)
+        self.action_dim = 12  #
+        self.state_dim = len(self.state_represent())
+        self.model = models.ThreePieces(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+
+    def state_represent(self):
+        own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+        opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team_one, own_team_three, own_team_ten, own_team_flag, \
+               opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+
+
+class FourPieces(Reinforce):
+    def __init__(self, team):
+        super(FourPieces, self).__init__(team=team)
+        self.action_dim = 28  #
+        self.state_dim = len(self.state_represent())
+        self.model = models.FourPieces(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+
+    def state_represent(self):
+        # own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        # own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
+        # own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        # own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+
+        # opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        # opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        # opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        # opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team, own_team_flag, opp_team, opp_team_flag # flag is also bomb
+        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
+        #        opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+
+
+class Stratego(Reinforce):
+    def __init__(self, team):
+        super(Stratego, self).__init__(team=team)
+        self.action_dim = 64  #
+        self.state_dim = len(self.state_represent())
+        self.model = models.ThreePieces(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+
+    def state_represent(self):
+        # own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        # own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
+        # own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        # own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+
+        # opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        # opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        # opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        # opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team, own_team_flag, opp_team, opp_team_flag, obstacle # flag is also bomb
+        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
+        #        opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+
 
 class ExpectiSmart(Agent):
     """
