@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
-import battleMatrix
+
 import helpers
 import pieces
 
@@ -67,7 +67,7 @@ class Env:
             actors = sorted(actors, key=lambda actor: actor.type)  # train for unique actor sequence
             self.agents[team].action_represent(actors)
 
-        self.battleMatrix = battleMatrix.get_battle_matrix()
+        self.battleMatrix = helpers.get_battle_matrix()
 
         self.opp_can_move = False  # static opponent would be e.g. only flag
         for p in self.living_pieces[1]:  # if movable piece among opponents pieces

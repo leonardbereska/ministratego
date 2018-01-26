@@ -37,7 +37,7 @@ class Agent:
         obstacle.hidden = False
         self.board[2, 2] = obstacle
 
-        self.battleMatrix = battleMatrix.get_battle_matrix()
+        self.battleMatrix = helpers.get_battle_matrix()
 
         # fallen pieces bookkeeping
         self.deadPieces = []
