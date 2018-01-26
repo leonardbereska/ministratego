@@ -276,16 +276,17 @@ class Reinforce(Agent):
             # 2. probabilistic: interpret q-value as probability
             p = list(state_action_values.data[0].numpy())
             # (optional) mask out impossible actions
-            print("raw net : {}".format(np.round(p, 2)))
+            #print("raw net : {}".format(np.round(p, 2)))
             for action in range(len(p)):
                 if action not in poss_actions:
                     p[action] = p[action] * 0.0
-            print("masked: {}".format(np.round(p, 2)))
+            #print("masked: {}".format(np.round(p, 2)))
             # renormalize
             normed = [float(i) / sum(p) for i in p]
             # print("normed: {}".format(np.round(normed, 2)))
-            action = np.random.choice(np.arange(0, action_dim), p=normed)
-            action = int(action)  # normal int not numpy int
+            # action = np.random.choice(np.arange(0, action_dim), p=normed)
+            # action = int(action)  # normal int not numpy int
+            action = p.index(max(p))
             return torch.LongTensor([[action]])
         else:
             # 1. random from possible (not-illegal) actions

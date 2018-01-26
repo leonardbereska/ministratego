@@ -136,7 +136,7 @@ def train(env, num_episodes):
 # hyperparameters
 BATCH_SIZE = 128  # for faster training take a smaller batch size
 GAMMA = 0.99
-EPS_START = 0.5  # for instable models take higher randomness first
+EPS_START = 0.5  # for unstable models take higher randomness first
 EPS_END = 0.1
 EPS_DECAY = 50
 N_SMOOTH = 20  # plotting scores averaged over this number of episodes
@@ -148,8 +148,10 @@ VERBOSE = 3  # level of printed output verbosity:
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
 num_episodes = 200  # training for how many episodes
-
-env = env.Stratego(agent.Stratego(0), agent.RandomAgent(1))
+agent0 = agent.Stratego(0)
+agent1 = agent.Stratego(1)
+agent1.model = agent0.model
+env = env.Stratego(agent0, agent1)
 env.Train = True  # for externally determining move in train function (usually determined in agent)
 
 state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values
