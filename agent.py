@@ -8,7 +8,6 @@ from scipy import spatial
 import helpers
 from torch.autograd import Variable
 import torch
-import battleMatrix
 import models
 
 

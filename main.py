@@ -29,12 +29,11 @@ def watch_game(agent0, agent1, step_time):
     plt.show(block=True)  # keep plot
 
 
-def simulation(agent_type_0, agent_type_1, setup_0=None, setup_1=None, show_game=False):
+def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_1=None, show_game=False):
     """
     :return: tested_setups: list of setup and winning percentage
     """
     types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11]
-    num_simulations = 1000
     blue_won = 0
     blue_wins_bc_flag = 0
     blue_wins_bc_noMovesLeft = 0
@@ -207,7 +206,7 @@ for pos, piece in np.ndenumerate(good_setup):
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="random", agent_type_1="expectimax")
+simulation(agent_type_0="random", agent_type_1="expectimax", num_simulations=1000)
 # simulation()
 
 
