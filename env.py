@@ -334,6 +334,7 @@ class MiniStratego(Env):
         random_place = []  # random_place is across whole board
         return known_place, random_place
 
+
 class ThreePieces(Env):
     def __init__(self, agent0, agent1):
         super(ThreePieces, self).__init__(agent0=agent0, agent1=agent1)
@@ -359,12 +360,70 @@ class ThreePieces(Env):
         return known_place, random_place
 
 
+class FourPieces(Env):
+    def __init__(self, agent0, agent1):
+        super(FourPieces, self).__init__(agent0=agent0, agent1=agent1)
+        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
+        # self.reward_illegal = -0.1  # no illegal moves allowed
+        self.reward_kill = 0.1
+        self.reward_die = -0.1
+        self.reward_loss = -1
+        self.reward_win = 1
+        # self.death_thresh = -20
+
+    def decide_pieces(self):
+        self.types_available = [[0, 1, 2, 3, 10], [0, 1, 2, 3, 10]]
+        known_place = []
+        # draw random setup for 10 figures for each team
+        for team in (0, 1):
+            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
+            for i, piece_type in enumerate(self.types_available[team]):
+                # print(setup_pos[index[i]])
+                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
+        random_place = []  # random_place is across whole board
+        return known_place, random_place
+
+
+class FourPiecesBomb(Env):
+    def __init__(self, agent0, agent1):
+        super(FourPiecesBomb, self).__init__(agent0=agent0, agent1=agent1)
+        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
+        # self.reward_illegal = -0.1  # no illegal moves allowed
+        self.reward_kill = 0.1
+        self.reward_die = -0.1
+        self.reward_loss = -1
+        self.reward_win = 1
+        # self.death_thresh = -20
+
+    def decide_pieces(self):
+        self.types_available = [[0, 1, 2, 3, 10, 11, 11], [0, 1, 2, 3, 10, 11, 11]]
+        known_place = []
+        # draw random setup for 10 figures for each team
+        for team in (0, 1):
+            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
+            for i, piece_type in enumerate(self.types_available[team]):
+                # print(setup_pos[index[i]])
+                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
+        random_place = []  # random_place is across whole board
+        return known_place, random_place
+
+
+# Unknown
+# Same Pieces Control
+#
+
+
 class Stratego(Env):
     def __init__(self, agent0, agent1):
         super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.1
+        # self.reward_step = -0.1
+        self.reward_kill = 0.1
+        self.reward_die = -0.1
         self.reward_illegal = -1
-        self.reward_win = 10
+        self.reward_win = 1
+        self.reward_loss = -1
 
     def decide_pieces(self):
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])  # has to be here for correct order

@@ -438,6 +438,62 @@ class ThreePieces(Reinforce):
                opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
 
 
+class FourPieces(Reinforce):
+    def __init__(self, team):
+        super(FourPieces, self).__init__(team=team)
+        self.action_dim = 28  #
+        self.state_dim = len(self.state_represent())
+        self.model = models.FourPieces(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+
+    def state_represent(self):
+        # own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        # own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
+        # own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        # own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+
+        # opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        # opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        # opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        # opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team, own_team_flag, opp_team, opp_team_flag # flag is also bomb
+        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
+        #        opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+
+
+class Stratego(Reinforce):
+    def __init__(self, team):
+        super(Stratego, self).__init__(team=team)
+        self.action_dim = 64  #
+        self.state_dim = len(self.state_represent())
+        self.model = models.ThreePieces(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+
+    def state_represent(self):
+        # own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        # own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
+        # own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        # own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+
+        # opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        # opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        # opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        # opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        return own_team, own_team_flag, opp_team, opp_team_flag, obstacle # flag is also bomb
+        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
+        #        opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+
+
 class ExpectiSmart(Agent):
     def __init__(self, team, setup=None):
         super(ExpectiSmart, self).__init__(team=team, setup=setup)
