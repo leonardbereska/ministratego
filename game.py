@@ -45,7 +45,7 @@ class Game:
         self.deadPieces.append(dead_piecesdict)
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
-        self.battleMatrix = battleMatrix.get_battle_matrix()
+        self.battleMatrix = helpers.get_battle_matrix()
 
     def run_game(self):
         game_over = False

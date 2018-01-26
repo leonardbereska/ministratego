@@ -24,18 +24,18 @@ class Agent:
             for idx, piece in np.ndenumerate(setup):  # board is initialized in environment
                 piece.hidden = False
                 self.board[piece.position] = piece
-        self.living_pieces = []  # to be filled by environment
-        self.board_positions = [(i, j) for i in range(5) for j in range(5)]
 
+        # round counter of the game
         self.move_count = 0
-
+        # move and pieces history
         self.last_N_moves = []
         self.pieces_last_N_Moves_beforePos = []
         self.pieces_last_N_Moves_afterPos = []
 
+        #place obstacle on board
         obstacle = pieces.Piece(99, 99, (2, 2))
         obstacle.hidden = False
-        self.board[2, 2] = obstacle  # set obstacle
+        self.board[2, 2] = obstacle
 
         self.battleMatrix = battleMatrix.get_battle_matrix()
 
@@ -48,12 +48,19 @@ class Agent:
         self.deadPieces.append(dead_piecesdict)
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
+        # list of enemy pieces
         self.ordered_opp_pieces = []
 
     def action_represent(self, actors):  # does nothing but is important for Reinforce
         return
 
     def install_opp_setup(self, opp_setup):
+        """
+        Install the opponents setup in this agents board and evaluate information for potential
+        minmax operations later on
+        :param opp_setup: numpy array of any shape with pieces objects stored in them
+        :return: None
+        """
         self.assignment_dict = dict()
         enemy_types = [piece.type for idx, piece in np.ndenumerate(opp_setup)]
         for idx, piece in np.ndenumerate(opp_setup):
@@ -61,24 +68,41 @@ class Agent:
             self.ordered_opp_pieces.append(piece)
             piece.hidden = True
             self.board[piece.position] = piece
+        return None
 
     def update_board(self, updated_piece, board=None):
+        """
+        update the current board at the position with the piece both given by updated_piece
+        :param updated_piece: tuple of (position, piece) with position being a tuple and piece being
+        of class piece
+        :param board: numpy array of shape (5,5) representing the board that should be updated.
+        Default is the agent's own board
+        :return: Updates are made in-place. No return value specified
+        """
         if board is None:
             board = self.board
         if updated_piece[1] is not None:
             updated_piece[1].change_position(updated_piece[0])
         board[updated_piece[0]] = updated_piece[1]
-        return board
 
     def decide_move(self):
         """
-        Agent has to implement which action to decide on given the state
+        Implementation of the agent's move for the current round
+        :return: tuple of "from" position tuple to "to" position tuple representing the move
         """
         raise NotImplementedError
 
     def do_move(self, move, board=None, bookkeeping=True, true_gameplay=False):
         """
-        :param move: tuple or array consisting of coordinates 'from' at 0 and 'to' at 1
+        Execute the given move on the given board. If bookkeeping is TRUE, any dying pieces will be
+        collected by the agent and stored for evaluation. If true_gameplay is TRUE, any moves made are
+        due to the real game having proceeded, if FALSE it is considered a move made during planning (e.g
+        minmax calculations). Return the new board and the outcome of any occuring fights during the move.
+        :param move: tuple of positions tuple "from", "to" in the range of (0..4, 0..4)
+        :param board: numpy array (5, 5) holding pieces objects
+        :param bookkeeping: boolean
+        :param true_gameplay: boolean
+        :return: tuple of (numpy array (5, 5), integer)
         """
         from_ = move[0]
         to_ = move[1]
@@ -124,8 +148,15 @@ class Agent:
 
     def fight(self, piece_att, piece_def, collect_dead_pieces=True):
         """
-        Determine the outcome of a fight between two pieces: 1: win, 0: tie, -1: loss
-        add dead pieces to deadFigures
+        Determine the outcome of a fight between the provided attacking piece and the defening piece.
+        If collect_dead_pieces is TRUE, we will store the fallen pieces in the dict.
+        Return the outcome of the fight, categorized by an integer (1=ATTACKER won, 0=TIE, -1=DEFENDER won),
+        double the outcome if any of the pieces' types were not known before, but guessed
+        (done for minmax calculation).
+        :param piece_att: object of class Piece
+        :param piece_def: object of class Piece
+        :param collect_dead_pieces: boolean
+        :return: integer
         """
         outcome = self.battleMatrix[piece_att.type, piece_def.type]
         if collect_dead_pieces:
@@ -153,19 +184,29 @@ class Agent:
     def update_prob_by_move(self, *args):
         pass
 
-    def get_poss_actions(self, board, team):  # TODO: change references to helper's version
+    def get_poss_actions(self, board, team):
+        """
+        get the possible actions for the agent of team "team" for the provided board.
+        :param board: numpy array (5, 5)
+        :param team: int (boolean 0,1)
+        :return: list of moves
+        """
         return helpers.get_poss_moves(board, team)
 
-    def is_legal_move(self, move_to_check, board):  # TODO: change references to helper's version
+    def is_legal_move(self, move_to_check, board):
+        """
+        Check if the given move on the provided board is legal in terms of the rules of the game. Return
+        a boolean TRUE for legal, FALSE for illegal.
+        :param move_to_check: tuple of board positions
+        :param board: numpy array (5, 5)
+        :return: boolean
+        """
         return helpers.is_legal_move(board, move_to_check)
-
-    def analyze_board(self):
-        pass
 
 
 class RandomAgent(Agent):
     """
-    Agent who chooses his initial setup and actions at random
+    Agent who chooses his actions at random
     """
     def __init__(self, team, setup=None):
         super(RandomAgent, self).__init__(team=team, setup=setup)
@@ -302,7 +343,7 @@ class Reinforce(Agent):
         conditions = self.state_represent()
         state_dim = len(conditions)
         board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
-        for pos in self.board_positions:
+        for pos, val in np.ndenumerate(self.board):
             p = self.board[pos]
             if p is not None:  # piece on this field
                 for i, cond in enumerate(conditions):
@@ -406,19 +447,30 @@ class MiniStrat(Reinforce):
                opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
 
 class ExpectiSmart(Agent):
+    """
+    Agent deciding his moves based on the minimax algorithm. The agent guessed the enemies setup
+    before making a decision by using the current information available about the pieces.
+    """
     def __init__(self, team, setup=None):
         super(ExpectiSmart, self).__init__(team=team, setup=setup)
+        # rewards for planning the move
+        self.kill_reward = 10  # killing an enemy piece
+        self.neutral_fight = 2  # a neutral outcome of a fight
+        self.winGameReward = 100  # finding the enemy flag
+        self.certainty_multiplier = 1.2  # killing known, not guessed, enemy pieces
 
-        self.kill_reward = 10
-        self.neutral_fight = 2
-        self.winGameReward = 100
-        self.certainty_multiplier = 1.2
-
+        # initial maximum depth of the minimax algorithm
         self.max_depth = 1
 
-        self.battleMatrix = battleMatrix.get_battle_matrix()
+        # the matrix table for deciding battle outcomes between two pieces
+        self.battleMatrix = helpers.get_battle_matrix()
 
     def decide_move(self):
+        """
+        Depending on the amount of enemy pieces left, we are entering the start, mid or endgame
+        and planning through the minimax algorithm.
+        :return: tuple of tuple positions representing the move
+        """
         nr_dead_enemies = sum(self.deadPieces[self.other_team].values())
         if nr_dead_enemies <= 1:
             self.max_depth = 2
@@ -431,6 +483,12 @@ class ExpectiSmart(Agent):
         return self.minimax(max_depth=self.max_depth)
 
     def minimax(self, max_depth):
+        """
+        given the maximum depth, copy the known board so far, assign the pieces by random, while still
+        respecting the current knowledge, and then decide the move via minimax algorithm.
+        :param max_depth: int
+        :return: tuple of position tuples
+        """
         curr_board = copy.deepcopy(self.board)
         curr_board = self.draw_consistent_enemy_setup(curr_board)
         chosen_action = self.max_val(curr_board, 0, -float("inf"), float("inf"), max_depth)[1]
@@ -439,9 +497,12 @@ class ExpectiSmart(Agent):
     def max_val(self, board, current_reward, alpha, beta, depth):
         # this is what the expectimax agent will think
 
+        # get my possible actions, then shuffle them to ensure randomness when no action
+        # stands out as the best
         my_doable_actions = helpers.get_poss_moves(board, self.team)
         np.random.shuffle(my_doable_actions)
-        # check for end-state scenario
+
+        # check for terminal-state scenario
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
             if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
@@ -453,6 +514,7 @@ class ExpectiSmart(Agent):
         for action in my_doable_actions:
             board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
             temp_reward = current_reward
+            # depending on the fight we want to update the current paths value
             if fight_result is not None:
                 if fight_result == 1:
                     temp_reward += self.kill_reward
@@ -479,9 +541,12 @@ class ExpectiSmart(Agent):
     def min_val(self, board, current_reward, alpha, beta, depth):
         # this is what the opponent will think, the min-player
 
+        # get my possible actions, then shuffle them to ensure randomness when no action
+        # stands out as the best
         my_doable_actions = helpers.get_poss_moves(board, self.other_team)
         np.random.shuffle(my_doable_actions)
-        # check for end-state scenario first
+
+        # check for terminal-state scenario or maximum depth
         goal_check = self.goal_test(my_doable_actions, board)
         if goal_check or depth == 0:
             if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
@@ -490,9 +555,11 @@ class ExpectiSmart(Agent):
 
         val = float('inf')  # initial value set, so min comparison later possible
         best_action = None
+        # iterate through all actions
         for action in my_doable_actions:
             board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
             temp_reward = current_reward
+            # depending on the fight we want to update the current paths value
             if fight_result is not None:
                 if fight_result == 1:
                     temp_reward += -self.kill_reward
@@ -516,6 +583,13 @@ class ExpectiSmart(Agent):
         return val, best_action
 
     def goal_test(self, actions_possible, board=None):
+        """
+        check the board for whether a flag has been captured already and return the winning game rewards,
+        if not check whether there are no actions possible anymore, return TRUE then, or FALSE.
+        :param actions_possible: list of moves
+        :param board: numpy array (5, 5)
+        :return: integer or boolean
+        """
         if board is not None:
             flag_alive = [False, False]
             for pos, piece in np.ndenumerate(board):
@@ -536,9 +610,20 @@ class ExpectiSmart(Agent):
             return False
 
     def update_prob_by_fight(self, enemy_piece):
+        """
+        update the information about the given piece, after a fight occured
+        :param enemy_piece: object of class Piece
+        :return: change is in-place, no value specified
+        """
         enemy_piece.potential_types = [enemy_piece.type]
 
     def update_prob_by_move(self, move, moving_piece):
+        """
+        update the information about the given piece, after it did the given move
+        :param move: tuple of positions tuples
+        :param moving_piece: object of class Piece
+        :return: change is in-place, no value specified
+        """
         move_dist = spatial.distance.cityblock(move[0], move[1])
         if move_dist > 1:
             moving_piece.hidden = False
@@ -549,6 +634,13 @@ class ExpectiSmart(Agent):
             moving_piece.potential_types = np.delete(moving_piece.potential_types, immobile_enemy_types)
 
     def draw_consistent_enemy_setup(self, board):
+        """
+        Draw a setup of the enemies pieces on the board provided that aligns with the current status of
+        information about said pieces, then place them on the board. This is done via iterative random sampling,
+        until a consistent draw occurs. This draw may or may not represent the overall true distribution of the pieces.
+        :param board: numpy array (5, 5)
+        :return: board with the assigned enemy pieces in it.
+        """
         # get information about enemy pieces (how many, which alive, which types, and indices in assign. array)
         enemy_pieces = copy.deepcopy(self.ordered_opp_pieces)
         enemy_pieces_alive = [piece for piece in enemy_pieces if not piece.dead]
@@ -558,13 +650,18 @@ class ExpectiSmart(Agent):
         consistent = False
         sample = None
         while not consistent:
-            # choose len(types_alive) many pieces randomly
+            # choose as many pieces randomly as there are enemy pieces alive
             sample = np.random.choice(types_alive, len(types_alive), replace=False)
+            # while-loop break condition
             consistent = True
             for idx, piece in enumerate(enemy_pieces_alive):
+                # if the drawn type doesn't fit the potential types of the current piece, then redraw
                 if sample[idx] not in piece.potential_types:
                     consistent = False
+                    break
+        # place this draw now on the board by assigning the types and changing critical attributes
         for idx, piece in enumerate(enemy_pieces_alive):
+            # add attribute of the piece being guessed (only happens in non-real gameplay aka planning)
             piece.guessed = not piece.hidden
             piece.type = sample[idx]
             if piece.type in [0, 11]:
@@ -581,6 +678,11 @@ class ExpectiSmart(Agent):
         return board
 
     def undo_last_move(self, board):
+        """
+        Undo the last move in the memory. Return the updated board.
+        :param board: numpy array (5, 5)
+        :return: board
+        """
         last_move = self.last_N_moves.pop()
         if last_move is None:
             raise ValueError("No last move to undo detected!")
@@ -595,6 +697,10 @@ class ExpectiSmart(Agent):
 
 
 class OmniscientExpectiSmart(ExpectiSmart):
+    """
+    Child of ExpectiSmart agent. This agent is omniscient and thus knows the location and type of each
+    piece of the enemy. It then plans by doing a minimax algorithm.
+    """
     def __init__(self, team, setup):
         super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
         self.setup = setup
@@ -607,6 +713,10 @@ class OmniscientExpectiSmart(ExpectiSmart):
         self.unhide_all()
 
     def unhide_all(self):
+        """
+        Uncover all enemy pieces by setting the hidden attribute to False
+        :return: None
+        """
         for pos, piece in np.ndenumerate(self.board):
             if piece is not None:
                 piece.hidden = False
