@@ -13,7 +13,7 @@ import models
 
 class Agent:
     """
-    Agent decides the initial setup and decides which action to take
+    Agent decides which action to take
     """
     def __init__(self, team, setup=None):
         self.team = team
@@ -32,7 +32,7 @@ class Agent:
         self.pieces_last_N_Moves_beforePos = []
         self.pieces_last_N_Moves_afterPos = []
 
-        #place obstacle on board
+        # place obstacle on board
         obstacle = pieces.Piece(99, 99, (2, 2))
         obstacle.hidden = False
         self.board[2, 2] = obstacle
@@ -184,7 +184,7 @@ class Agent:
     def update_prob_by_move(self, *args):
         pass
 
-    def get_poss_actions(self, board, team):
+    def get_poss_actions(self, board, team):  # TODO deprecate this, all reference should go to helpers.py
         """
         get the possible actions for the agent of team "team" for the provided board.
         :param board: numpy array (5, 5)
@@ -193,7 +193,7 @@ class Agent:
         """
         return helpers.get_poss_moves(board, team)
 
-    def is_legal_move(self, move_to_check, board):
+    def is_legal_move(self, move_to_check, board):  # TODO deprecate this
         """
         Check if the given move on the provided board is legal in terms of the rules of the game. Return
         a boolean TRUE for legal, FALSE for illegal.
@@ -276,14 +276,14 @@ class Reinforce(Agent):
             # 2. probabilistic: interpret q-value as probability
             p = list(state_action_values.data[0].numpy())
             # (optional) mask out impossible actions
-            #print("raw net : {}".format(np.round(p, 2)))
+            print("raw net : {}".format(np.round(p, 2)))
             for action in range(len(p)):
                 if action not in poss_actions:
                     p[action] = p[action] * 0.0
-            #print("masked: {}".format(np.round(p, 2)))
+            # print("masked: {}".format(np.round(p, 2)))
             # renormalize
             normed = [float(i) / sum(p) for i in p]
-            # print("normed: {}".format(np.round(normed, 2)))
+            print("normed: {}".format(np.round(normed, 2)))
             # action = np.random.choice(np.arange(0, action_dim), p=normed)
             # action = int(action)  # normal int not numpy int
             action = p.index(max(p))
@@ -298,16 +298,16 @@ class Reinforce(Agent):
 
     def poss_actions(self, action_dim):
         """
-
-        :param action_dim:
-        :return:
+        Converting set of possible moves in the whole game to a set of actions for the agent
+        :param action_dim: how many actions are possible for agent
+        :return: list of legal actions
         """
-        poss_moves = helpers.get_poss_moves(self.board, self.team)
+        poss_moves = helpers.get_poss_moves(self.board, self.team)  # which moves are possible in the game
         poss_actions = []
         all_actions = range(0, action_dim)
         for action in all_actions:
-            move = self.action_to_move(action)
-            if move in poss_moves:
+            move = self.action_to_move(action)  # converting all actions to moves (which can be illegal)
+            if move in poss_moves:              # only select legal moves among them
                 poss_actions.append(action)
         return poss_actions
 
@@ -343,7 +343,7 @@ class Reinforce(Agent):
         Converts the board of pieces (aka self.board) to the state input for a neural network,
         according to the environment for which the agent is specified
         (e.g. Finder only needs his own position, but MiniStratego will need all opponents pieces also)
-        :return: state_dim * 5 * 5 Tensor
+        :return: (state_dim * 5 * 5) Tensor
         """
         conditions = self.state_represent()
         state_dim = len(conditions)
@@ -364,18 +364,20 @@ class Reinforce(Agent):
 
 
 class Finder(Reinforce):
+    """
+    Agent for FindFlag environment
+    """
     def __init__(self, team):
         super(Finder, self).__init__(team=team)
         self.action_dim = 4
         self.state_dim = len(self.state_represent())
         self.model = models.Finder(self.state_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/finder.pkl'))
 
     def state_represent(self):
-        own_team = lambda piece: (piece.team == 0, piece.type)
+        own_team = lambda piece: (piece.team == 0, 1)
         other_flag = lambda piece: (piece.team == 1, 1)
-        # obstacle = lambda piece: (piece.type == 99, 1)
-        return [own_team, other_flag]
+        obstacle = lambda piece: (piece.type == 99, 1)
+        return own_team, other_flag, obstacle
 
 
 class Mazer(Reinforce):
@@ -441,19 +443,15 @@ class MiniStrat(Reinforce):
         # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
 
     def state_represent(self):
-        # too informative state-representation, but trained models on this
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
-        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
         own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-        # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
         own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
         opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
-        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
         opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
         opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
         obstacle = lambda p: (p.type == 99, 1)
-        return own_team_one, own_team_three, own_team_ten, own_team_flag, \
-               opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+        return own_team_one, own_team_ten, own_team_flag, \
+               opp_team_one, opp_team_ten, opp_team_flag, obstacle
 
 
 class ThreePieces(Reinforce):
@@ -482,7 +480,7 @@ class ThreePieces(Reinforce):
 class FourPieces(Reinforce):
     def __init__(self, team):
         super(FourPieces, self).__init__(team=team)
-        self.action_dim = 28  #
+        self.action_dim = 28  # 16 (for piece 2) + 3 * 4 (for pieces 1, 3, 10)
         self.state_dim = len(self.state_represent())
         self.model = models.FourPieces(self.state_dim, self.action_dim)
         # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
@@ -510,7 +508,7 @@ class FourPieces(Reinforce):
 class Stratego(Reinforce):
     def __init__(self, team):
         super(Stratego, self).__init__(team=team)
-        self.action_dim = 64  #
+        self.action_dim = 64  # all pieces 3 * 16 (for pieces: 2, 2, 2) + 4 * 4 for (for pieces 1, 3, 3, 10)
         self.state_dim = len(self.state_represent())
         self.model = models.ThreePieces(self.state_dim, self.action_dim)
         # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))

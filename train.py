@@ -147,22 +147,21 @@ VERBOSE = 3  # level of printed output verbosity:
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 200  # training for how many episodes
-agent0 = agent.Stratego(0)
-agent1 = agent.Stratego(1)
+num_episodes = 1000  # training for how many episodes
+agent0 = agent.Finder(0)
+agent1 = agent.RandomAgent(1)
 agent1.model = agent0.model
-env = env.Stratego(agent0, agent1)
-env.Train = True  # for externally determining move in train function (usually determined in agent)
+env = env.FindFlag(agent0, agent1)
 
 state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values
-ACTION_DIM = 64  # how many agents * how many possible directions to go per agent
+ACTION_DIM = 4  # how many agents * how many possible directions to go per agent
 model = env.agents[0].model  # this is key for optimizing the policy which is interacting in environment
 
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
-# model.load_state_dict(torch.load('./saved_models/stratego.pkl'))  # trained against Random
+# model.load_state_dict(torch.load('./saved_models/finder.pkl'))  # trained against Random
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/stratego.pkl')
+torch.save(model.state_dict(), './saved_models/finder.pkl')
 
 run_env(env, 10000)

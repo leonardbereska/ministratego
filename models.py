@@ -104,8 +104,9 @@ class MiniStrat(nn.Module):
         self.conv1_bn = nn.BatchNorm2d(10)
         self.conv2 = nn.Conv2d(10, 10, padding=2, kernel_size=5)
         self.conv2_bn = nn.BatchNorm2d(10)
-        self.lin1 = nn.Linear(self.feature_size, 16)
-        self.lin2 = nn.Linear(16, action_dim)
+        self.lin1 = nn.Linear(self.feature_size, action_dim)
+        # self.lin1 = nn.Linear(self.feature_size, 32)
+        # self.lin2 = nn.Linear(32, action_dim)
 
     def forward(self, x):
         x = F.tanh(self.conv1_bn(self.conv1(x)))
@@ -113,8 +114,9 @@ class MiniStrat(nn.Module):
 
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
-        x = F.softmax(x)
+        # x = F.relu(self.lin2(x))
+        # x = F.softmax(x)
+        x = F.tanh(x)
         return x
 
 
@@ -137,7 +139,7 @@ class ThreePieces(nn.Module):
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
         x = F.relu(self.lin2(x))
-        x = F.softmax(x)
+        x = F.sigmoid(x)
         return x
 
 

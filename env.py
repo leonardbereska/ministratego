@@ -9,16 +9,12 @@ import helpers
 import pieces
 
 
-# import train
-
-
 class Env:
     """
     Environment superclass
     """
 
     def __init__(self, agent0, agent1, board_size=(5, 5)):
-        # self.Train = True  # if true can insert action in env_step
 
         # initialize board
         self.board = np.empty(board_size, dtype=object)
@@ -54,8 +50,7 @@ class Env:
         agent1.board = cp.deepcopy(self.board)
         self.agents = (agent0, agent1)
 
-        # give agent actors
-        # actors are pieces which are under control of the agent
+        # give agent actors (pieces whose movements he controls)
         for team in (0, 1):
             actors = []
             for pos in self.board_positions:
@@ -64,7 +59,7 @@ class Env:
                     if p.team == team:
                         if p.can_move:
                             actors.append(p)
-            actors = sorted(actors, key=lambda actor: actor.type)  # train for unique actor sequence
+            actors = sorted(actors, key=lambda actor: actor.type)  # train for unique actor sequence, sort by type
             self.agents[team].action_represent(actors)
 
         self.battleMatrix = helpers.get_battle_matrix()
@@ -92,65 +87,78 @@ class Env:
     def reset(self):  # resetting means freshly initializing
         self.__init__(agent0=self.agents[0], agent1=self.agents[1])
 
-    def decide_pieces(self):
-        raise NotImplementedError
+    # def decide_pieces(self):  # TODO deprecate this
+    #     raise NotImplementedError
 
     def decide_obstacles(self):  # standard: obstacle in middle
         obstacle_pos = [(2, 2)]
         return obstacle_pos
 
     def step(self, move=None):
+        """
+        Perform one step of the environment: agents in turn choose a move
+        :param move: externally determined move to be performed by agent0 (useful for training)
+        :return: reward accumulated in this step, boolean: if environment in terminal state, boolean: if agent0 won
+        """
         self.reward = 0
         self.steps += 1  # illegal move as step
+
+        # are there still pieces to be moved?
         if not helpers.get_poss_moves(self.board, team=0):
             self.reward += self.reward_loss
             self.score += self.reward
             return self.reward, True, False  # 0 for lost
+
+        # move decided by agent or externally?
         if move is not None:
-            agent_move = move
+            agent_move = move  # this enables working with the environment in external functions (e.g. train.py)
         else:
-            # self.agents[0].living_pieces = self.living_pieces  # give agents pieces
             agent_move = self.agents[0].decide_move()
-        # if not legal -> not change env, receive reward_illegal
-        if not helpers.is_legal_move(self.board, agent_move):
+
+        # is move legal?
+        if not helpers.is_legal_move(self.board, agent_move):  # if illegal -> no change in env, receive reward_illegal
             self.reward += self.reward_illegal
             self.illegal_moves += 1
             # print("illegal")
             self.score += self.reward
             done, won = self.goal_test()
-            return self.reward, done, won  # environment does not change, agent should better choose only legal moves
+            return self.reward, done, won  # environment does not change for illegal
+
         self.do_move(agent_move, team=0)
 
         # opponents move
-        if self.opp_can_move:  # only if opponent is playing, killing his pieces wins
+        if self.opp_can_move:  # only if opponent is playing, killing his pieces wins (opponent can be e.g. flag only)
+
+            # are there still pieces to be moved?
             if not helpers.get_poss_moves(self.board, team=1):
                 self.reward += self.reward_win
                 self.score = self.reward
                 return self.reward, True, True  # 1 for won
-            # self.agents[1].living_pieces = self.living_pieces  # give agents pieces TODO do i need this?
             opp_move = self.agents[1].decide_move()
-            if not helpers.is_legal_move(self.board, opp_move):
-                print("Warning: selected illegal move!")
+
+            # is move legal?
+            if not helpers.is_legal_move(self.board, opp_move):  # opponent is assumed to only perform legal moves
+                print("Warning: agent 1 selected illegal move!")
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 
         done, won = self.goal_test()
         self.score += self.reward
         return self.reward, done, won
 
-    def action_to_move(self, action, team):
-        i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
-        piece = self.living_pieces[team][i]  # TODO connect to environment
-        piece_pos = piece.position  # where is the piece
-        if piece_pos is None:
-            move = (None, None)  # return illegal move
-            return move
-        action = action % 4  # 0-3 as direction
-        moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
-        direction = moves[action]  # action: 0-3
-        pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
-        pos_to = tuple(pos_to)
-        move = (piece_pos, pos_to)
-        return move
+    # def action_to_move(self, action, team):  # TODO deprecate this (is in agent now)
+    #     i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
+    #     piece = self.living_pieces[team][i]
+    #     piece_pos = piece.position  # where is the piece
+    #     if piece_pos is None:
+    #         move = (None, None)  # return illegal move
+    #         return move
+    #     action = action % 4  # 0-3 as direction
+    #     moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
+    #     direction = moves[action]  # action: 0-3
+    #     pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
+    #     pos_to = tuple(pos_to)
+    #     move = (piece_pos, pos_to)
+    #     return move
 
     def do_move(self, move, team):
         if move is None:  # no move chosen (network)?
@@ -204,11 +212,13 @@ class Env:
         piece = updated_piece[1]
         if piece is not None:
             piece.change_position(pos)  # adapt position for piece
-        self.board[pos] = piece
+        self.board[pos] = piece  # place piece on board position
         return
 
     def goal_test(self):
         """
+        Check if the game is in a terminal state due to flag capture
+        (note: in env.step it is already checked if there are still pieces to move)
         :return: (bool: is environment in a terminal state, bool: is it won (True) or lost (False)
         """
         for p in self.dead_pieces[1]:
@@ -235,14 +245,12 @@ class Env:
 
 
 ################################################################################################################
+# Subclasses
 
 class FindFlag(Env):
     def __init__(self, agent0, agent1):
         super(FindFlag, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.1
-        self.reward_illegal = -1
-        self.reward_win = 10
-        # self.death_thresh = -100
+        self.reward_win = 1
 
     def decide_pieces(self):
         known_place = []
@@ -253,14 +261,10 @@ class FindFlag(Env):
 class Maze(Env):
     def __init__(self, agent0, agent1):
         super(Maze, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step
         self.reward_illegal = -1
         self.reward_win = 10
         self.reward_iter = -1
         self.reward_loss = -1
-        #
-        # # TODO: Deprecate this
-        # self.previous_pos = self.living_pieces[0][0]
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 1, (4, 4))]
@@ -274,7 +278,6 @@ class Maze(Env):
 class Survive(Env):
     def __init__(self, agent0, agent1):
         super(Survive, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step = -0.01
         self.reward_illegal = -1
         self.reward_win = 1
         self.reward_kill = 1
@@ -313,13 +316,13 @@ class ControlTheTwo(Env):
 class MiniStratego(Env):
     def __init__(self, agent0, agent1):
         super(MiniStratego, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_step = -0.1
-        self.reward_illegal = -0.5
-        self.reward_kill = 0.5
-        self.reward_die = -0.5
-        self.reward_loss = -2
-        self.reward_win = 2
-        self.death_thresh = -20
+        # self.reward_step = -0.1
+        # self.reward_illegal = -0.5
+        self.reward_kill = 0.25
+        self.reward_die = -0.25
+        self.reward_loss = -0.5
+        self.reward_win = 0.5
+        # self.death_thresh = -20
 
     def decide_pieces(self):
         self.types_available = [0, 1, 10]
@@ -385,34 +388,8 @@ class FourPieces(Env):
         return known_place, random_place
 
 
-class FourPiecesBomb(Env):
-    def __init__(self, agent0, agent1):
-        super(FourPiecesBomb, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
-        # self.reward_illegal = -0.1  # no illegal moves allowed
-        self.reward_kill = 0.1
-        self.reward_die = -0.1
-        self.reward_loss = -1
-        self.reward_win = 1
-        # self.death_thresh = -20
-
-    def decide_pieces(self):
-        self.types_available = [[0, 1, 2, 3, 10, 11, 11], [0, 1, 2, 3, 10, 11, 11]]
-        known_place = []
-        # draw random setup for 10 figures for each team
-        for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
-            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
-            for i, piece_type in enumerate(self.types_available[team]):
-                # print(setup_pos[index[i]])
-                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
-        random_place = []  # random_place is across whole board
-        return known_place, random_place
-
-
-# Unknown
-# Same Pieces Control
-#
+# TODO how does agent deal with uncertainty? how does he master controlling pieces of same value?
+# TODO -> adapt state representation to this
 
 
 class Stratego(Env):
@@ -443,7 +420,6 @@ def watch_game(env, step_time):
     Watch two agents play against each other, step_time is
     """
     new_game = env
-    env.Train = False
     done = False
     while not done:
         move = 0
