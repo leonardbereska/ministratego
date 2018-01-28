@@ -89,7 +89,7 @@ def train(env, num_episodes):
     """
     episode_scores = []  # score = total reward
     episode_won = []  # win-ratio win = 1 loss = -1
-
+    averages = [0]
     for i_episode in range(num_episodes):
             env.reset()  # initialize environment
             state = env.agents[0].board_to_state()  # initialize state
@@ -112,7 +112,7 @@ def train(env, num_episodes):
                     memory.push(state, action, next_state, reward)  # store the transition in memory
                     state = next_state  # move to the next state
                     optimize_model()  # one step of optimization of target network
-                    # env.agents[1].model = model  # TODO real self play?
+                    env.agents[1].model = model  # TODO real self play?
 
                     if done:
                         # after each episode print stats
@@ -124,12 +124,13 @@ def train(env, num_episodes):
                         episode_scores.append(env.score)
                         episode_won.append(won)
                         if VERBOSE > 0:
-                            global N_SMOOTH
-                            # helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
-                            helpers.plot_stats(episode_won, N_SMOOTH)  # takes run time
+                            if i_episode % 50 == 0:
+                                global N_SMOOTH
+                                # helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
+                                averages = helpers.plot_stats(averages, episode_won, N_SMOOTH)  # takes run time
                         break
-            if i_episode % 100 == 2:
-                    if VERBOSE > 3:
+            if i_episode % 500 == 2:
+                    if VERBOSE > 2:
                             run_env(env, 1)
 
 
@@ -137,18 +138,18 @@ def train(env, num_episodes):
 BATCH_SIZE = 128  # for faster training take a smaller batch size
 GAMMA = 0.8  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
 EPS_START = 0.3  # for unstable models take higher randomness first
-EPS_END = 0.1
+EPS_END = 0
 EPS_DECAY = 100
-N_SMOOTH = 20  # plotting scores averaged over this number of episodes
-VERBOSE = 3  # level of printed output verbosity:
+N_SMOOTH = 100  # plotting scores averaged over this number of episodes
+VERBOSE = 1  # level of printed output verbosity:
                 # 1: plot averaged episode scores
                 # 2: also print actions taken and rewards
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 1000  # training for how many episodes
+num_episodes = 1500  # training for how many episodes
 agent0 = agent.MiniStrat(0)
-agent1 = agent.RandomAgent(1)
+agent1 = agent.MiniStrat(1)
 agent1.model = agent0.model
 env = env.MiniStratego(agent0, agent1)
 
@@ -157,8 +158,8 @@ model = env.agents[0].model  # optimize model of agent0
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
-# model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))  # trained against Random
+#model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))  # trained against Random
 train(env, num_episodes)
-# torch.save(model.state_dict(), './saved_models/ministrat.pkl')
+torch.save(model.state_dict(), './saved_models/ministrat_selfplay.pkl')
 
 run_env(env, 10000)

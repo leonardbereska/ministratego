@@ -187,14 +187,6 @@ good_setup2[1, 2] = 1
 good_setup2[1, 3] = 1
 good_setup2[1, 4] = 1
 
-rd_setup = np.empty((2, 5), )
-rd_setup[:, :] = 0
-rd_setup[0, 1] = 0
-rd_setup[1, 0] = 11
-rd_setup[1, 3] = 11
-rd_setup[1, 1] = 11
-rd_setup[1, 2] = 0
-rd_setup[0, 4] = 11
 
 
 setup_agent0 = np.empty((2, 5), dtype=object)
@@ -290,6 +282,6 @@ def watch_env(env, n_runs=100):
 # agent0.model.load_state_dict(torch.load('./saved_models/finder.pkl'))  # trained against Random
 
 
-env = env.MiniStratego(agent.OmniscientExpectiSmart(0), agent.RandomAgent(1))
+env = env.MiniStratego(agent.ExpectiSmartReinforce(0), agent.RandomAgent(1))
 watch_env(env, 10000)
 

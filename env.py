@@ -46,6 +46,8 @@ class Env:
             self.living_pieces[p.team].append(p)
 
         # give agents board
+        agent0.install_opp_setup(self.living_pieces[1])
+        agent1.install_opp_setup(self.living_pieces[0])
         agent0.board = cp.deepcopy(self.board)
         agent1.board = cp.deepcopy(self.board)
         self.agents = (agent0, agent1)

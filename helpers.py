@@ -106,8 +106,8 @@ def print_board(board):
             plt.plot(pos[1], pos[0], piece_marker, markersize=37)  # plot markers for pieces
             plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
     #plt.gca().invert_yaxis()  # own pieces down, others up
-    # plt.pause(1)
-    plt.pause(0.2)
+    #plt.pause(1)
+    plt.pause(.5)
 
     plt.show(block=False)
 
@@ -149,10 +149,31 @@ def plot_scores(episode_scores, n_smooth):
         average = means.numpy()
         plt.plot(average)
     plt.title('Average Score over last {} Episodes: {}'.format(n_smooth, int(average[-1]*10)/10))
+    #plt.pause(0.001)  # pause a bit so that plots are updated
+
+
+def plot_stats(curr_average, episode_won, n_smooth):
+    """
+    Plots the winning/losing ratio
+    :param episode_scores:
+    :param n_smooth:
+    :return:
+    """
+    plt.figure(3)
+    plt.clf()
+    scores = np.array(episode_won)
+    plt.xlabel('Episode')
+    plt.ylabel('Score')
+    if len(scores) >= n_smooth:
+        mean = np.mean(scores[-1000:])
+        curr_average.append(mean)
+    plt.plot(curr_average)
+    plt.title('Average Win Percentage over last {} Episodes: {}'.format(n_smooth, int(curr_average[-1]*100)/100))
     plt.pause(0.001)  # pause a bit so that plots are updated
+    return curr_average
 
 
-def plot_stats(episode_won, n_smooth):
+def plot_stats_all(episode_won, end_episode):
     """
     Plots the winning/losing ratio
     :param episode_scores:
@@ -165,12 +186,12 @@ def plot_stats(episode_won, n_smooth):
     plt.xlabel('Episode')
     plt.ylabel('Score')
     average = [0]
-    if len(scores_t) >= n_smooth:
-        means = scores_t.unfold(0, n_smooth, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(n_smooth-1), means))
-        average = means.numpy()
-        plt.plot(average)
-    plt.title('Average Win Percentage over last {} Episodes: {}'.format(n_smooth, int(average[-1]*100)/100))
+    for i in range(1, end_episode+1):
+        means = scores_t.unfold(0, i, 1).mean(1).view(-1)
+        #means = torch.cat((torch.zeros(i-1), means))
+        average.append(list(means.numpy())[0])
+    plt.plot(average)
+    plt.title('Average Win Percentage over last {} Episodes: {}'.format(end_episode, int(average[-1]*100)/100))
     plt.pause(0.001)  # pause a bit so that plots are updated
 
 

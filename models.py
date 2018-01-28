@@ -42,8 +42,8 @@ class Mazer(nn.Module):
         x = F.relu(self.conv1(x))
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin0(x))
-        x = F.relu(self.lin1(x))
-        x = F.softmax(x)
+        x = self.lin1(x)
+        x = F.sigmoid(x)
         return x
 
 
@@ -66,8 +66,8 @@ class Survivor(nn.Module):
 
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
-        x = F.softmax(x)
+        x = self.lin2(x)
+        x = F.sigmoid(x)
         return x
 
 class Control(nn.Module):
@@ -89,8 +89,8 @@ class Control(nn.Module):
 
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
-        x = F.softmax(x)
+        x = self.lin2(x)
+        x = F.sigmoid(x)
         return x
 
 
@@ -99,17 +99,25 @@ class MiniStrat(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(MiniStrat, self).__init__()
         self.feature_size = 10 * 25
-        self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
-        self.conv1_bn = nn.BatchNorm2d(10)
-        self.conv2 = nn.Conv2d(10, 10, padding=2, kernel_size=5)
-        self.conv2_bn = nn.BatchNorm2d(10)
-        self.lin1 = nn.Linear(self.feature_size, 32)
+        # self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
+        # self.conv1_bn = nn.BatchNorm2d(10)
+        # self.conv2 = nn.Conv2d(10, 10, padding=2, kernel_size=5)
+        # self.conv2_bn = nn.BatchNorm2d(10)
         # self.lin1 = nn.Linear(self.feature_size, 32)
-        self.lin2 = nn.Linear(32, action_dim)
+        # # self.lin1 = nn.Linear(self.feature_size, 32)
+        # self.lin2 = nn.Linear(32, action_dim)
+
+        self.conv1 = nn.Conv2d(state_dim, 10, padding=2, kernel_size=5)
+        self.conv1_bn = nn.BatchNorm2d(10)
+        # self.conv2 = nn.Conv2d(20, 20, padding=2, kernel_size=5)
+        # self.conv2_bn = nn.BatchNorm2d(20)
+        self.lin1 = nn.Linear(self.feature_size, 64)
+        # self.lin1 = nn.Linear(self.feature_size, 32)
+        self.lin2 = nn.Linear(64, action_dim)
 
     def forward(self, x):
         x = F.relu(self.conv1_bn(self.conv1(x)))
-        x = F.relu(self.conv2_bn(self.conv2(x)))
+        # x = F.relu(self.conv2_bn(self.conv2(x)))
 
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
@@ -135,7 +143,7 @@ class ThreePieces(nn.Module):
 
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
+        x = self.lin2(x)
         x = F.sigmoid(x)
         return x
 
@@ -161,8 +169,8 @@ class FourPieces(nn.Module):
         x = x.view(-1, self.feature_size)
 
         x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
-        x = F.softmax(x)
+        x = self.lin2(x)
+        x = F.sigmoid(x)
         return x
 
 
@@ -187,6 +195,6 @@ class Stratego(nn.Module):
         x = x.view(-1, self.feature_size)
 
         x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
-        x = F.softmax(x)
+        x = self.lin2(x)
+        x = F.sigmoid(x)
         return x

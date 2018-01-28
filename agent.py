@@ -514,23 +514,23 @@ class Stratego(Reinforce):
         # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
 
     def state_represent(self):
-        # own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
-        # own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
-        # own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
-        # own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-        own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
+        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        #own_team = lambda p: (p.team == self.team and p.can_move, p.type)
         own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
 
-        # opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
-        # opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
-        # opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
-        # opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
-        opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
+        opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        #opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
         opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
         obstacle = lambda p: (p.type == 99, 1)
-        return own_team, own_team_flag, opp_team, opp_team_flag, obstacle # flag is also bomb
-        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
-        #        opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+        #return own_team, own_team_flag, opp_team, opp_team_flag, obstacle # flag is also bomb
+        return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
+                opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
 
 
 class ExpectiSmart(Agent):
@@ -558,7 +558,7 @@ class ExpectiSmart(Agent):
         and planning through the minimax algorithm.
         :return: tuple of tuple positions representing the move
         """
-        nr_dead_enemies = sum(self.deadPieces[self.other_team].values())
+        nr_dead_enemies = sum([True for piece in self.ordered_opp_pieces if not piece.dead])
         if nr_dead_enemies <= 1:
             self.max_depth = 2
         elif 3 <= nr_dead_enemies <= 5:
@@ -817,3 +817,102 @@ class OmniscientExpectiSmart(ExpectiSmart):
 
     def update_prob_by_move(self, move, moving_piece):
         pass
+
+
+class ExpectiSmartReinforce(OmniscientExpectiSmart):
+    def __init__(self, team, setup=None):
+        super(ExpectiSmartReinforce, self).__init__(team=team, setup=setup)
+        self.evaluator = MiniStrat(team)
+        self.winGameReward = 1
+
+    def install_opp_setup(self, opp_setup):
+        super().install_opp_setup(opp_setup)
+        self.evaluator.board = copy.deepcopy(self.board)
+        self.unhide_all()
+
+    def decide_move(self):
+        """
+        Depending on the amount of enemy pieces left, we are entering the start, mid or endgame
+        and planning through the minimax algorithm.
+        :return: tuple of tuple positions representing the move
+        """
+
+        self.max_depth = 6
+        # make sure a flag win will be discounted by a factor that guarantees a preference towards immediate flag kill
+        self.winGameReward = max(self.winGameReward, self.max_depth*self.kill_reward)
+        return self.minimax(max_depth=self.max_depth)
+
+    def minimax(self, max_depth):
+        chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
+        return chosen_action
+
+    def max_val(self, board, _, alpha, beta, depth):
+        # this is what the expectimax agent will think
+
+        # get my possible actions, then shuffle them to ensure randomness when no action
+        # stands out as the best
+        my_doable_actions = helpers.get_poss_moves(board, self.team)
+        np.random.shuffle(my_doable_actions)
+
+        # check for terminal-state scenario
+        goal_check = self.goal_test(my_doable_actions, board)
+        if goal_check or depth == 0:
+            if goal_check == True or goal_check == -self.winGameReward:
+                return -1, None
+            elif goal_check == self.winGameReward:
+                return 1.1, None
+            else:
+                state = self.evaluator.board_to_state()
+                state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
+                return np.max(state_action_values), None
+
+        val = -float('inf')
+        best_action = None
+        for action in my_doable_actions:
+            board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
+            new_val = self.min_val(board, 0, alpha, beta, depth-1)[0]
+            if val < new_val:
+                val = new_val
+                best_action = action
+            if val >= beta:
+                board = self.undo_last_move(board)
+                best_action = action
+                return val, best_action
+            alpha = max(alpha, val)
+            board = self.undo_last_move(board)
+        return val, best_action
+
+    def min_val(self, board, _, alpha, beta, depth):
+        # this is what the opponent will think, the min-player
+
+        # get my possible actions, then shuffle them to ensure randomness when no action
+        # stands out as the best
+        my_doable_actions = helpers.get_poss_moves(board, self.other_team)
+        np.random.shuffle(my_doable_actions)
+
+        # check for terminal-state scenario or maximum depth
+        goal_check = self.goal_test(my_doable_actions, board)
+        if goal_check or depth == 0:
+            if goal_check == True or goal_check == self.winGameReward:
+                return 1, None
+            elif goal_check == -self.winGameReward:
+                return -1, None
+            else:
+                print("Warning, ended on min evaluation with depth {}!".format(depth))
+
+        val = float('inf')  # initial value set, so min comparison later possible
+        best_action = None
+        # iterate through all actions
+        for action in my_doable_actions:
+            board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
+            new_val = self.max_val(board, 0, alpha, beta, depth-1)[0]
+            if val > new_val:
+                val = new_val
+                best_action = action
+            if val <= alpha:
+                board = self.undo_last_move(board)
+                return val, best_action
+            beta = min(beta, val)
+            board = self.undo_last_move(board)
+        return val, best_action
+
