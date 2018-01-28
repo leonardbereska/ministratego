@@ -135,7 +135,7 @@ def train(env, num_episodes):
 
 # hyperparameters
 BATCH_SIZE = 128  # for faster training take a smaller batch size
-GAMMA = 0.99
+GAMMA = 0.9
 EPS_START = 0.5  # for unstable models take higher randomness first
 EPS_END = 0.01
 EPS_DECAY = 500
@@ -146,7 +146,7 @@ VERBOSE = 0  # level of printed output verbosity:
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 1000  # training for how many episodes
+num_episodes = 100  # training for how many episodes
 agent0 = agent.Finder(0)
 agent1 = agent.RandomAgent(1)
 agent1.model = agent0.model

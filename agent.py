@@ -280,7 +280,7 @@ class Reinforce(Agent):
             for action in range(len(p)):
                 if action not in poss_actions:
                     p[action] = p[action] * 0.0
-            print("masked: {}".format(np.round(p, 2)))
+            # print("masked: {}".format(np.round(p, 2)))
             # re-normalize to probabilities
             # normed = [float(i) / sum(p) for i in p]
             # print("normed: {}".format(np.round(normed, 2)))

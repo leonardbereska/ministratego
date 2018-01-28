@@ -23,9 +23,8 @@ class Finder(nn.Module):
 
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
-        x = F.softmax(x)
-        # x = F.sigmoid(x)
+        x = F.sigmoid(self.lin2(x))
+        # x = F.softmax(x)
         return x
 
 

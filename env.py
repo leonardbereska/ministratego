@@ -250,7 +250,7 @@ class Env:
 class FindFlag(Env):
     def __init__(self, agent0, agent1):
         super(FindFlag, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_win = 1
+        self.reward_win = 10
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 1, (4, 4))]
