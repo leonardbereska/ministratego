@@ -64,7 +64,7 @@ def run_env(env, n_runs=100):
         done = False
         while not done:
             state = env.agents[0].board_to_state()  # for the reinforcement agent convert board to state input
-            action = env.agents[0].select_action(state, 0.00, ACTION_DIM)
+            action = env.agents[0].select_action(state, 0.00)
             action = action[0, 0]  # action is unwrapped from the LongTensor
             move = env.agents[0].action_to_move(action)  # e.g. action = 1 -> move = ((0, 0), (0, 1))
             _, done, won = env.step(move)
@@ -96,7 +96,7 @@ def train(env, num_episodes):
             while True:
                     # act in environment
                     p_random = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * i_episode / EPS_DECAY)
-                    action = env.agents[0].select_action(state, p_random, ACTION_DIM)  # random action with p_random
+                    action = env.agents[0].select_action(state, p_random)  # random action with p_random
                     move = env.agents[0].action_to_move(action[0, 0])
                     reward_value, done, won = env.step(move)  # environment step for action
                     if VERBOSE > 2:
@@ -137,11 +137,10 @@ def train(env, num_episodes):
 BATCH_SIZE = 128  # for faster training take a smaller batch size
 GAMMA = 0.99
 EPS_START = 0.5  # for unstable models take higher randomness first
-EPS_END = 0.1
-EPS_DECAY = 50
+EPS_END = 0.01
+EPS_DECAY = 500
 N_SMOOTH = 20  # plotting scores averaged over this number of episodes
-EVAL = False  # evaluation mode: controls verbosity of output e.g. printing non-optimal moves
-VERBOSE = 3  # level of printed output verbosity:
+VERBOSE = 0  # level of printed output verbosity:
                 # 1: plot averaged episode scores
                 # 2: also print actions taken and rewards
                 # 3: every 100 episodes run_env()
@@ -153,9 +152,9 @@ agent1 = agent.RandomAgent(1)
 agent1.model = agent0.model
 env = env.FindFlag(agent0, agent1)
 
-state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values
-ACTION_DIM = 4  # how many agents * how many possible directions to go per agent
-model = env.agents[0].model  # this is key for optimizing the policy which is interacting in environment
+# state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values TODO deprecate
+# action_dim = env.agents[0].action_dim  # how many agents * how many possible directions to go per agent
+model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)

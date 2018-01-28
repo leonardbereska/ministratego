@@ -253,8 +253,8 @@ class FindFlag(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        known_place = []
-        random_place = [pieces.Piece(3, 0, None), pieces.Piece(0, 1, None)]
+        known_place = [pieces.Piece(0, 1, (4, 4))]
+        random_place = [pieces.Piece(3, 0, None)]
         return known_place, random_place
 
 

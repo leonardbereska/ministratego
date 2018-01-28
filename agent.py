@@ -258,14 +258,14 @@ class Reinforce(Agent):
                 piece_action += [(i, j) for j in range(4)]
         self.piece_action = piece_action
 
-    def select_action(self, state, p_random, action_dim):
+    def select_action(self, state, p_random):
         """
         Agents action is one of four directions
         :return: action 0: up, 1: down, 2: left, 3: right (cross in prayer)
         """
-        poss_actions = self.poss_actions(action_dim=action_dim)
+        poss_actions = self.poss_actions(action_dim=self.action_dim)
         if not poss_actions:
-            return torch.LongTensor([[random.randint(0, action_dim-1)]])
+            return torch.LongTensor([[random.randint(0, self.action_dim-1)]])
         sample = random.random()
         if sample > p_random:
             state_action_values = self.model(Variable(state, volatile=True))
@@ -280,11 +280,11 @@ class Reinforce(Agent):
             for action in range(len(p)):
                 if action not in poss_actions:
                     p[action] = p[action] * 0.0
-            # print("masked: {}".format(np.round(p, 2)))
-            # renormalize
-            normed = [float(i) / sum(p) for i in p]
-            print("normed: {}".format(np.round(normed, 2)))
-            # action = np.random.choice(np.arange(0, action_dim), p=normed)
+            print("masked: {}".format(np.round(p, 2)))
+            # re-normalize to probabilities
+            # normed = [float(i) / sum(p) for i in p]
+            # print("normed: {}".format(np.round(normed, 2)))
+            # action = np.random.choice(np.arange(0, self.action_dim), p=normed)
             # action = int(action)  # normal int not numpy int
             action = p.index(max(p))
             return torch.LongTensor([[action]])

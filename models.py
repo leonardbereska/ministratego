@@ -25,6 +25,7 @@ class Finder(nn.Module):
         x = F.relu(self.lin1(x))
         x = F.relu(self.lin2(x))
         x = F.softmax(x)
+        # x = F.sigmoid(x)
         return x
 
 
