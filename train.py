@@ -71,7 +71,7 @@ def run_env(env, n_runs=100):
             env.show()
             if done and won:
                 print("Won!")
-            elif done and not won or env.score < -3:
+            elif done and not won or env.steps > 20:
                 print("Lost")
                 break
 
@@ -125,7 +125,7 @@ def train(env, num_episodes):
                         episode_won.append(won)
                         if VERBOSE > 0:
                             global N_SMOOTH
-                            helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
+                            # helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
                             helpers.plot_stats(episode_won, N_SMOOTH)  # takes run time
                         break
             if i_episode % 100 == 2:
@@ -135,32 +135,30 @@ def train(env, num_episodes):
 
 # hyperparameters
 BATCH_SIZE = 128  # for faster training take a smaller batch size
-GAMMA = 0.9
-EPS_START = 0.5  # for unstable models take higher randomness first
-EPS_END = 0.01
-EPS_DECAY = 500
+GAMMA = 0.8  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
+EPS_START = 0.3  # for unstable models take higher randomness first
+EPS_END = 0.1
+EPS_DECAY = 100
 N_SMOOTH = 20  # plotting scores averaged over this number of episodes
-VERBOSE = 0  # level of printed output verbosity:
+VERBOSE = 3  # level of printed output verbosity:
                 # 1: plot averaged episode scores
                 # 2: also print actions taken and rewards
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 100  # training for how many episodes
-agent0 = agent.Finder(0)
+num_episodes = 1000  # training for how many episodes
+agent0 = agent.MiniStrat(0)
 agent1 = agent.RandomAgent(1)
 agent1.model = agent0.model
-env = env.FindFlag(agent0, agent1)
+env = env.MiniStratego(agent0, agent1)
 
-# state_dim = len(env.agents[0].state_represent())  # state has state_dim*5*5 values TODO deprecate
-# action_dim = env.agents[0].action_dim  # how many agents * how many possible directions to go per agent
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(10000)
 
-# model.load_state_dict(torch.load('./saved_models/finder.pkl'))  # trained against Random
+# model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))  # trained against Random
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/finder.pkl')
+# torch.save(model.state_dict(), './saved_models/ministrat.pkl')
 
 run_env(env, 10000)

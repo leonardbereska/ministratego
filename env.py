@@ -82,13 +82,13 @@ class Env:
         self.reward_loss = 0  # lose game
         self.reward_kill = 0  # kill enemy figure reward
         self.reward_die = 0  # lose to enemy figure
-        self.reward_iter = 0  # no iteration
+        # self.reward_iter = 0  # no iteration TODO deprecate this
 
     def reset(self):  # resetting means freshly initializing
         self.__init__(agent0=self.agents[0], agent1=self.agents[1])
 
-    # def decide_pieces(self):  # TODO deprecate this
-    #     raise NotImplementedError
+    def decide_pieces(self):
+        raise NotImplementedError
 
     def decide_obstacles(self):  # standard: obstacle in middle
         obstacle_pos = [(2, 2)]
@@ -250,21 +250,21 @@ class Env:
 class FindFlag(Env):
     def __init__(self, agent0, agent1):
         super(FindFlag, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_win = 10
+        self.reward_win = 1
 
     def decide_pieces(self):
-        known_place = [pieces.Piece(0, 1, (4, 4))]
-        random_place = [pieces.Piece(3, 0, None)]
+        known_place = []
+        random_place = [pieces.Piece(3, 0, None), pieces.Piece(0, 1, None)]
         return known_place, random_place
 
 
 class Maze(Env):
     def __init__(self, agent0, agent1):
         super(Maze, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_illegal = -1
-        self.reward_win = 10
-        self.reward_iter = -1
-        self.reward_loss = -1
+        # self.reward_illegal = -1
+        self.reward_win = 1
+        # self.reward_iter = -1
+        # self.reward_loss = -1
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 1, (4, 4))]
@@ -273,24 +273,6 @@ class Maze(Env):
 
     def decide_obstacles(self):
         return [(3, 1), (3, 2), (3, 3), (3, 4), (1, 0), (1, 1), (1, 2), (1, 3)]
-
-
-class Survive(Env):
-    def __init__(self, agent0, agent1):
-        super(Survive, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_illegal = -1
-        self.reward_win = 1
-        self.reward_kill = 1
-        self.reward_die = -1
-        self.reward_loss = -1
-        self.death_thresh = -10
-
-    def decide_pieces(self):
-        known_place = [pieces.Piece(0, 0, (0, 0)), pieces.Piece(0, 1, (4, 4)),
-                       pieces.Piece(3, 0, (0, 1)), pieces.Piece(10, 0, (1, 0))]
-        random_place = [pieces.Piece(3, 1, (4, 3)), pieces.Piece(10, 1, (3, 4)),
-                        pieces.Piece(3, 1, (3, 3))]
-        return known_place, random_place
 
 
 class ControlTheTwo(Env):
@@ -318,10 +300,10 @@ class MiniStratego(Env):
         super(MiniStratego, self).__init__(agent0=agent0, agent1=agent1)
         # self.reward_step = -0.1
         # self.reward_illegal = -0.5
-        self.reward_kill = 0.25
-        self.reward_die = -0.25
-        self.reward_loss = -0.5
-        self.reward_win = 0.5
+        self.reward_kill = 0.2
+        # self.reward_die = 0
+        # self.reward_loss = 0
+        self.reward_win = 1
         # self.death_thresh = -20
 
     def decide_pieces(self):

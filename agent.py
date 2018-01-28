@@ -233,7 +233,7 @@ class Reinforce(Agent):
 
     def decide_move(self):
         state = self.board_to_state()
-        action = self.select_action(state, p_random=0.00, action_dim=self.action_dim)
+        action = self.select_action(state, p_random=0.00)
         move = self.action_to_move(action[0, 0])
         return move
 
@@ -276,11 +276,11 @@ class Reinforce(Agent):
             # 2. probabilistic: interpret q-value as probability
             p = list(state_action_values.data[0].numpy())
             # (optional) mask out impossible actions
-            print("raw net : {}".format(np.round(p, 2)))
+            # print("raw net : {}".format(np.round(p, 2)))
             for action in range(len(p)):
                 if action not in poss_actions:
                     p[action] = p[action] * 0.0
-            # print("masked: {}".format(np.round(p, 2)))
+            print("masked: {}".format(np.round(p, 2)))
             # re-normalize to probabilities
             # normed = [float(i) / sum(p) for i in p]
             # print("normed: {}".format(np.round(normed, 2)))
@@ -788,7 +788,7 @@ class OmniscientExpectiSmart(ExpectiSmart):
     Child of ExpectiSmart agent. This agent is omniscient and thus knows the location and type of each
     piece of the enemy. It then plans by doing a minimax algorithm.
     """
-    def __init__(self, team, setup):
+    def __init__(self, team, setup=None):
         super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
         self.setup = setup
         self.winFightReward = 10

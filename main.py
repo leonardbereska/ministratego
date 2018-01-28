@@ -7,6 +7,7 @@ import agent
 import helpers
 import copy
 import env
+import torch
 
 def watch_game(agent0, agent1, step_time):
     """
@@ -206,7 +207,7 @@ for pos, piece in np.ndenumerate(good_setup):
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="random", agent_type_1="expectimax", num_simulations=1000)
+# simulation(agent_type_0="random", agent_type_1="expectimax", num_simulations=1000)
 # simulation()
 
 
@@ -285,6 +286,10 @@ def watch_env(env, n_runs=100):
                 break
 
 
-env = env.ThreePieces(agent.RandomAgent(0), agent.RandomAgent(1))
+# agent0 = agent.Finder(0)
+# agent0.model.load_state_dict(torch.load('./saved_models/finder.pkl'))  # trained against Random
+
+
+env = env.MiniStratego(agent.OmniscientExpectiSmart(0), agent.RandomAgent(1))
 watch_env(env, 10000)
 
