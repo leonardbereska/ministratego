@@ -187,7 +187,7 @@ def plot_scores(episode_scores, n_smooth):
     #plt.pause(0.001)  # pause a bit so that plots are updated
 
 
-def plot_stats(curr_average, episode_won, n_smooth):
+def plot_stats(curr_average, episode_won, n_smooth, plot_freq):
     """
     Plots the winning/losing ratio
     :param episode_scores:
@@ -202,6 +202,9 @@ def plot_stats(curr_average, episode_won, n_smooth):
     if len(scores) >= n_smooth:
         mean = np.mean(scores[-1000:])
         curr_average.append(mean)
+    x = [plot_freq*(i+1) for i in range(len(curr_average))]  # x axis values
+    xi = [i for i in range(0, len(x))]  # ticks for each x point
+    plt.xticks(xi, x)
     plt.plot(curr_average)
     plt.title('Average Win Percentage over last {} Episodes: {}'.format(n_smooth, int(curr_average[-1]*100)/100))
     plt.pause(0.001)  # pause a bit so that plots are updated

@@ -124,10 +124,10 @@ def train(env, num_episodes):
                         episode_scores.append(env.score)
                         episode_won.append(won)
                         if VERBOSE > 0:
-                            if i_episode % 50 == 0:
+                            if i_episode % PLOT_FREQUENCY == 0:
                                 global N_SMOOTH
                                 # helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
-                                averages = helpers.plot_stats(averages, episode_won, N_SMOOTH)  # takes run time
+                                averages = helpers.plot_stats(averages, episode_won, N_SMOOTH, PLOT_FREQUENCY)  # takes run time
                         break
             if i_episode % 500 == 2:
                     if VERBOSE > 2:
@@ -135,6 +135,7 @@ def train(env, num_episodes):
 
 
 # hyperparameters
+PLOT_FREQUENCY = 50
 BATCH_SIZE = 256  # for faster training take a smaller batch size, not too small as batchnorm will not work otherwise
 GAMMA = 0.9  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
 EPS_START = 0.3  # for unstable models take higher randomness first
