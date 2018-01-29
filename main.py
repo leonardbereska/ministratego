@@ -185,5 +185,10 @@ def simu_env(env, n_runs=100, watch=True):
         print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won/(n_won+n_lost), 2)))
 
 
-env = env.ThreePieces(agent.Omniscient(0, depth=4), agent.Random(1))
-simu_env(env, 1000, watch=False)
+test = env.ThreePieces(agent.Heuristic(0, depth=4), agent.Random(1))  # MinMax Heuristic
+simu_env(test, 100, watch=False)
+
+test = env.ThreePieces(agent.MiniMax(0, depth=4), agent.Random(1))
+simu_env(test, 100, watch=False)
+
+# for higher depth heuristic becomes more useful somehow -> why?

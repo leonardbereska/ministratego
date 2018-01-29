@@ -65,7 +65,8 @@ class Env:
                     if p.team == team:
                         if p.can_move:
                             actors.append(p)
-            actors = sorted(actors, key=lambda actor: actor.type + actor.version/10)  # train for unique actor sequence, sort by type
+            actors = sorted(actors, key=lambda actor: actor.type + actor.version/10)
+            # train for unique actor sequence, sort by type and version
             self.agents[team].action_represent(actors)
 
         self.battleMatrix = helpers.get_battle_matrix()
@@ -125,7 +126,7 @@ class Env:
         if not helpers.is_legal_move(self.board, agent_move):  # if illegal -> no change in env, receive reward_illegal
             self.reward += self.reward_illegal
             self.illegal_moves += 1
-            print("Warning: agent 1 selected an illegal move: {}".format(agent_move))
+            # print("Warning: agent 1 selected an illegal move: {}".format(agent_move))
             self.score += self.reward
             done, won = self.goal_test()
             return self.reward, done, won  # environment does not change for illegal
@@ -144,7 +145,8 @@ class Env:
 
             # is move legal?
             if not helpers.is_legal_move(self.board, opp_move):  # opponent is assumed to only perform legal moves
-                print("Warning: agent 1 selected an illegal move: {}".format(opp_move))
+                pass
+                # print("Warning: agent 1 selected an illegal move: {}".format(opp_move))
 
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 

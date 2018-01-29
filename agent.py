@@ -454,23 +454,23 @@ class FourPieces(Reinforce):
         # self.model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))
 
     def state_represent(self):
-        # own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
-        # own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
-        # own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
-        # own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-        own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+        own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
+        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
         own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
 
-        # opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
-        # opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
-        # opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
-        # opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
-        opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
+        opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        # opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
         opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
         obstacle = lambda p: (p.type == 99, 1)
-        return own_team, own_team_flag, opp_team, opp_team_flag # flag is also bomb
-        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
-        #        opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+        # return own_team, own_team_flag, opp_team, opp_team_flag # flag is also bomb
+        return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
+               opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
 
 
 class Stratego(Reinforce):
@@ -576,7 +576,7 @@ class MiniMax(Agent):
         np.random.shuffle(my_doable_actions)
 
         # check for terminal-state scenario
-        done, won = self.goal_test(my_doable_actions, board)
+        done, won = self.goal_test(my_doable_actions, board, max_val=True)
         if done or depth == 0:
             return current_reward + self.get_terminal_reward(done, won, depth), None
 
@@ -606,7 +606,7 @@ class MiniMax(Agent):
         np.random.shuffle(my_doable_actions)
 
         # check for terminal-state scenario or maximum depth
-        done, won = self.goal_test(my_doable_actions, board)
+        done, won = self.goal_test(my_doable_actions, board, max_val=False)
         if done or depth == 0:
             return current_reward + self.get_terminal_reward(done, won, depth), None
 
@@ -643,7 +643,7 @@ class MiniMax(Agent):
                 temp_reward = -int(self.certainty_multiplier * self.kill_reward)
         return temp_reward
 
-    def goal_test(self, actions_possible, board):
+    def goal_test(self, actions_possible, board, max_val):
         """
         check the board for whether a flag has been captured already and return the winning game rewards,
         if not check whether there are no actions possible anymore, return TRUE then, or FALSE.
@@ -666,17 +666,21 @@ class MiniMax(Agent):
         #         return True
         if not actions_possible:  # TODO no reward for winning with killing all enemies?
             # print('cannot move anymore')
-            return True, None
+            if max_val:  # TODO think about, if this order is correct
+                won = False
+            else:
+                won = True  # empirically False 65 : 35, 63 : 37 vs  True: 78 : 22, 65 : 35, 71 : 29 against Random
+            return True, won
         else:
             return False, None
 
     def get_terminal_reward(self, done, won, depth):
-        if not done or won is None:
+        if not done:
             return 0
         else:
             if won:
                 terminal_reward = self.winGameReward
-            else:
+            elif not won:
                 terminal_reward = - self.winGameReward
             return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
 
@@ -698,7 +702,7 @@ class MiniMax(Agent):
         move_dist = spatial.distance.cityblock(move[0], move[1])
         if move_dist > 1:
             moving_piece.hidden = False
-            moving_piece.potential_types = [moving_piece.type]
+            moving_piece.potential_types = [moving_piece.type]  # piece is 2
         else:
             immobile_enemy_types = [idx for idx, type in enumerate(moving_piece.potential_types)
                                     if type in [0, 11]]
@@ -803,33 +807,29 @@ class Omniscient(MiniMax):
         pass
 
 
-class Heuristic(Omniscient):
+class Heuristic(MiniMax):
     def __init__(self, team, setup=None, depth=2):
         super(Heuristic, self).__init__(team=team, setup=setup, depth=depth)
         self.evaluator = ThreePieces(team)
-        self.winGameReward = 1
+        self.winGameReward = 100
 
     def install_board(self, board):
         super().install_board(board)
         self.evaluator.install_board(board)
-        self.unhide_all()
+        # self.unhide_all()
 
     def get_network_reward(self):
         state = self.evaluator.board_to_state()
         state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
-        return np.max(state_action_values), None
-
-    def minimax(self, max_depth):
-        chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
-        return chosen_action
+        return np.max(state_action_values)
 
     def get_terminal_reward(self, done, won, depth):
-        if not done or won is None:
+        if not done:
             return self.get_network_reward()
         else:
             if won:
                 terminal_reward = self.winGameReward
-            else:
+            elif not won:
                 terminal_reward = - self.winGameReward
             return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
 
