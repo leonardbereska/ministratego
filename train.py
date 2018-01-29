@@ -149,19 +149,19 @@ VERBOSE = 1  # level of printed output verbosity:
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
 num_episodes = 10000  # training for how many episodes
-agent0 = agent.Stratego(0)
-agent1 = agent.RandomAgent(1)
+agent0 = agent.ThreePieces(0)
+agent1 = agent.Random(1)
 agent1.model = agent0.model
-env = env.Stratego(agent0, agent1)
+env = env.ThreePieces(agent0, agent1)
 
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(1000000)
 
-#model.load_state_dict(torch.load('./saved_models/threepieces.pkl'))  # trained against Random
-train(env, num_episodes)
-# torch.save(model.state_dict(), './saved_models/threepieces.pkl')
+model.load_state_dict(torch.load('./saved_models/threepieces.pkl'))  # trained against Random
+# train(env, num_episodes)
+# torch.save(model.state_dict(), './saved_models/fourpieces.pkl')
 
 run_env(env, 10000)
 

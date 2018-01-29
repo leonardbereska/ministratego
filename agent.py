@@ -211,12 +211,12 @@ class Agent:
     #     return helpers.is_legal_move(board, move_to_check)
 
 
-class RandomAgent(Agent):
+class Random(Agent):
     """
     Agent who chooses his actions at random
     """
     def __init__(self, team, setup=None):
-        super(RandomAgent, self).__init__(team=team, setup=setup)
+        super(Random, self).__init__(team=team, setup=setup)
 
     def decide_move(self):
         actions = helpers.get_poss_moves(self.board, self.team)
@@ -285,7 +285,8 @@ class Reinforce(Agent):
             # print("raw net : {}".format(np.round(p, 2)))
             for action in range(len(p)):
                 if action not in poss_actions:
-                    p[action] = p[action] * 0.0
+                    p[action] = -1
+
             # print("masked: {}".format(np.round(p, 2)))
             # re-normalize to probabilities
             # normed = [float(i) / sum(p) for i in p]
@@ -510,13 +511,13 @@ class Stratego(Reinforce):
                 opp_team_ten, opp_team_flag, opp_team_bomb_1, opp_team_bomb_2, obstacle
 
 
-class ExpectiSmart(Agent):
+class MiniMax(Agent):
     """
     Agent deciding his moves based on the minimax algorithm. The agent guessed the enemies setup
     before making a decision by using the current information available about the pieces.
     """
-    def __init__(self, team, setup=None):
-        super(ExpectiSmart, self).__init__(team=team, setup=setup)
+    def __init__(self, team, setup=None, depth=None):
+        super(MiniMax, self).__init__(team=team, setup=setup)
         # rewards for planning the move
         self.kill_reward = 10  # killing an enemy piece
         self.neutral_fight = 2  # a neutral outcome of a fight
@@ -524,7 +525,8 @@ class ExpectiSmart(Agent):
         self.certainty_multiplier = 1.2  # killing known, not guessed, enemy pieces
 
         # initial maximum depth of the minimax algorithm
-        self.max_depth = 1
+        self.ext_depth = depth
+        self.max_depth = 2  # standard max depth
 
         # the matrix table for deciding battle outcomes between two pieces
         self.battleMatrix = helpers.get_battle_matrix()
@@ -535,16 +537,23 @@ class ExpectiSmart(Agent):
         and planning through the minimax algorithm.
         :return: tuple of tuple positions representing the move
         """
-        nr_dead_enemies = sum([True for piece in self.ordered_opp_pieces if not piece.dead])
-        if nr_dead_enemies <= 1:
-            self.max_depth = 2
-        elif 3 <= nr_dead_enemies <= 5:
-            self.max_depth = 4
-        elif 5 < nr_dead_enemies <= 10:
-            self.max_depth = 6
+        if self.ext_depth is None:
+            self.set_max_depth()  # set max_depth each turn
+        else:
+            self.max_depth = self.ext_depth
         # make sure a flag win will be discounted by a factor that guarantees a preference towards immediate flag kill
         self.winGameReward = max(self.winGameReward, self.max_depth*self.kill_reward)
         return self.minimax(max_depth=self.max_depth)
+
+    def set_max_depth(self):
+        n_alive_enemies = sum([True for piece in self.ordered_opp_pieces if not piece.dead])
+        # TODO is this really doing what it should?
+        if n_alive_enemies <= 1:
+            self.max_depth = 2
+        elif 3 <= n_alive_enemies <= 5:
+            self.max_depth = 4
+        elif 5 < n_alive_enemies <= 10:
+            self.max_depth = 6
 
     def minimax(self, max_depth):
         """
@@ -567,35 +576,21 @@ class ExpectiSmart(Agent):
         np.random.shuffle(my_doable_actions)
 
         # check for terminal-state scenario
-        goal_check = self.goal_test(my_doable_actions, board)
-        if goal_check or depth == 0:
-            if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
-                return current_reward, None
-            return current_reward + goal_check * (depth+1)/(self.max_depth+1)*(goal_check/self.kill_reward), None
+        done, won = self.goal_test(my_doable_actions, board)
+        if done or depth == 0:
+            return current_reward + self.get_terminal_reward(done, won, depth), None
 
         val = -float('inf')
         best_action = None
         for action in my_doable_actions:
             board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
-            temp_reward = current_reward
-            # depending on the fight we want to update the current paths value
-            if fight_result is not None:
-                if fight_result == 1:
-                    temp_reward += self.kill_reward
-                elif fight_result == 2:
-                    temp_reward += int(self.certainty_multiplier*self.kill_reward)
-                elif fight_result == 0:
-                    temp_reward += self.neutral_fight  # both pieces die
-                elif fight_result == -1:
-                    temp_reward += -self.kill_reward
-                elif fight_result == -2:
-                    temp_reward += -int(self.certainty_multiplier * self.kill_reward)
+            temp_reward = current_reward + self.add_temp_reward(fight_result)
             new_val = self.min_val(board, temp_reward, alpha, beta, depth-1)[0]
             if val < new_val:
                 val = new_val
                 best_action = action
             if val >= beta:
-                board = self.undo_last_move(board)
+                board = self.undo_last_move(board)  # TODO why is this needed?
                 best_action = action
                 return val, best_action
             alpha = max(alpha, val)
@@ -611,67 +606,79 @@ class ExpectiSmart(Agent):
         np.random.shuffle(my_doable_actions)
 
         # check for terminal-state scenario or maximum depth
-        goal_check = self.goal_test(my_doable_actions, board)
-        if goal_check or depth == 0:
-            if goal_check == True:  # Needs to be this form, as -100 is also True for if statement
-                return current_reward, None
-            return current_reward + goal_check * (depth+1)/(self.max_depth+1)*(goal_check/self.kill_reward), None
+        done, won = self.goal_test(my_doable_actions, board)
+        if done or depth == 0:
+            return current_reward + self.get_terminal_reward(done, won, depth), None
 
         val = float('inf')  # initial value set, so min comparison later possible
         best_action = None
         # iterate through all actions
         for action in my_doable_actions:
             board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
-            temp_reward = current_reward
-            # depending on the fight we want to update the current paths value
-            if fight_result is not None:
-                if fight_result == 1:
-                    temp_reward += -self.kill_reward
-                elif fight_result == 2:
-                    temp_reward += -int(self.certainty_multiplier*self.kill_reward)
-                elif fight_result == 0:
-                    temp_reward += -self.neutral_fight  # both pieces die
-                elif fight_result == -1:
-                    temp_reward += self.kill_reward
-                elif fight_result == -2:
-                    temp_reward += int(self.certainty_multiplier * self.kill_reward)
+            temp_reward = current_reward + self.add_temp_reward(fight_result)
             new_val = self.max_val(board, temp_reward, alpha, beta, depth-1)[0]
             if val > new_val:
                 val = new_val
                 best_action = action
             if val <= alpha:
-                board = self.undo_last_move(board)
+                board = self.undo_last_move(board)  # TODO why is this needed?
                 return val, best_action
             beta = min(beta, val)
             board = self.undo_last_move(board)
         return val, best_action
 
-    def goal_test(self, actions_possible, board=None):
+    def add_temp_reward(self, fight_result):
+        # depending on the fight we want to update the current paths value
+        temp_reward = 0
+        if fight_result is not None:
+            if fight_result == 1:
+                temp_reward = self.kill_reward
+            elif fight_result == 2:
+                temp_reward = int(self.certainty_multiplier * self.kill_reward)
+            elif fight_result == 0:
+                temp_reward = self.neutral_fight  # both pieces die
+            elif fight_result == -1:
+                temp_reward = -self.kill_reward
+            elif fight_result == -2:
+                temp_reward = -int(self.certainty_multiplier * self.kill_reward)
+        return temp_reward
+
+    def goal_test(self, actions_possible, board):
         """
         check the board for whether a flag has been captured already and return the winning game rewards,
         if not check whether there are no actions possible anymore, return TRUE then, or FALSE.
         :param actions_possible: list of moves
         :param board: numpy array (5, 5)
-        :return: integer or boolean
+        :return: boolean: reached terminal state, boolean: own team (True) or other team won (False)
         """
-        if board is not None:
-            flag_alive = [False, False]
-            for pos, piece in np.ndenumerate(board):
-                if piece is not None and piece.type == 0:
-                    flag_alive[piece.team] = True
-            if not flag_alive[self.other_team]:
-                return self.winGameReward
-            if not flag_alive[self.team]:
-                return -self.winGameReward
-        else:
-            if 0 in self.deadPieces[0] or 0 in self.deadPieces[1]:
-                # print('flag captured')
-                return True
-        if not actions_possible:
+        # if board is not None:
+        flag_alive = [False, False]
+        for pos, piece in np.ndenumerate(board):
+            if piece is not None and piece.type == 0:
+                flag_alive[piece.team] = True
+        if not flag_alive[self.other_team]:
+            return True, True
+        if not flag_alive[self.team]:
+            return True, False
+        # else:             # TODO deprecate this, board should not be None
+        #     if 0 in self.deadPieces[0] or 0 in self.deadPieces[1]:
+        #         # print('flag captured')
+        #         return True
+        if not actions_possible:  # TODO no reward for winning with killing all enemies?
             # print('cannot move anymore')
-            return True
+            return True, None
         else:
-            return False
+            return False, None
+
+    def get_terminal_reward(self, done, won, depth):
+        if not done or won is None:
+            return 0
+        else:
+            if won:
+                terminal_reward = self.winGameReward
+            else:
+                terminal_reward = - self.winGameReward
+            return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
 
     def update_prob_by_fight(self, enemy_piece):
         """
@@ -760,13 +767,13 @@ class ExpectiSmart(Agent):
         return board
 
 
-class OmniscientExpectiSmart(ExpectiSmart):
+class Omniscient(MiniMax):
     """
     Child of ExpectiSmart agent. This agent is omniscient and thus knows the location and type of each
     piece of the enemy. It then plans by doing a minimax algorithm.
     """
-    def __init__(self, team, setup=None):
-        super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
+    def __init__(self, team, setup=None, depth=None):
+        super(Omniscient, self).__init__(team=team, setup=setup, depth=depth)
         self.setup = setup
         self.winFightReward = 10
         self.neutralFightReward = 5
@@ -796,25 +803,9 @@ class OmniscientExpectiSmart(ExpectiSmart):
         pass
 
 
-class OmniscientAdaptDepth(OmniscientExpectiSmart):
-    def __init__(self, team, setup=None, depth=None):
-        super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
-        self.max_depth = depth
-
-    def decide_move(self):
-        """
-        Depending on the amount of enemy pieces left, we are entering the start, mid or endgame
-        and planning through the minimax algorithm.
-        :return: tuple of tuple positions representing the move
-        """
-        # make sure a flag win will be discounted by a factor that guarantees a preference towards immediate flag kill
-        self.winGameReward = max(self.winGameReward, self.max_depth*self.kill_reward)
-        return self.minimax(max_depth=self.max_depth)
-
-
-class OmniscientReinforce(OmniscientAdaptDepth):
+class Heuristic(Omniscient):
     def __init__(self, team, setup=None, depth=2):
-        super(OmniscientReinforce, self).__init__(team=team, setup=setup, depth=depth)
+        super(Heuristic, self).__init__(team=team, setup=setup, depth=depth)
         self.evaluator = ThreePieces(team)
         self.winGameReward = 1
 
@@ -832,78 +823,13 @@ class OmniscientReinforce(OmniscientAdaptDepth):
         chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
         return chosen_action
 
-    def max_val(self, board, _, alpha, beta, depth):
-        # this is what the expectimax agent will think
-
-        # get my possible actions, then shuffle them to ensure randomness when no action
-        # stands out as the best
-        my_doable_actions = helpers.get_poss_moves(board, self.team)
-        np.random.shuffle(my_doable_actions)
-
-        # check for terminal-state scenario
-        goal_check = self.goal_test(my_doable_actions, board)
-        if goal_check or depth == 0:
-            if goal_check == True or goal_check == -self.winGameReward:
-                return -1, None
-            elif goal_check == self.winGameReward:
-                return 1, None
+    def get_terminal_reward(self, done, won, depth):
+        if not done or won is None:
+            return self.get_network_reward()
+        else:
+            if won:
+                terminal_reward = self.winGameReward
             else:
-                return self.get_network_reward()
+                terminal_reward = - self.winGameReward
+            return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
 
-        val = -float('inf')
-        best_action = None
-        for action in my_doable_actions:
-            board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
-            new_val = self.min_val(board, 0, alpha, beta, depth-1)[0]
-            if val < new_val:
-                val = new_val
-                best_action = action
-            if val >= beta:
-                board = self.undo_last_move(board)
-                best_action = action
-                return val, best_action
-            alpha = max(alpha, val)
-            board = self.undo_last_move(board)
-        return val, best_action
-
-    def min_val(self, board, _, alpha, beta, depth):
-        # this is what the opponent will think, the min-player
-
-        # get my possible actions, then shuffle them to ensure randomness when no action
-        # stands out as the best
-        my_doable_actions = helpers.get_poss_moves(board, self.other_team)
-        np.random.shuffle(my_doable_actions)
-
-        # check for terminal-state scenario or maximum depth
-        goal_check = self.goal_test(my_doable_actions, board)
-        if goal_check or depth == 0:
-            if goal_check == True or goal_check == self.winGameReward:
-                return 1, None
-            elif goal_check == -self.winGameReward:
-                return -1, None
-
-
-        val = float('inf')  # initial value set, so min comparison later possible
-        best_action = None
-        # iterate through all actions
-        for action in my_doable_actions:
-            board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
-            new_val = self.max_val(board, 0, alpha, beta, depth-1)[0]
-            if val > new_val:
-                val = new_val
-                best_action = action
-            if val <= alpha:
-                board = self.undo_last_move(board)
-                return val, best_action
-            beta = min(beta, val)
-            board = self.undo_last_move(board)
-        return val, best_action
-
-# TODO list:
-# MINIMAX
-# setup vs board conflict
-# generalize minimax
-# depth adaptable for minimax
-
-# REINFORCE
-# state representation for full game (same pieces different layers

@@ -358,18 +358,15 @@ class FourPieces(Env):
         return known_place, random_place
 
 
-
-
-
 class Stratego(Env):
     def __init__(self, agent0, agent1):
         super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
         # self.reward_step = -0.1
-        self.reward_kill = 0
-        self.reward_die = -0
-        self.reward_illegal = 0
+        # self.reward_kill = 0
+        # self.reward_die = -0
+        # self.reward_illegal = 0
         self.reward_win = 1
-        self.reward_loss = 0
+        # self.reward_loss = 0
 
     def decide_pieces(self):
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])  # has to be here for correct order

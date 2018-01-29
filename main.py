@@ -63,13 +63,13 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         print("Game number: " + str(simu+1))
         assert(agent_type_0 in ["random", "expectimax", "omniscientmax", "reinforce"])
         if agent_type_0 == "random":
-            agent_0 = agent.RandomAgent(team=0, setup=copy.deepcopy(setup_agent_0))
+            agent_0 = agent.Random(team=0, setup=copy.deepcopy(setup_agent_0))
             agent_output_type_0 = "RandomAgent"
         elif agent_type_0 == "expectimax":
-            agent_0 = agent.ExpectiSmart(team=0, setup=copy.deepcopy(setup_agent_0))
+            agent_0 = agent.MiniMax(team=0, setup=copy.deepcopy(setup_agent_0))
             agent_output_type_0 = "ExpectiAgent"
         elif agent_type_0 == "omniscientmax":
-            agent_0 = agent.OmniscientExpectiSmart(team=0, setup=copy.deepcopy(setup_agent_0))
+            agent_0 = agent.Omniscient(team=0, setup=copy.deepcopy(setup_agent_0))
             agent_output_type_0 = "OmnniscientMinMaxAgent"
         else:
             agent_0 = agent.Reinforce(team=0, setup=copy.deepcopy(setup_agent_0))
@@ -77,13 +77,13 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
         assert(agent_type_1 in ["random", "expectimax", "omniscientmax", "reinforce"])
         if agent_type_1 == "random":
-            agent_1 = agent.RandomAgent(team=1, setup=copy.deepcopy(setup_agent_1))
+            agent_1 = agent.Random(team=1, setup=copy.deepcopy(setup_agent_1))
             agent_output_type_1 = "RandomAgent"
         elif agent_type_1 == "expectimax":
-            agent_1 = agent.ExpectiSmart(team=1, setup=copy.deepcopy(setup_agent_1))
+            agent_1 = agent.MiniMax(team=1, setup=copy.deepcopy(setup_agent_1))
             agent_output_type_1 = "OmnniscientMinMaxAgent"
         elif agent_type_1 == "omniscientmax":
-            agent_1 = agent.OmniscientExpectiSmart(team=1, setup=copy.deepcopy(setup_agent_1))
+            agent_1 = agent.Omniscient(team=1, setup=copy.deepcopy(setup_agent_1))
             agent_output_type_1 = "OmnniscientMinMaxAgent"
         else:
             agent_1 = agent.Reinforce(team=1, setup=copy.deepcopy(setup_agent_1))
@@ -171,7 +171,7 @@ def simu_env(env, n_runs=100, watch=True):
     n_lost = 0
     for i in range(n_runs):
         env.reset()
-        env.show()
+        # env.show()
         done = False
         while not done:
             _, done, won = env.step()
@@ -182,8 +182,8 @@ def simu_env(env, n_runs=100, watch=True):
             elif done and not won or env.steps > 2000:  # break game that takes too long
                 n_lost += 1
                 break
-        print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, n_won/(n_won+n_lost)))
+        print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won/(n_won+n_lost), 2)))
 
 
-env = env.ThreePieces(agent.ExpectiSmart(0), agent.RandomAgent(1))
-simu_env(env, 1000, watch=True)
+env = env.ThreePieces(agent.Omniscient(0, depth=4), agent.Random(1))
+simu_env(env, 1000, watch=False)
