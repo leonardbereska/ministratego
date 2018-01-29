@@ -382,7 +382,7 @@ class TwoPieces(Reinforce):
         self.action_dim = 8
         self.state_dim = len(self.state_represent())
         self.model = models.TwoPieces(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+        self.model.load_state_dict(torch.load('./saved_models/twopieces.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -425,7 +425,7 @@ class FourPieces(Reinforce):
         self.action_dim = 28  # 16 (for piece 2) + 3 * 4 (for pieces 1, 3, 10)
         self.state_dim = len(self.state_represent())
         self.model = models.FourPieces(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+        # self.model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))
 
     def state_represent(self):
         # own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -453,7 +453,7 @@ class Stratego(Reinforce):
         self.action_dim = 64  # all pieces 3 * 16 (for pieces: 2, 2, 2) + 4 * 4 for (for pieces 1, 3, 3, 10)
         self.state_dim = len(self.state_represent())
         self.model = models.ThreePieces(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+        # self.model.load_state_dict(torch.load('./saved_models/stratego.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -882,6 +882,10 @@ class OmniscientReinforce(OmniscientAdaptDepth):
         return val, best_action
 
 # TODO list:
+# MINIMAX
 # setup vs board conflict
 # generalize minimax
 # depth adaptable for minimax
+
+# REINFORCE
+# state representation for full game (same pieces different layers
