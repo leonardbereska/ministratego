@@ -46,8 +46,8 @@ class Env:
             self.living_pieces[p.team].append(p)
 
         # give agents board
-        agent0.install_opp_setup(self.living_pieces[1])
-        agent1.install_opp_setup(self.living_pieces[0])
+        # agent0.install_opp_setup(self.living_pieces[1])
+        # agent1.install_opp_setup(self.living_pieces[0])
         agent0.board = cp.deepcopy(self.board)
         agent1.board = cp.deepcopy(self.board)
         self.agents = (agent0, agent1)
@@ -121,7 +121,7 @@ class Env:
         if not helpers.is_legal_move(self.board, agent_move):  # if illegal -> no change in env, receive reward_illegal
             self.reward += self.reward_illegal
             self.illegal_moves += 1
-            print("Warning: agent 0 selected an illegal move")
+            print("Warning: agent 1 selected an illegal move: {}".format(agent_move))
             self.score += self.reward
             done, won = self.goal_test()
             return self.reward, done, won  # environment does not change for illegal
@@ -140,7 +140,8 @@ class Env:
 
             # is move legal?
             if not helpers.is_legal_move(self.board, opp_move):  # opponent is assumed to only perform legal moves
-                print("Warning: agent 1 selected an illegal move!")
+                print("Warning: agent 1 selected an illegal move: {}".format(opp_move))
+
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 
         done, won = self.goal_test()

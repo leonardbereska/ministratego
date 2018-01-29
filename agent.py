@@ -184,24 +184,24 @@ class Agent:
     def update_prob_by_move(self, *args):
         pass
 
-    def get_poss_actions(self, board, team):  # TODO deprecate this, all reference should go to helpers.py
-        """
-        get the possible actions for the agent of team "team" for the provided board.
-        :param board: numpy array (5, 5)
-        :param team: int (boolean 0,1)
-        :return: list of moves
-        """
-        return helpers.get_poss_moves(board, team)
-
-    def is_legal_move(self, move_to_check, board):  # TODO deprecate this
-        """
-        Check if the given move on the provided board is legal in terms of the rules of the game. Return
-        a boolean TRUE for legal, FALSE for illegal.
-        :param move_to_check: tuple of board positions
-        :param board: numpy array (5, 5)
-        :return: boolean
-        """
-        return helpers.is_legal_move(board, move_to_check)
+    # def get_poss_actions(self, board, team):  # TODO deprecate this, all reference should go to helpers.py
+    #     """
+    #     get the possible actions for the agent of team "team" for the provided board.
+    #     :param board: numpy array (5, 5)
+    #     :param team: int (boolean 0,1)
+    #     :return: list of moves
+    #     """
+    #     return helpers.get_poss_moves(board, team)
+    #
+    # def is_legal_move(self, move_to_check, board):  # TODO deprecate this
+    #     """
+    #     Check if the given move on the provided board is legal in terms of the rules of the game. Return
+    #     a boolean TRUE for legal, FALSE for illegal.
+    #     :param move_to_check: tuple of board positions
+    #     :param board: numpy array (5, 5)
+    #     :return: boolean
+    #     """
+    #     return helpers.is_legal_move(board, move_to_check)
 
 
 class RandomAgent(Agent):
@@ -395,51 +395,12 @@ class Mazer(Reinforce):
         return own_team, other_flag, obstacle
 
 
-class Survivor(Reinforce):
+class TwoPieces(Reinforce):
     def __init__(self, team):
-        super(Survivor, self).__init__(team=team)
+        super(TwoPieces, self).__init__(team=team)
         self.action_dim = 8
         self.state_dim = len(self.state_represent())
-        self.model = models.Survivor(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/survivor.pkl'))
-
-    def state_represent(self):
-        own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
-        own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
-        own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
-        opp_team_three = lambda p: (p.team == 1 and p.type == 3, 1)
-        opp_team_ten = lambda p: (p.team == 1 and p.type == 10, 1)
-        opp_team_flag = lambda p: (p.team == 1 and not p.can_move, 1)
-        obstacle = lambda p: (p.type == 99, 1)
-        return own_team_three, own_team_ten, own_team_flag, opp_team_three, opp_team_ten, opp_team_flag,obstacle
-
-
-class Control(Reinforce):
-    def __init__(self, team):
-        super(Control, self).__init__(team=team)
-        self.action_dim = 16
-        self.state_dim = len(self.state_represent())
-        self.model = models.Control(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/survivor.pkl'))
-
-    def state_represent(self):
-        # own_team_three = lambda p: (p.team == 0 and p.type == 3, 1)
-        own_team_two = lambda p: (p.team == 0 and p.type == 2, 1)
-        # own_team_ten = lambda p: (p.team == 0 and p.type == 10, 1)
-        own_team_flag = lambda p: (p.team == 0 and not p.can_move, 1)
-        opp_team_three = lambda p: (p.team == 1 and p.type == 3, 1)
-        opp_team_ten = lambda p: (p.team == 1 and p.type == 10, 1)
-        opp_team_flag = lambda p: (p.team == 1 and not p.can_move, 1)
-        obstacle = lambda p: (p.type == 99, 1)
-        return own_team_two, own_team_flag, opp_team_three, opp_team_ten, opp_team_flag,obstacle
-
-
-class MiniStrat(Reinforce):
-    def __init__(self, team):
-        super(MiniStrat, self).__init__(team=team)
-        self.action_dim = 8
-        self.state_dim = len(self.state_represent())
-        self.model = models.MiniStrat(self.state_dim, self.action_dim)
+        self.model = models.TwoPieces(self.state_dim, self.action_dim)
         # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
 
     def state_represent(self):
@@ -820,10 +781,9 @@ class OmniscientExpectiSmart(ExpectiSmart):
 
 
 class OmniscientAdaptDepth(OmniscientExpectiSmart):
-    def __init__(self, team, setup=None, depth=2):
+    def __init__(self, team, setup=None, depth=None):
         super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
         self.max_depth = depth
-
 
     def decide_move(self):
         """
@@ -833,32 +793,19 @@ class OmniscientAdaptDepth(OmniscientExpectiSmart):
         """
         # make sure a flag win will be discounted by a factor that guarantees a preference towards immediate flag kill
         self.winGameReward = max(self.winGameReward, self.max_depth*self.kill_reward)
-        move = self.minimax(max_depth=self.max_depth)
-        return move
+        return self.minimax(max_depth=self.max_depth)
 
 
-class ExpectiSmartReinforce(OmniscientExpectiSmart):
-    def __init__(self, team, setup=None):
-        super(ExpectiSmartReinforce, self).__init__(team=team, setup=setup)
-        self.evaluator = MiniStrat(team)
+class OmniscientReinforce(OmniscientAdaptDepth):
+    def __init__(self, team, setup=None, depth=2):
+        super(OmniscientReinforce, self).__init__(team=team, setup=setup, depth=depth)
+        self.evaluator = ThreePieces(team)
         self.winGameReward = 1
 
     def install_opp_setup(self, opp_setup):
         super().install_opp_setup(opp_setup)
         self.evaluator.board = copy.deepcopy(self.board)
         self.unhide_all()
-
-    def decide_move(self):
-        """
-        Depending on the amount of enemy pieces left, we are entering the start, mid or endgame
-        and planning through the minimax algorithm.
-        :return: tuple of tuple positions representing the move
-        """
-
-        self.max_depth = 6
-        # make sure a flag win will be discounted by a factor that guarantees a preference towards immediate flag kill
-        self.winGameReward = max(self.winGameReward, self.max_depth*self.kill_reward)
-        return self.minimax(max_depth=self.max_depth)
 
     def minimax(self, max_depth):
         chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
@@ -878,7 +825,7 @@ class ExpectiSmartReinforce(OmniscientExpectiSmart):
             if goal_check == True or goal_check == -self.winGameReward:
                 return -1, None
             elif goal_check == self.winGameReward:
-                return 1.1, None
+                return 1, None
             else:
                 state = self.evaluator.board_to_state()
                 state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
@@ -916,7 +863,10 @@ class ExpectiSmartReinforce(OmniscientExpectiSmart):
             elif goal_check == -self.winGameReward:
                 return -1, None
             else:
-                print("Warning, ended on min evaluation with depth {}!".format(depth))
+                # print("Warning, ended on min evaluation with depth {}!".format(depth))
+                state = self.evaluator.board_to_state()
+                state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
+                return np.max(state_action_values), None
 
         val = float('inf')  # initial value set, so min comparison later possible
         best_action = None

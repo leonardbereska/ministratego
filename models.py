@@ -47,57 +47,10 @@ class Mazer(nn.Module):
         return x
 
 
-class Survivor(nn.Module):
-    """
-    Agent for solving the Maze environment
-    """
-    def __init__(self, state_dim, action_dim):
-        super(Survivor, self).__init__()
-        self.feature_size = 10 * 25
-        self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
-        self.conv2 = nn.Conv2d(10, 10, padding=1, kernel_size=3)
-        self.lin1 = nn.Linear(self.feature_size, 16)
-        self.lin2 = nn.Linear(16, action_dim)
-
-    def forward(self, x):
-
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-
-        x = x.view(-1, self.feature_size)
-        x = F.relu(self.lin1(x))
-        x = self.lin2(x)
-        x = F.sigmoid(x)
-        return x
-
-class Control(nn.Module):
-    """
-    Agent for solving the Maze environment
-    """
-    def __init__(self, state_dim, action_dim):
-        super(Control, self).__init__()
-        self.feature_size = 10 * 25
-        self.conv1 = nn.Conv2d(state_dim, 20, padding=1, kernel_size=3)
-        self.conv2 = nn.Conv2d(20, 10, padding=1, kernel_size=3)
-        self.lin1 = nn.Linear(self.feature_size, 64)
-        self.lin2 = nn.Linear(64, action_dim)
-
-    def forward(self, x):
-
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-
-        x = x.view(-1, self.feature_size)
-        x = F.relu(self.lin1(x))
-        x = self.lin2(x)
-        x = F.sigmoid(x)
-        return x
-
-
-class MiniStrat(nn.Module):
+class TwoPieces(nn.Module):
 
     def __init__(self, state_dim, action_dim):
-        super(MiniStrat, self).__init__()
+        super(TwoPieces, self).__init__()
         self.feature_size = 10 * 25
         # self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
         # self.conv1_bn = nn.BatchNorm2d(10)
