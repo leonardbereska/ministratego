@@ -482,22 +482,32 @@ class Stratego(Reinforce):
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
-        own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
-        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        own_team_two_1 = lambda p: (p.team == self.team and p.type == 2 and p.version == 1, 1)
+        own_team_two_2 = lambda p: (p.team == self.team and p.type == 2 and p.version == 2, 1)
+        own_team_two_3 = lambda p: (p.team == self.team and p.type == 2 and p.version == 3, 1)
+        own_team_three_1 = lambda p: (p.team == self.team and p.type == 3 and p.version == 1, 1)
+        own_team_three_2 = lambda p: (p.team == self.team and p.type == 3 and p.version == 2, 1)
         own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-        #own_team = lambda p: (p.team == self.team and p.can_move, p.type)
-        own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+        own_team_flag = lambda p: (p.team == self.team and not p.type == 0, 1)
+        own_team_bomb_1 = lambda p: (p.team == self.team and not p.type == 11 and p.version == 1, 1)
+        own_team_bomb_2 = lambda p: (p.team == self.team and not p.type == 11 and p.version == 2, 1)
 
         opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
-        opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
-        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        opp_team_two_1 = lambda p: (p.team == self.other_team and p.type == 2 and p.version == 1, 1)
+        opp_team_two_2 = lambda p: (p.team == self.other_team and p.type == 2 and p.version == 2, 1)
+        opp_team_two_3 = lambda p: (p.team == self.other_team and p.type == 2 and p.version == 3, 1)
+        opp_team_three_1 = lambda p: (p.team == self.other_team and p.type == 3 and p.version == 1, 1)
+        opp_team_three_2 = lambda p: (p.team == self.other_team and p.type == 3 and p.version == 2, 1)
         opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
-        #opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
-        opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
+        opp_team_flag = lambda p: (p.team == self.other_team and not p.type == 0, 1)
+        opp_team_bomb_1 = lambda p: (p.team == self.other_team and not p.type == 11 and p.version == 1, 1)
+        opp_team_bomb_2 = lambda p: (p.team == self.other_team and not p.type == 11 and p.version == 2, 1)
         obstacle = lambda p: (p.type == 99, 1)
         #return own_team, own_team_flag, opp_team, opp_team_flag, obstacle # flag is also bomb
-        return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
-                opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+        return own_team_one, own_team_two_1, own_team_two_2, own_team_two_3, own_team_three_1, own_team_three_2,\
+                own_team_ten, own_team_flag, own_team_bomb_1, own_team_bomb_2,\
+                opp_team_one, opp_team_two_1, opp_team_two_2, opp_team_two_3, opp_team_three_1, opp_team_three_2,\
+                opp_team_ten, opp_team_flag, opp_team_bomb_1, opp_team_bomb_2, obstacle
 
 
 class ExpectiSmart(Agent):

@@ -89,7 +89,7 @@ def train(env, num_episodes):
     """
     episode_scores = []  # score = total reward
     episode_won = []  # win-ratio win = 1 loss = -1
-    averages = [0]
+    averages = []
     for i_episode in range(num_episodes):
             env.reset()  # initialize environment
             state = env.agents[0].board_to_state()  # initialize state
@@ -124,7 +124,7 @@ def train(env, num_episodes):
                         episode_scores.append(env.score)
                         episode_won.append(won)
                         if VERBOSE > 0:
-                            if i_episode % PLOT_FREQUENCY == 0:
+                            if (i_episode+1) % PLOT_FREQUENCY == 0:
                                 global N_SMOOTH
                                 # helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
                                 averages = helpers.plot_stats(averages, episode_won, N_SMOOTH, PLOT_FREQUENCY)  # takes run time
@@ -149,10 +149,10 @@ VERBOSE = 1  # level of printed output verbosity:
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
 num_episodes = 10000  # training for how many episodes
-agent0 = agent.ThreePieces(0)
+agent0 = agent.Stratego(0)
 agent1 = agent.RandomAgent(1)
 agent1.model = agent0.model
-env = env.ThreePieces(agent0, agent1)
+env = env.Stratego(agent0, agent1)
 
 model = env.agents[0].model  # optimize model of agent0
 

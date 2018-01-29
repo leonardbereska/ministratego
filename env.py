@@ -31,12 +31,16 @@ class Env:
         self.dead_pieces = [[], []]
 
         known_pieces, random_pieces = self.decide_pieces()
-
+        typecounter = [dict(), dict()]
+        for piece in known_pieces + random_pieces:
+            typecounter[piece.team][piece.type] = 0
         # place fixed position pieces
         for piece in known_pieces:
             self.board[piece.position] = piece
             positions.remove(piece.position)
             self.living_pieces[piece.team].append(piece)
+            typecounter[piece.team][piece.type] += 1
+            piece.version = typecounter[piece.team][piece.type]
         # place random position pieces
         c = list(np.random.choice(len(positions), len(random_pieces), replace=False))
         for p in random_pieces:
@@ -44,6 +48,8 @@ class Env:
             p.position = positions[i_pos]
             self.board[p.position] = p
             self.living_pieces[p.team].append(p)
+            typecounter[piece.team][piece.type] += 1
+            piece.version = typecounter[piece.team][piece.type]
 
         # give agents board
         agent0.install_board(self.board)
@@ -59,7 +65,7 @@ class Env:
                     if p.team == team:
                         if p.can_move:
                             actors.append(p)
-            actors = sorted(actors, key=lambda actor: actor.type)  # train for unique actor sequence, sort by type
+            actors = sorted(actors, key=lambda actor: actor.type + actor.version/10)  # train for unique actor sequence, sort by type
             self.agents[team].action_represent(actors)
 
         self.battleMatrix = helpers.get_battle_matrix()
@@ -332,9 +338,9 @@ class FourPieces(Env):
         super(FourPieces, self).__init__(agent0=agent0, agent1=agent1)
         # self.reward_step = -0.1  # only important in self-play to escape stale-mates
         # self.reward_illegal = -0.1  # no illegal moves allowed
-        self.reward_kill = 0.1
-        self.reward_die = -0.1
-        self.reward_loss = -1
+        self.reward_kill = 0
+        self.reward_die = -0
+        self.reward_loss = 0
         self.reward_win = 1
         # self.death_thresh = -20
 
@@ -359,11 +365,11 @@ class Stratego(Env):
     def __init__(self, agent0, agent1):
         super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
         # self.reward_step = -0.1
-        self.reward_kill = 0.1
-        self.reward_die = -0.1
-        self.reward_illegal = -1
+        self.reward_kill = 0
+        self.reward_die = -0
+        self.reward_illegal = 0
         self.reward_win = 1
-        self.reward_loss = -1
+        self.reward_loss = 0
 
     def decide_pieces(self):
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])  # has to be here for correct order
