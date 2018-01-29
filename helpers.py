@@ -6,6 +6,39 @@ import torch
 from collections import namedtuple
 import random
 
+good_setup = np.empty((2, 5), dtype=int)
+good_setup[0, 0] = 3
+good_setup[0, 1] = 11
+good_setup[0, 2] = 0
+good_setup[0, 3] = 11
+good_setup[0, 4] = 1
+good_setup[1, 0] = 2
+good_setup[1, 1] = 2
+good_setup[1, 2] = 10
+good_setup[1, 3] = 2
+good_setup[1, 4] = 3
+# good_setup = np.flip(good_setup, 0)
+
+good_setup2 = np.empty((2, 5), dtype=int)
+good_setup2[0, 0] = 1
+good_setup2[0, 1] = 11
+good_setup2[0, 2] = 0
+good_setup2[0, 3] = 11
+good_setup2[0, 4] = 1
+good_setup2[1, 0] = 1
+good_setup2[1, 1] = 1
+good_setup2[1, 2] = 1
+good_setup2[1, 3] = 1
+good_setup2[1, 4] = 1
+
+
+def get_good_setup():
+    return good_setup
+
+
+def get_good_setup2():
+    return good_setup2
+
 
 battleMatrix = dict()
 battleMatrix[1, 11] = -1

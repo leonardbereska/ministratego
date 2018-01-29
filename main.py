@@ -10,27 +10,6 @@ import env
 import torch
 
 
-def watch_game(agent0, agent1, step_time):
-    """
-    Watch two agents play against each other, step_time is
-    """
-    new_game = game.Game(agent0, agent1)
-    done = False
-    while not done:
-        new_game.run_step()
-        helpers.print_board(new_game.board)
-        done = new_game.goal_test()
-        plt.pause(step_time)
-
-    if new_game.move_count % 2 == 1:
-        outcome = "Red won!"
-    else:
-        outcome = "Blue won!"
-    print(outcome)
-    plt.title(outcome)
-    plt.show(block=True)  # keep plot
-
-
 def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_1=None, show_game=False):
     """
     :return: tested_setups: list of setup and winning percentage
@@ -163,38 +142,15 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     file.close()
 
 
-good_setup = np.empty((2, 5), dtype=int)
-good_setup[0, 0] = 3
-good_setup[0, 1] = 11
-good_setup[0, 2] = 0
-good_setup[0, 3] = 11
-good_setup[0, 4] = 1
-good_setup[1, 0] = 2
-good_setup[1, 1] = 2
-good_setup[1, 2] = 10
-good_setup[1, 3] = 2
-good_setup[1, 4] = 3
-#good_setup = np.flip(good_setup, 0)
+# good_setups in helpers now
+# good_setup = helpers.get_good_setup()
+# good_setup2 = helpers.get_good_setup2()
 
-good_setup2 = np.empty((2, 5), dtype=int)
-good_setup2[0, 0] = 1
-good_setup2[0, 1] = 11
-good_setup2[0, 2] = 0
-good_setup2[0, 3] = 11
-good_setup2[0, 4] = 1
-good_setup2[1, 0] = 1
-good_setup2[1, 1] = 1
-good_setup2[1, 2] = 1
-good_setup2[1, 3] = 1
-good_setup2[1, 4] = 1
-
-
-
-setup_agent0 = np.empty((2, 5), dtype=object)
-setup_agent1 = np.empty((2, 5), dtype=object)
-for pos, piece in np.ndenumerate(good_setup):
-    setup_agent0[pos] = pieces.Piece(piece, 0, (4-pos[0], 4-pos[1]))
-    setup_agent1[pos] = pieces.Piece(piece, 1, pos)
+# setup_agent0 = np.empty((2, 5), dtype=object)
+# setup_agent1 = np.empty((2, 5), dtype=object)
+# for pos, piece in np.ndenumerate(good_setup):
+#     setup_agent0[pos] = pieces.Piece(piece, 0, (4-pos[0], 4-pos[1]))
+#     setup_agent1[pos] = pieces.Piece(piece, 1, pos)
 # for pos, type in np.ndenumerate(rd_setup):
 #     if not type != type:  # check if type is NaN
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
@@ -228,42 +184,6 @@ def simu_env(env, n_runs=100, watch=True):
                 break
         print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, n_won/(n_won+n_lost)))
 
-
-# for testing the ministratego!
-good_setup2 = np.empty((2, 5), dtype=int)
-good_setup2[0, 0] = 3
-good_setup2[0, 1] = 11
-good_setup2[0, 2] = 0
-good_setup2[0, 3] = 11
-good_setup2[0, 4] = 1
-good_setup2[1, 0] = 2
-good_setup2[1, 1] = 2
-good_setup2[1, 2] = 10
-good_setup2[1, 3] = 2
-good_setup2[1, 4] = 3
-
-rd_setup = np.empty((5, 5), )
-rd_setup[:, :] = None
-rd_setup[0, 1] = 0
-rd_setup[1, 0] = 11
-rd_setup[2, 3] = 10
-rd_setup[2, 1] = 10
-rd_setup[1, 2] = 10
-rd_setup[0, 4] = 10
-
-setup_agent0 = np.empty((2, 5), dtype=object)
-# setup_agent1 = np.empty((2, 5), dtype=object)
-
-for pos in ((i, j) for i in range(2) for j in range(5)):
-    setup_agent0[pos] = pieces.Piece(good_setup2[pos], 0, (4 - pos[0], 4 - pos[1]))
-for pos, type in np.ndenumerate(rd_setup):
-    if not type != type:  # check if type is NaN
-        setup_agent1.append(pieces.Piece(int(type), 1, pos))
-
-# board_to_setup()
-
-
-simu_env(env, 1000, watch=True)
 
 # env = env.ThreePieces(agent.ExpectiSmart(0), agent.RandomAgent(1))
 # simu_env(env, 1000, watch=True)
