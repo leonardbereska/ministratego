@@ -25,12 +25,10 @@ class Agent:
                 piece.hidden = False
                 self.board[piece.position] = piece
 
-        # round counter of the game
-        self.move_count = 0
-        # move and pieces history
-        self.last_N_moves = []
-        self.pieces_last_N_Moves_beforePos = []
-        self.pieces_last_N_Moves_afterPos = []
+        self.move_count = 0  # round counter of the game
+        # self.last_N_moves = []  TODO deprecate
+        # self.pieces_last_N_Moves_beforePos = [] TODO deprecate
+        # self.pieces_last_N_Moves_afterPos = [] TODO deprecate
 
         # place obstacle on board
         obstacle = pieces.Piece(99, 99, (2, 2))
@@ -40,7 +38,7 @@ class Agent:
         self.battleMatrix = helpers.get_battle_matrix()
 
         # fallen pieces bookkeeping
-        self.deadPieces = []
+        self.deadPieces = []  # TODO do we need this?
         dead_piecesdict = dict()
         self.types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
         for type_ in set(self.types_available):
@@ -49,26 +47,10 @@ class Agent:
         self.deadPieces.append(copy.deepcopy(dead_piecesdict))
 
         # list of enemy pieces
-        self.ordered_opp_pieces = []
+        self.ordered_opp_pieces = []  # TODO replace this?
 
-    def action_represent(self, actors):  # does nothing but is important for Reinforce
+    def action_represent(self, actors):  # does nothing but is important for Reinforce TODO deprecate
         return
-
-    def install_opp_setup(self, opp_setup):
-        """
-        Install the opponents setup in this agents board and evaluate information for potential
-        minmax operations later on
-        :param opp_setup: numpy array of any shape with pieces objects stored in them
-        :return: None
-        """
-        self.assignment_dict = dict()
-        enemy_types = [piece.type for idx, piece in np.ndenumerate(opp_setup)]
-        for idx, piece in np.ndenumerate(opp_setup):
-            piece.potential_types = copy.copy(enemy_types)
-            self.ordered_opp_pieces.append(piece)
-            piece.hidden = True
-            self.board[piece.position] = piece
-        return None
 
     def update_board(self, updated_piece, board=None):
         """
@@ -113,9 +95,9 @@ class Agent:
             board[from_].has_moved = True
         moving_piece = board[from_]
         attacked_field = board[to_]
-        self.last_N_moves.append(move)
-        self.pieces_last_N_Moves_afterPos.append(attacked_field)
-        self.pieces_last_N_Moves_beforePos.append(moving_piece)
+        # self.last_N_moves.append(move)  TODO deprecate
+        # self.pieces_last_N_Moves_afterPos.append(attacked_field) TODO deprecate
+        # self.pieces_last_N_Moves_beforePos.append(moving_piece) TODO deprecate
         if not board[to_] is None:  # Target field is not empty, then has to fight
             if board is None:
                 # only uncover them when the real board is being played on
@@ -178,7 +160,7 @@ class Agent:
             outcome *= 2
         return outcome
 
-    def update_prob_by_fight(self, *args):
+    def update_prob_by_fight(self, *args):  # TODO can we use this only in ExpectiSmart?
         pass
 
     def update_prob_by_move(self, *args):
@@ -213,7 +195,6 @@ class RandomAgent(Agent):
 
     def decide_move(self):
         actions = helpers.get_poss_moves(self.board, self.team)
-        # ignore state, do random action
         if not actions:
             return None
         else:
@@ -512,6 +493,22 @@ class ExpectiSmart(Agent):
 
         # the matrix table for deciding battle outcomes between two pieces
         self.battleMatrix = helpers.get_battle_matrix()
+
+    def install_opp_setup(self, opp_setup):
+        """
+        Install the opponents setup in this agents board and evaluate information for potential
+        minmax operations later on
+        :param opp_setup: numpy array of any shape with pieces objects stored in them
+        :return: None
+        """
+        self.assignment_dict = dict()
+        enemy_types = [piece.type for idx, piece in np.ndenumerate(opp_setup)]
+        for idx, piece in np.ndenumerate(opp_setup):
+            piece.potential_types = copy.copy(enemy_types)
+            self.ordered_opp_pieces.append(piece)
+            piece.hidden = True
+            self.board[piece.position] = piece
+        return None
 
     def decide_move(self):
         """
@@ -884,3 +881,7 @@ class OmniscientReinforce(OmniscientAdaptDepth):
             board = self.undo_last_move(board)
         return val, best_action
 
+# TODO list:
+# setup vs board conflict
+# generalize minimax
+# depth adaptable for minimax

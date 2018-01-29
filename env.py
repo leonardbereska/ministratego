@@ -46,8 +46,8 @@ class Env:
             self.living_pieces[p.team].append(p)
 
         # give agents board
-        # agent0.install_opp_setup(self.living_pieces[1])
-        # agent1.install_opp_setup(self.living_pieces[0])
+        agent0.install_opp_setup(self.living_pieces[1])
+        agent1.install_opp_setup(self.living_pieces[0])
         agent0.board = cp.deepcopy(self.board)
         agent1.board = cp.deepcopy(self.board)
         self.agents = (agent0, agent1)
@@ -278,29 +278,10 @@ class Maze(Env):
         return [(3, 1), (3, 2), (3, 3), (3, 4), (1, 0), (1, 1), (1, 2), (1, 3)]
 
 
-class ControlTheTwo(Env):
+
+class TwoPieces(Env):
     def __init__(self, agent0, agent1):
-        super(ControlTheTwo, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step = -0.01
-        self.reward_illegal = -1
-        self.reward_win = 10
-        self.reward_kill = 1
-        self.reward_die = -1
-        self.reward_loss = -10
-        self.death_thresh = -20
-
-    def decide_pieces(self):
-        known_place = [pieces.Piece(0, 0, (0, 0)), pieces.Piece(0, 1, (4, 4)),
-                       pieces.Piece(2, 0, (1, 1))]
-
-        random_place = [pieces.Piece(3, 1, (4, 3)), pieces.Piece(10, 1, (3, 4)),
-                        pieces.Piece(3, 1, (3, 3))]
-        return known_place, random_place
-
-
-class MiniStratego(Env):
-    def __init__(self, agent0, agent1):
-        super(MiniStratego, self).__init__(agent0=agent0, agent1=agent1)
+        super(TwoPieces, self).__init__(agent0=agent0, agent1=agent1)
         # self.reward_step = -0.1
         # self.reward_illegal = -0.5
         self.reward_kill = 0.2
@@ -373,8 +354,7 @@ class FourPieces(Env):
         return known_place, random_place
 
 
-# TODO how does agent deal with uncertainty? how does he master controlling pieces of same value?
-# TODO -> adapt state representation to this
+
 
 
 class Stratego(Env):
@@ -400,40 +380,28 @@ class Stratego(Env):
         return known_place, random_place
 
 
-def watch_game(env, step_time):
-    """
-    Watch two agents play against each other, step_time is
-    """
-    new_game = env
-    done = False
-    while not done:
-        move = 0
-        _, done = new_game.step(move)
-        # print(env.reward)
-        new_game.show()
-        plt.pause(step_time)
+# def watch_game(env, step_time):  # TODO deprecate this -> main
+#     """
+#     Watch two agents play against each other, step_time is
+#     """
+#     new_game = env
+#     done = False
+#     while not done:
+#         move = 0
+#         _, done = new_game.step(move)
+#         # print(env.reward)
+#         new_game.show()
+#         plt.pause(step_time)
+#
+#     if env.reward > 0:  # reward_win is for Red
+#         outcome = "Red won!"
+#     else:
+#         outcome = "Blue won!"
+#     print(outcome)
+#     plt.title(outcome)
+#     plt.show(block=True)  # keep plot
 
-    if env.reward > 0:  # reward_win is for Red
-        outcome = "Red won!"
-    else:
-        outcome = "Blue won!"
-    print(outcome)
-    plt.title(outcome)
-    plt.show(block=True)  # keep plot
 
 
-    # State representation?
-# max 7 channels
-# own: movable,
-#      immovable
-# opp: known, movable
-#             bomb
-#      unknown, moved
-#               not_moved
-# obstacles
-# own
-# opp
-# obstacles yes/no?
-# own movable/immovable?
-# opp movable/immovable?
-# opp known/unknown?
+# TODO how does agent deal with uncertainty? how does he master controlling pieces of same value?
+# TODO -> adapt state representation to this list:
