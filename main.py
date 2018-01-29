@@ -269,17 +269,13 @@ def simu_env(env, n_runs=100, watch=True):
             if watch:
                 env.show()
             if done and won:
-                if watch:
-                    print("Won!")
                 n_won += 1
             elif done and not won or env.steps > 2000:  # break game that takes too long
-                if watch:
-                    print("Lost")
                 n_lost += 1
                 break
         print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, n_won/(n_won+n_lost)))
 
 # agent0 = agent.Finder(0)
 # agent0.model.load_state_dict(torch.load('./saved_models/finder.pkl'))  # trained against Random
-env = env.ThreePieces(agent.ThreePieces(0), agent.OmniscientAdaptDepth(1, depth=2))
+env = env.ThreePieces(agent.OmniscientAdaptDepth(0, depth=4), agent.ThreePieces(1))
 simu_env(env, 1000, watch=False)
