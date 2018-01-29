@@ -252,36 +252,34 @@ for pos, piece in np.ndenumerate(good_setup):
 #     watch_game(env, 0.001)
 
 
-def watch_env(env, n_runs=100):
+def simu_env(env, n_runs=100, watch=True):
     """
     Plots simulated games in an environment for visualization
     :param env: environment to be run
     :param n_runs: how many episodes should be run
     :return: plot of each step in the environment
     """
+    n_won = 0
+    n_lost = 0
     for i in range(n_runs):
         env.reset()
-        env.show()
         done = False
         while not done:
-            # state = env.agents[0].board_to_state()  # for the reinforcement agent convert board to state input
-            # action = env.agents[0].select_action(state, 0.00, action_dim)
-            # action = action[0, 0]  # action is unwrapped from the LongTensor
-            # move = env.agents[0].action_to_move(action)  # e.g. action = 1 -> move = ((0, 0), (0, 1))
-
             _, done, won = env.step()
-            env.show()
+            if watch:
+                env.show()
             if done and won:
-                print("Won!")
-            elif done and not won or env.score < -3:
-                print("Lost")
+                if watch:
+                    print("Won!")
+                n_won += 1
+            elif done and not won or env.steps > 2000:  # break game that takes too long
+                if watch:
+                    print("Lost")
+                n_lost += 1
                 break
-
+        print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, n_won/(n_won+n_lost)))
 
 # agent0 = agent.Finder(0)
 # agent0.model.load_state_dict(torch.load('./saved_models/finder.pkl'))  # trained against Random
-
-
-env = env.MiniStratego(agent.ExpectiSmartReinforce(0), agent.RandomAgent(1))
-watch_env(env, 10000)
-
+env = env.ThreePieces(agent.ThreePieces(0), agent.OmniscientAdaptDepth(1, depth=2))
+simu_env(env, 1000, watch=False)

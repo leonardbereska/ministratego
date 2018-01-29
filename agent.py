@@ -280,7 +280,7 @@ class Reinforce(Agent):
             for action in range(len(p)):
                 if action not in poss_actions:
                     p[action] = p[action] * 0.0
-            print("masked: {}".format(np.round(p, 2)))
+            # print("masked: {}".format(np.round(p, 2)))
             # re-normalize to probabilities
             # normed = [float(i) / sum(p) for i in p]
             # print("normed: {}".format(np.round(normed, 2)))
@@ -460,7 +460,7 @@ class ThreePieces(Reinforce):
         self.action_dim = 12  #
         self.state_dim = len(self.state_represent())
         self.model = models.ThreePieces(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/ministrat2.pkl'))
+        self.model.load_state_dict(torch.load('./saved_models/threepieces.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -817,6 +817,24 @@ class OmniscientExpectiSmart(ExpectiSmart):
 
     def update_prob_by_move(self, move, moving_piece):
         pass
+
+
+class OmniscientAdaptDepth(OmniscientExpectiSmart):
+    def __init__(self, team, setup=None, depth=2):
+        super(OmniscientExpectiSmart, self).__init__(team=team, setup=setup)
+        self.max_depth = depth
+
+
+    def decide_move(self):
+        """
+        Depending on the amount of enemy pieces left, we are entering the start, mid or endgame
+        and planning through the minimax algorithm.
+        :return: tuple of tuple positions representing the move
+        """
+        # make sure a flag win will be discounted by a factor that guarantees a preference towards immediate flag kill
+        self.winGameReward = max(self.winGameReward, self.max_depth*self.kill_reward)
+        move = self.minimax(max_depth=self.max_depth)
+        return move
 
 
 class ExpectiSmartReinforce(OmniscientExpectiSmart):

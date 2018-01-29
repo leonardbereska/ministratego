@@ -121,7 +121,7 @@ class Env:
         if not helpers.is_legal_move(self.board, agent_move):  # if illegal -> no change in env, receive reward_illegal
             self.reward += self.reward_illegal
             self.illegal_moves += 1
-            # print("illegal")
+            print("Warning: agent 0 selected an illegal move")
             self.score += self.reward
             done, won = self.goal_test()
             return self.reward, done, won  # environment does not change for illegal
@@ -140,7 +140,7 @@ class Env:
 
             # is move legal?
             if not helpers.is_legal_move(self.board, opp_move):  # opponent is assumed to only perform legal moves
-                print("Warning: agent 1 selected illegal move!")
+                print("Warning: agent 1 selected an illegal move!")
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
 
         done, won = self.goal_test()
@@ -327,14 +327,14 @@ class ThreePieces(Env):
         super(ThreePieces, self).__init__(agent0=agent0, agent1=agent1)
         # self.reward_step = -0.1  # only important in self-play to escape stale-mates
         # self.reward_illegal = -0.1  # no illegal moves allowed
-        self.reward_kill = 1
-        self.reward_die = -1
-        self.reward_loss = -1
+        # self.reward_kill = 0
+        # self.reward_die = -1
+        # self.reward_loss = -1
         self.reward_win = 1
         # self.death_thresh = -20
 
     def decide_pieces(self):
-        self.types_available = [[0, 1, 3, 10], [0, 1, 1, 3, 3, 10, 10]]
+        self.types_available = [[0, 1, 3, 10], [0, 1, 3, 10]]
         known_place = []
         # draw random setup for 10 figures for each team
         for team in (0, 1):

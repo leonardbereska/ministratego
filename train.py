@@ -112,7 +112,7 @@ def train(env, num_episodes):
                     memory.push(state, action, next_state, reward)  # store the transition in memory
                     state = next_state  # move to the next state
                     optimize_model()  # one step of optimization of target network
-                    env.agents[1].model = model  # TODO real self play?
+                    # env.agents[1].model = model  # TODO real self play?
 
                     if done:
                         # after each episode print stats
@@ -135,8 +135,8 @@ def train(env, num_episodes):
 
 
 # hyperparameters
-BATCH_SIZE = 128  # for faster training take a smaller batch size
-GAMMA = 0.8  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
+BATCH_SIZE = 256  # for faster training take a smaller batch size, not too small as batchnorm will not work otherwise
+GAMMA = 0.9  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
 EPS_START = 0.3  # for unstable models take higher randomness first
 EPS_END = 0
 EPS_DECAY = 100
@@ -147,19 +147,23 @@ VERBOSE = 1  # level of printed output verbosity:
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 1500  # training for how many episodes
-agent0 = agent.MiniStrat(0)
-agent1 = agent.MiniStrat(1)
+num_episodes = 10000  # training for how many episodes
+agent0 = agent.ThreePieces(0)
+agent1 = agent.RandomAgent(1)
 agent1.model = agent0.model
-env = env.MiniStratego(agent0, agent1)
+env = env.ThreePieces(agent0, agent1)
 
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
-memory = helpers.ReplayMemory(10000)
+memory = helpers.ReplayMemory(100000)
 
-#model.load_state_dict(torch.load('./saved_models/ministrat.pkl'))  # trained against Random
-train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/ministrat_selfplay.pkl')
+model.load_state_dict(torch.load('./saved_models/threepieces.pkl'))  # trained against Random
+# train(env, num_episodes)
+# torch.save(model.state_dict(), './saved_models/threepieces.pkl')
 
 run_env(env, 10000)
+
+
+# increased memory size -> why good?: less bias in estimate, why bad?: not on-policy anymore
+# increased batch size -> good, especially with batchnorm

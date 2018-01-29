@@ -43,6 +43,8 @@ def is_legal_move(board, move_to_check):
     :param move_to_check: array/tuple with the coordinates of the position from and to
     :return: True if move is a legal move, False if not
     """
+    if move_to_check is None:
+        return False
     pos_before = move_to_check[0]
     pos_after = move_to_check[1]
     if pos_after not in [(i, j) for i in range(5) for j in range(5)]:
@@ -107,7 +109,7 @@ def print_board(board):
             plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
     #plt.gca().invert_yaxis()  # own pieces down, others up
     #plt.pause(1)
-    plt.pause(.5)
+    plt.pause(.2)
 
     plt.show(block=False)
 
