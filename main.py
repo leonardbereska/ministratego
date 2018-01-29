@@ -185,5 +185,5 @@ def simu_env(env, n_runs=100, watch=True):
         print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, n_won/(n_won+n_lost)))
 
 
-# env = env.ThreePieces(agent.ExpectiSmart(0), agent.RandomAgent(1))
-# simu_env(env, 1000, watch=True)
+env = env.ThreePieces(agent.ExpectiSmart(0), agent.RandomAgent(1))
+simu_env(env, 1000, watch=True)

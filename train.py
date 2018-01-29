@@ -157,10 +157,10 @@ env = env.ThreePieces(agent0, agent1)
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
-memory = helpers.ReplayMemory(100000)
+memory = helpers.ReplayMemory(1000000)
 
-model.load_state_dict(torch.load('./saved_models/threepieces.pkl'))  # trained against Random
-# train(env, num_episodes)
+#model.load_state_dict(torch.load('./saved_models/threepieces.pkl'))  # trained against Random
+train(env, num_episodes)
 # torch.save(model.state_dict(), './saved_models/threepieces.pkl')
 
 run_env(env, 10000)

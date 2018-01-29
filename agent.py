@@ -26,9 +26,9 @@ class Agent:
                 self.board[piece.position] = piece
 
         self.move_count = 0  # round counter of the game
-        # self.last_N_moves = []  TODO deprecate
-        # self.pieces_last_N_Moves_beforePos = [] TODO deprecate
-        # self.pieces_last_N_Moves_afterPos = [] TODO deprecate
+        self.last_N_moves = []
+        self.pieces_last_N_Moves_beforePos = []
+        self.pieces_last_N_Moves_afterPos = []
 
         # place obstacle on board
         obstacle = pieces.Piece(99, 99, (2, 2))
@@ -48,6 +48,31 @@ class Agent:
 
         # list of enemy pieces
         self.ordered_opp_pieces = []  # TODO replace this?
+
+    def install_board(self, board):
+        """
+        Install the opponents setup in this agents board and evaluate information for potential
+        minmax operations later on
+        :param opp_setup: numpy array of any shape with pieces objects stored in them
+        :return: None
+        """
+        self.board = copy.deepcopy(board)
+        enemy_pieces = []
+        self.own_pieces = []
+        for idx, piece in np.ndenumerate(self.board):
+            if piece is not None:
+                if piece.team == self.team:
+                    self.own_pieces.append(piece)
+                elif piece.team == self.other_team:
+                    enemy_pieces.append(piece)
+        enemy_types = [piece.type for piece in enemy_pieces]
+        self.ordered_opp_pieces = np.array(enemy_pieces)
+        self.own_pieces = np.array(self.own_pieces)
+
+        for idx, piece in np.ndenumerate(self.ordered_opp_pieces):
+            piece.potential_types = copy.copy(enemy_types)
+            piece.hidden = True
+        return None
 
     def action_represent(self, actors):  # does nothing but is important for Reinforce TODO deprecate
         return
@@ -95,9 +120,9 @@ class Agent:
             board[from_].has_moved = True
         moving_piece = board[from_]
         attacked_field = board[to_]
-        # self.last_N_moves.append(move)  TODO deprecate
-        # self.pieces_last_N_Moves_afterPos.append(attacked_field) TODO deprecate
-        # self.pieces_last_N_Moves_beforePos.append(moving_piece) TODO deprecate
+        self.last_N_moves.append(move)
+        self.pieces_last_N_Moves_afterPos.append(attacked_field)
+        self.pieces_last_N_Moves_beforePos.append(moving_piece)
         if not board[to_] is None:  # Target field is not empty, then has to fight
             if board is None:
                 # only uncover them when the real board is being played on
@@ -494,22 +519,6 @@ class ExpectiSmart(Agent):
         # the matrix table for deciding battle outcomes between two pieces
         self.battleMatrix = helpers.get_battle_matrix()
 
-    def install_opp_setup(self, opp_setup):
-        """
-        Install the opponents setup in this agents board and evaluate information for potential
-        minmax operations later on
-        :param opp_setup: numpy array of any shape with pieces objects stored in them
-        :return: None
-        """
-        self.assignment_dict = dict()
-        enemy_types = [piece.type for idx, piece in np.ndenumerate(opp_setup)]
-        for idx, piece in np.ndenumerate(opp_setup):
-            piece.potential_types = copy.copy(enemy_types)
-            self.ordered_opp_pieces.append(piece)
-            piece.hidden = True
-            self.board[piece.position] = piece
-        return None
-
     def decide_move(self):
         """
         Depending on the amount of enemy pieces left, we are entering the start, mid or endgame
@@ -753,8 +762,8 @@ class OmniscientExpectiSmart(ExpectiSmart):
         self.neutralFightReward = 5
         self.winGameReward = 1000
 
-    def install_opp_setup(self, opp_setup):
-        super().install_opp_setup(opp_setup)
+    def install_board(self, board):
+        super().install_board(board)
         self.unhide_all()
 
     def unhide_all(self):
@@ -799,10 +808,15 @@ class OmniscientReinforce(OmniscientAdaptDepth):
         self.evaluator = ThreePieces(team)
         self.winGameReward = 1
 
-    def install_opp_setup(self, opp_setup):
-        super().install_opp_setup(opp_setup)
-        self.evaluator.board = copy.deepcopy(self.board)
+    def install_board(self, board):
+        super().install_board(board)
+        self.evaluator.install_board(board)
         self.unhide_all()
+
+    def get_network_reward(self):
+        state = self.evaluator.board_to_state()
+        state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
+        return np.max(state_action_values), None
 
     def minimax(self, max_depth):
         chosen_action = self.max_val(self.board, 0, -float("inf"), float("inf"), max_depth)[1]
@@ -824,9 +838,7 @@ class OmniscientReinforce(OmniscientAdaptDepth):
             elif goal_check == self.winGameReward:
                 return 1, None
             else:
-                state = self.evaluator.board_to_state()
-                state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
-                return np.max(state_action_values), None
+                return self.get_network_reward()
 
         val = -float('inf')
         best_action = None
@@ -859,11 +871,7 @@ class OmniscientReinforce(OmniscientAdaptDepth):
                 return 1, None
             elif goal_check == -self.winGameReward:
                 return -1, None
-            else:
-                # print("Warning, ended on min evaluation with depth {}!".format(depth))
-                state = self.evaluator.board_to_state()
-                state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
-                return np.max(state_action_values), None
+
 
         val = float('inf')  # initial value set, so min comparison later possible
         best_action = None
