@@ -275,25 +275,22 @@ class Reinforce(Agent):
         sample = random.random()
         if sample > p_random:
             state_action_values = self.model(Variable(state, volatile=True))
-            # 1. deterministic action selection (always select maximum q-value
-            # print(list(state_action_values.data[0].numpy()))
-            # action = state_action_values.data.max(1)[1].view(1, 1)
-            # return action
-            # 2. probabilistic: interpret q-value as probability
-            p = list(state_action_values.data[0].numpy())
-            # (optional) mask out impossible actions
-            # print("raw net : {}".format(np.round(p, 2)))
-            for action in range(len(p)):
-                if action not in poss_actions:
-                    p[action] = -1
+            q_values = list(state_action_values.data[0].numpy())
 
-            # print("masked: {}".format(np.round(p, 2)))
-            # re-normalize to probabilities
-            # normed = [float(i) / sum(p) for i in p]
-            # print("normed: {}".format(np.round(normed, 2)))
+            for action in range(len(q_values)):
+                if action not in poss_actions:
+                    q_values[action] = -1  # (optional) mask out impossible actions
+            # print("masked: {}".format(np.round(q_values, 2)))
+
+            # 1. deterministic action selection (always select maximum q-value
+            action = q_values.index(max(q_values))
+
+            # 2. probabilistic: interpret q-value as probability, re-normalize to probabilities
+            # normed = [float(i) / sum(p) for i in q_values]
             # action = np.random.choice(np.arange(0, self.action_dim), p=normed)
+            # print("normed: {}".format(np.round(normed, 2)))
             # action = int(action)  # normal int not numpy int
-            action = p.index(max(p))
+
             return torch.LongTensor([[action]])
         else:
             # 1. random from possible (not-illegal) actions
@@ -472,6 +469,36 @@ class FourPieces(Reinforce):
         return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, \
                opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
 
+
+class FourPiecesBomb(Reinforce):
+    def __init__(self, team):
+        super(FourPiecesBomb, self).__init__(team=team)
+        self.action_dim = 28  # 16 (for piece 2) + 3 * 4 (for pieces 1, 3, 10)
+        self.state_dim = len(self.state_represent())
+        self.model = models.FourPiecesBomb(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))
+
+    def state_represent(self):
+        own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+        own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
+        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+        own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+        own_team_bombs = lambda p: (p.team == self.team and p.type == 11, 1)
+        own_team_flag = lambda p: (p.team == self.team and p.type == 0, 1)
+
+        # opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
+        opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+        opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+        opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+        opp_team_bombs = lambda p: (p.team == self.other_team and p.type == 11, 1)
+        opp_team_flag = lambda p: (p.team == self.other_team and p.type == 0, 1)
+        obstacle = lambda p: (p.type == 99, 1)
+        # return own_team, own_team_flag, opp_team, opp_team_flag # flag is also bomb
+        return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, own_team_bombs, \
+               opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
+        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, own_team_bombs, \
+        #        opp_team, opp_team_flag, opp_team_bombs, obstacle
 
 class Stratego(Reinforce):
     def __init__(self, team):

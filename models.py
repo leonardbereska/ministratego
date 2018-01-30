@@ -103,10 +103,33 @@ class FourPieces(nn.Module):
 
     def __init__(self, state_dim, action_dim):
         super(FourPieces, self).__init__()
-        self.feature_size = 40 * 25
+        self.feature_size = 20 * 25
 
-        self.conv1 = nn.Conv2d(state_dim, 40, padding=1, kernel_size=3)
-        self.conv1_bn = nn.BatchNorm2d(40)
+        self.conv1 = nn.Conv2d(state_dim, 20, padding=1, kernel_size=3)
+        self.conv1_bn = nn.BatchNorm2d(20)
+
+        self.lin1 = nn.Linear(self.feature_size, 32)
+        self.lin2 = nn.Linear(32, action_dim)
+
+    def forward(self, x):
+        x = F.tanh(self.conv1_bn(self.conv1(x)))
+
+        x = x.view(-1, self.feature_size)
+
+        x = F.relu(self.lin1(x))
+        x = self.lin2(x)
+        x = F.sigmoid(x)
+        return x
+
+
+class FourPiecesBomb(nn.Module):
+
+    def __init__(self, state_dim, action_dim):
+        super(FourPiecesBomb, self).__init__()
+        self.feature_size = 20 * 25
+
+        self.conv1 = nn.Conv2d(state_dim, 20, padding=1, kernel_size=3)
+        self.conv1_bn = nn.BatchNorm2d(20)
 
         self.lin1 = nn.Linear(self.feature_size, 32)
         self.lin2 = nn.Linear(32, action_dim)

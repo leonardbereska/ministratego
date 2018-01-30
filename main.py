@@ -183,6 +183,7 @@ def simu_env(env, n_runs=100, watch=True):
                 n_lost += 1
                 break
         print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won/(n_won+n_lost), 2)))
+    print("Simulation over: {} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won / (n_won + n_lost), 2)))
 
 
 test = env.ThreePieces(agent.Heuristic(0, depth=4), agent.Random(1))  # MinMax Heuristic

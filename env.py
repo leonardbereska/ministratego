@@ -89,13 +89,27 @@ class Env:
         self.reward_loss = 0  # lose game
         self.reward_kill = 0  # kill enemy figure reward
         self.reward_die = 0  # lose to enemy figure
-        # self.reward_iter = 0  # no iteration TODO deprecate this
 
     def reset(self):  # resetting means freshly initializing
         self.__init__(agent0=self.agents[0], agent1=self.agents[1])
 
     def decide_pieces(self):
         raise NotImplementedError
+
+    def place_types(self):
+        """
+        Places available types for each team in the teams respective half of the board
+        :return:
+        """
+        known_place = []
+        # draw random setup for 10 figures for each team
+        for team in (0, 1):
+            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 5) for j in range(5)]
+            setup = np.random.choice(self.types_available, len(self.types_available), replace=False)
+            for i, pos in enumerate(setup):
+                known_place.append(pieces.Piece(setup[i], team, setup_pos[i]))
+        random_place = []  # random_place is across whole board
+        return known_place, random_place
 
     def decide_obstacles(self):  # standard: obstacle in middle
         obstacle_pos = [(2, 2)]
@@ -153,21 +167,6 @@ class Env:
         done, won = self.goal_test()
         self.score += self.reward
         return self.reward, done, won
-
-    # def action_to_move(self, action, team):  # TODO deprecate this (is in agent now)
-    #     i = int(np.floor(action / 4))  # which piece: 0-3 is first 4-7 second etc.
-    #     piece = self.living_pieces[team][i]
-    #     piece_pos = piece.position  # where is the piece
-    #     if piece_pos is None:
-    #         move = (None, None)  # return illegal move
-    #         return move
-    #     action = action % 4  # 0-3 as direction
-    #     moves = [(1, 0), (-1, 0), (0, -1), (0, 1)]  # a piece can move in four directions
-    #     direction = moves[action]  # action: 0-3
-    #     pos_to = [sum(x) for x in zip(piece_pos, direction)]  # go in this direction
-    #     pos_to = tuple(pos_to)
-    #     move = (piece_pos, pos_to)
-    #     return move
 
     def do_move(self, move, team):
         if move is None:  # no move chosen (network)?
@@ -233,12 +232,10 @@ class Env:
         for p in self.dead_pieces[1]:
             if p.type == 0:
                 self.reward += self.reward_win
-                # print("Red won, captured flag")
                 return True, True
         for p in self.dead_pieces[0]:
             if p.type == 0:
                 self.reward += self.reward_loss
-                # print("Blue won, captured flag")
                 return True, False
         if self.death_thresh is not None:
             if self.score < self.death_thresh:
@@ -270,10 +267,7 @@ class FindFlag(Env):
 class Maze(Env):
     def __init__(self, agent0, agent1):
         super(Maze, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_illegal = -1
         self.reward_win = 1
-        # self.reward_iter = -1
-        # self.reward_loss = -1
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 1, (4, 4))]
@@ -284,127 +278,53 @@ class Maze(Env):
         return [(3, 1), (3, 2), (3, 3), (3, 4), (1, 0), (1, 1), (1, 2), (1, 3)]
 
 
-
 class TwoPieces(Env):
     def __init__(self, agent0, agent1):
         super(TwoPieces, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step = -0.1
-        # self.reward_illegal = -0.5
-        self.reward_kill = 0.2
-        # self.reward_die = 0
-        # self.reward_loss = 0
         self.reward_win = 1
-        # self.death_thresh = -20
 
     def decide_pieces(self):
         self.types_available = [0, 1, 10]
-        known_place = []
-        # draw random setup for 10 figures for each team
-        for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
-            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
-            for i, piece_type in enumerate(self.types_available):
-                # print(setup_pos[index[i]])
-                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
-        random_place = []  # random_place is across whole board
-        return known_place, random_place
+        return self.place_types()
 
 
 class ThreePieces(Env):
     def __init__(self, agent0, agent1):
         super(ThreePieces, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
-        # self.reward_illegal = -0.1  # no illegal moves allowed
-        # self.reward_kill = 0
-        # self.reward_die = -1
-        # self.reward_loss = -1
         self.reward_win = 1
-        # self.death_thresh = -20
 
     def decide_pieces(self):
-        self.types_available = [[0, 1, 3, 10], [0, 1, 3, 10]]
-        known_place = []
-        # draw random setup for 10 figures for each team
-        for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
-            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
-            for i, piece_type in enumerate(self.types_available[team]):
-                # print(setup_pos[index[i]])
-                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
-        random_place = []  # random_place is across whole board
-        return known_place, random_place
+        self.types_available = [0, 1, 3, 10]
+        return self.place_types()
 
 
 class FourPieces(Env):
     def __init__(self, agent0, agent1):
         super(FourPieces, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step = -0.1  # only important in self-play to escape stale-mates
-        # self.reward_illegal = -0.1  # no illegal moves allowed
-        self.reward_kill = 0
-        self.reward_die = -0
-        self.reward_loss = 0
         self.reward_win = 1
-        # self.death_thresh = -20
 
     def decide_pieces(self):
-        self.types_available = [[0, 1, 2, 3, 10], [0, 1, 2, 3, 10]]
-        known_place = []
-        # draw random setup for 10 figures for each team
-        for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
-            index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
-            for i, piece_type in enumerate(self.types_available[team]):
-                # print(setup_pos[index[i]])
-                known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
-        random_place = []  # random_place is across whole board
-        return known_place, random_place
+        self.types_available = [0, 1, 2, 3, 10]
+        return self.place_types()
+
+
+class FourPiecesBomb(Env):
+    def __init__(self, agent0, agent1):
+        super(FourPiecesBomb, self).__init__(agent0=agent0, agent1=agent1)
+        self.reward_win = 1
+
+    def decide_pieces(self):
+        self.types_available = [0, 1, 2, 3, 10, 11, 11]
+        return self.place_types()
 
 
 class Stratego(Env):
     def __init__(self, agent0, agent1):
         super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
-        # self.reward_step = -0.1
-        # self.reward_kill = 0
-        # self.reward_die = -0
-        # self.reward_illegal = 0
         self.reward_win = 1
-        # self.reward_loss = 0
 
     def decide_pieces(self):
-        self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])  # has to be here for correct order
-        known_place = []
-        # draw random setup for 10 figures for each team
-        for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 5) for j in range(5)]
-            setup = np.random.choice(self.types_available, len(self.types_available), replace=False)
-            for i, pos in enumerate(setup):
-                known_place.append(pieces.Piece(setup[i], team, setup_pos[i]))
-        random_place = []  # random_place is across whole board
-        return known_place, random_place
+        self.types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
+        return self.place_types()
 
 
-# def watch_game(env, step_time):  # TODO deprecate this -> main
-#     """
-#     Watch two agents play against each other, step_time is
-#     """
-#     new_game = env
-#     done = False
-#     while not done:
-#         move = 0
-#         _, done = new_game.step(move)
-#         # print(env.reward)
-#         new_game.show()
-#         plt.pause(step_time)
-#
-#     if env.reward > 0:  # reward_win is for Red
-#         outcome = "Red won!"
-#     else:
-#         outcome = "Blue won!"
-#     print(outcome)
-#     plt.title(outcome)
-#     plt.show(block=True)  # keep plot
-
-
-
-# TODO how does agent deal with uncertainty? how does he master controlling pieces of same value?
-# TODO -> adapt state representation to this list:

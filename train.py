@@ -35,13 +35,14 @@ def optimize_model():
     state_action_values = model(state_batch).gather(1, action_batch)
 
     # Compute V(s_{t+1}) for all next states.
-    next_state_values = Variable(torch.zeros(BATCH_SIZE).type(torch.FloatTensor))  # zero for teminal states
+    next_state_values = Variable(torch.zeros(BATCH_SIZE).type(torch.FloatTensor))  # zero for terminal states
     # TODO next state value should be masked by possible actions too
     next_state_values[non_final_mask] = model(non_final_next_states).max(1)[0]  # what would the model predict
     next_state_values.volatile = False  # requires_grad = False to not mess with loss
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch  # compute the expected Q values
 
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)  # compute Huber loss
+    # use L2 loss?
 
     # optimize network
     optimizer.zero_grad()  # optimize towards expected q-values
@@ -136,32 +137,32 @@ def train(env, num_episodes):
 
 # hyperparameters
 PLOT_FREQUENCY = 50
-BATCH_SIZE = 256  # for faster training take a smaller batch size, not too small as batchnorm will not work otherwise
+BATCH_SIZE = 128  # for faster training take a smaller batch size, not too small as batchnorm will not work otherwise
 GAMMA = 0.9  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
 EPS_START = 0.3  # for unstable models take higher randomness first
-EPS_END = 0
+EPS_END = 0.01
 EPS_DECAY = 100
 N_SMOOTH = 100  # plotting scores averaged over this number of episodes
 VERBOSE = 1  # level of printed output verbosity:
-                # 1: plot averaged episode scores
+                # 1: plot averaged episode stats
                 # 2: also print actions taken and rewards
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 10000  # training for how many episodes
-agent0 = agent.FourPieces(0)
+num_episodes = 3000  # training for how many episodes
+agent0 = agent.FourPiecesBomb(0)
 agent1 = agent.Random(1)
 agent1.model = agent0.model
-env = env.FourPieces(agent0, agent1)
+env = env.FourPiecesBomb(agent0, agent1)
 
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(1000000)
 
-# model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))  # trained against Random
+model.load_state_dict(torch.load('./saved_models/fourpiecesbomb.pkl'))  # trained against Random
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/fourpieces.pkl')
+torch.save(model.state_dict(), './saved_models/fourpiecesbomb.pkl')
 
 run_env(env, 10000)
 
