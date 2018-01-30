@@ -186,10 +186,15 @@ def simu_env(env, n_runs=100, watch=True):
     print("Simulation over: {} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won / (n_won + n_lost), 2)))
 
 
-test = env.ThreePieces(agent.Heuristic(0, depth=4), agent.Random(1))  # MinMax Heuristic
-simu_env(test, 100, watch=False)
-
-test = env.ThreePieces(agent.MiniMax(0, depth=4), agent.Random(1))
-simu_env(test, 100, watch=False)
+# test = env.ThreePieces(agent.Heuristic(0, depth=4), agent.Random(1))  # MinMax Heuristic
+# simu_env(test, 100, watch=False)
+#
+# test = env.ThreePieces(agent.MiniMax(0, depth=4), agent.Random(1))
+# simu_env(test, 100, watch=False)
 
 # for higher depth heuristic becomes more useful somehow -> why?
+
+test = env.Stratego(agent.Heuristic(0, depth=4), agent.Omniscient(1, depth=4))
+# Heuristic : Omniscient (depth 2) 51 : 49, win ratio for Agent 0: 0.51
+
+simu_env(test, 100, watch=False)

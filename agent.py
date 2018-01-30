@@ -451,43 +451,13 @@ class FourPieces(Reinforce):
                opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, obstacle
 
 
-class FourPiecesBomb(Reinforce):
-    def __init__(self, team):
-        super(FourPiecesBomb, self).__init__(team=team)
-        self.action_dim = 28  # 16 (for piece 2) + 3 * 4 (for pieces 1, 3, 10)
-        self.state_dim = len(self.state_represent())
-        self.model = models.FourPiecesBomb(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))
-
-    def state_represent(self):
-        own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
-        own_team_two = lambda p: (p.team == self.team and p.type == 2, 1)
-        own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
-        own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-        own_team_bombs = lambda p: (p.team == self.team and p.type == 11, 1)
-        own_team_flag = lambda p: (p.team == self.team and p.type == 0, 1)
-
-        # opp_team = lambda p: (p.team == self.other_team and p.can_move, p.type)
-        opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
-        opp_team_two = lambda p: (p.team == self.other_team and p.type == 2, 1)
-        opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
-        opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
-        opp_team_bombs = lambda p: (p.team == self.other_team and p.type == 11, 1)
-        opp_team_flag = lambda p: (p.team == self.other_team and p.type == 0, 1)
-        obstacle = lambda p: (p.type == 99, 1)
-        # return own_team, own_team_flag, opp_team, opp_team_flag # flag is also bomb
-        return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, own_team_bombs, \
-               opp_team_one, opp_team_two, opp_team_three, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
-        # return own_team_one, own_team_two, own_team_three, own_team_ten, own_team_flag, own_team_bombs, \
-        #        opp_team, opp_team_flag, opp_team_bombs, obstacle
-
 class Stratego(Reinforce):
     def __init__(self, team):
         super(Stratego, self).__init__(team=team)
         self.action_dim = 64  # all pieces 3 * 16 (for pieces: 2, 2, 2) + 4 * 4 for (for pieces 1, 3, 3, 10)
         self.state_dim = len(self.state_represent())
-        self.model = models.ThreePieces(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/stratego.pkl'))
+        self.model = models.SuperDeep(self.state_dim, self.action_dim)
+        self.model.load_state_dict(torch.load('./saved_models/stratego_deep2.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -497,26 +467,19 @@ class Stratego(Reinforce):
         own_team_three_1 = lambda p: (p.team == self.team and p.type == 3 and p.version == 1, 1)
         own_team_three_2 = lambda p: (p.team == self.team and p.type == 3 and p.version == 2, 1)
         own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-        own_team_flag = lambda p: (p.team == self.team and not p.type == 0, 1)
-        own_team_bomb_1 = lambda p: (p.team == self.team and not p.type == 11 and p.version == 1, 1)
-        own_team_bomb_2 = lambda p: (p.team == self.team and not p.type == 11 and p.version == 2, 1)
+        own_team_flag = lambda p: (p.team == self.team and p.type == 0, 1)
+        own_team_bombs = lambda p: (p.team == self.team and p.type == 11, 1)
 
         opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
-        opp_team_two_1 = lambda p: (p.team == self.other_team and p.type == 2 and p.version == 1, 1)
-        opp_team_two_2 = lambda p: (p.team == self.other_team and p.type == 2 and p.version == 2, 1)
-        opp_team_two_3 = lambda p: (p.team == self.other_team and p.type == 2 and p.version == 3, 1)
-        opp_team_three_1 = lambda p: (p.team == self.other_team and p.type == 3 and p.version == 1, 1)
-        opp_team_three_2 = lambda p: (p.team == self.other_team and p.type == 3 and p.version == 2, 1)
+        opp_team_twos = lambda p: (p.team == self.other_team and p.type == 2, 1)
+        opp_team_threes = lambda p: (p.team == self.other_team and p.type == 3, 1)
         opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
-        opp_team_flag = lambda p: (p.team == self.other_team and not p.type == 0, 1)
-        opp_team_bomb_1 = lambda p: (p.team == self.other_team and not p.type == 11 and p.version == 1, 1)
-        opp_team_bomb_2 = lambda p: (p.team == self.other_team and not p.type == 11 and p.version == 2, 1)
+        opp_team_flag = lambda p: (p.team == self.other_team and p.type == 0, 1)
+        opp_team_bombs = lambda p: (p.team == self.other_team and p.type == 11, 1)
         obstacle = lambda p: (p.type == 99, 1)
-        #return own_team, own_team_flag, opp_team, opp_team_flag, obstacle # flag is also bomb
-        return own_team_one, own_team_two_1, own_team_two_2, own_team_two_3, own_team_three_1, own_team_three_2,\
-                own_team_ten, own_team_flag, own_team_bomb_1, own_team_bomb_2,\
-                opp_team_one, opp_team_two_1, opp_team_two_2, opp_team_two_3, opp_team_three_1, opp_team_three_2,\
-                opp_team_ten, opp_team_flag, opp_team_bomb_1, opp_team_bomb_2, obstacle
+        return own_team_one, own_team_two_1, own_team_two_2, own_team_two_3, own_team_three_1, own_team_three_2, \
+               own_team_ten, own_team_flag, own_team_bombs, \
+               opp_team_one, opp_team_twos, opp_team_threes, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
 
 
 class MiniMax(Agent):
@@ -815,16 +778,17 @@ class Omniscient(MiniMax):
         pass
 
 
-class Heuristic(MiniMax):
+class Heuristic(Omniscient):
     def __init__(self, team, setup=None, depth=2):
         super(Heuristic, self).__init__(team=team, setup=setup, depth=depth)
-        self.evaluator = ThreePieces(team)
+        self.evaluator = Stratego(team)
+        self.winFightReward = 10
         self.winGameReward = 100
 
     def install_board(self, board):
         super().install_board(board)
         self.evaluator.install_board(board)
-        # self.unhide_all()
+        self.unhide_all()  # use if inheriting from Omniscient
 
     def get_network_reward(self):
         state = self.evaluator.board_to_state()

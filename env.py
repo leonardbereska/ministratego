@@ -320,16 +320,6 @@ class FourPieces(Env):
         return self.place_types()
 
 
-class FourPiecesBomb(Env):
-    def __init__(self, agent0, agent1):
-        super(FourPiecesBomb, self).__init__(agent0=agent0, agent1=agent1)
-        self.reward_win = 1
-
-    def decide_pieces(self):
-        self.types_available = [0, 1, 2, 3, 10, 11, 11]
-        return self.place_types()
-
-
 class Stratego(Env):
     def __init__(self, agent0, agent1):
         super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
