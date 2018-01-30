@@ -212,28 +212,40 @@ class Stratego(nn.Module):
 
     def __init__(self, state_dim, action_dim):
         super(Stratego, self).__init__()
-        self.feature_size = 50 * 25
+        self.filter = 10
+        self.feature_size = 10 * 25
 
-        self.conv1 = nn.Conv2d(state_dim, 50, padding=2, kernel_size=5)
-        self.conv1_bn = nn.BatchNorm2d(50)
+        self.conv1 = nn.Conv2d(state_dim, self.filter, padding=1, kernel_size=3)
+        self.conv1_bn = nn.BatchNorm2d(self.filter)
+        self.conv2 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
+        self.conv2_bn = nn.BatchNorm2d(self.filter)
+        self.conv3 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
+        self.conv3_bn = nn.BatchNorm2d(self.filter)
+        self.conv4 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
+        self.conv4_bn = nn.BatchNorm2d(self.filter)
+        self.conv5 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
+        self.conv5_bn = nn.BatchNorm2d(self.filter)
         # self.conv2 = nn.Conv2d(50, 20, padding=1, kernel_size=3)
         # self.conv2_bn = nn.BatchNorm2d(20)
 
         self.lin1 = nn.Linear(self.feature_size, 128)
         self.lin2 = nn.Linear(128, 64)
-
-        self.lin3 = nn.Linear(64, action_dim)
+        self.lin3 = nn.Linear(64, 64)
+        self.lin4 = nn.Linear(64, action_dim)
 
     def forward(self, x):
         x = F.tanh(self.conv1_bn(self.conv1(x)))
         x = F.tanh(self.conv2_bn(self.conv2(x)))
+        x = F.tanh(self.conv3_bn(self.conv3(x)))
+        x = F.tanh(self.conv4_bn(self.conv4(x)))
+        x = F.tanh(self.conv5_bn(self.conv5(x)))
 
         x = x.view(-1, self.feature_size)
 
         x = F.relu(self.lin1(x))
         x = F.relu(self.lin2(x))
-
-        x = self.lin3(x)
+        x = F.relu(self.lin3(x))
+        x = self.lin4(x)
         x = F.sigmoid(x)
         return x
 

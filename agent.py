@@ -151,7 +151,7 @@ class Agent:
             if true_gameplay:
                 if turn == self.other_team:
                     self.update_prob_by_move(move, moving_piece)
-        return board, fight_outcome,
+        return board, fight_outcome
 
     def fight(self, piece_att, piece_def, collect_dead_pieces=True):
         """
@@ -456,8 +456,8 @@ class Stratego(Reinforce):
         super(Stratego, self).__init__(team=team)
         self.action_dim = 64  # all pieces 3 * 16 (for pieces: 2, 2, 2) + 4 * 4 for (for pieces 1, 3, 3, 10)
         self.state_dim = len(self.state_represent())
-        self.model = models.SuperDeep(self.state_dim, self.action_dim)
-        self.model.load_state_dict(torch.load('./saved_models/stratego_deep2.pkl'))
+        self.model = models.Stratego(self.state_dim, self.action_dim)
+        #self.model.load_state_dict(torch.load('./saved_models/stratego_deep2.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -476,10 +476,12 @@ class Stratego(Reinforce):
         opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
         opp_team_flag = lambda p: (p.team == self.other_team and p.type == 0, 1)
         opp_team_bombs = lambda p: (p.team == self.other_team and p.type == 11, 1)
+        opp_full_team = lambda p: (p.team == self.other_team, p.type)
         obstacle = lambda p: (p.type == 99, 1)
         return own_team_one, own_team_two_1, own_team_two_2, own_team_two_3, own_team_three_1, own_team_three_2, \
                own_team_ten, own_team_flag, own_team_bombs, \
-               opp_team_one, opp_team_twos, opp_team_threes, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
+                opp_full_team
+                # opp_team_one, opp_team_twos, opp_team_threes, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
 
 
 class MiniMax(Agent):
@@ -737,7 +739,6 @@ class MiniMax(Agent):
         # the piece at the 'before' position was the one that moved, so needs its
         # last entry in the move history deleted
         before_piece.position = last_move[0]
-        #before_piece.positions_history.pop()
         board[last_move[1]] = self.pieces_last_N_Moves_afterPos.pop()
         return board
 
@@ -805,3 +806,84 @@ class Heuristic(MiniMax):
                 terminal_reward = - self.winGameReward
             return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
 
+
+class MonteCarlo(MiniMax):
+    def __init__(self, team, setup=None, number_of_iterations_game_sim=100):
+        super(MonteCarlo, self).__init__(team=team, setup=setup)
+        self._nr_iterations_of_game_sim = number_of_iterations_game_sim
+
+    def decide_move(self):
+        """
+        given the maximum depth, copy the known board so far, assign the pieces by random, while still
+        respecting the current knowledge, and then decide the move via minimax algorithm.
+        :param max_depth: int
+        :return: tuple of position tuples
+        """
+        possible_moves = helpers.get_poss_moves(self.board, self.team)
+        next_action = None
+        if possible_moves:
+            values_of_moves = dict.fromkeys(possible_moves, None)
+            for move in possible_moves:
+                curr_board = self.draw_consistent_enemy_setup(copy.deepcopy(self.board))
+                curr_board, _ = self.do_move(move, curr_board, bookkeeping=False, true_gameplay=False)
+                values_of_moves[move] = self.approximate_value_of_board(curr_board)
+                self.undo_last_move(curr_board)
+            evaluations = list(values_of_moves.values())
+            actions = list(values_of_moves.keys())
+            next_action = actions[evaluations.index(max(evaluations))]
+        return next_action
+
+    def approximate_value_of_board(self, board):
+        finished = False
+        turn = 0
+        evals = []
+        for i in range(self._nr_iterations_of_game_sim):
+            board_copy = copy.deepcopy(board)
+            while not finished:
+                actions = helpers.get_poss_moves(board_copy, turn)
+                if actions:
+                    move = random.choice(actions)
+                    board_copy, _ = self.do_move(move, board_copy)
+                done, won = self.goal_test(actions, board_copy, turn)
+                if done:
+                    my_team = self.get_team_from_board(board, self.team)
+                    enemy_team = self.get_team_from_board(board, self.other_team)
+                    bonus = (len(my_team) - len(enemy_team)) / 20
+                    # -1+2*won equals -1+2*0=-1 for won=False, and -1+2*1=1 for won=True
+                    # bonus is negative if enemy team has more pieces
+                    evals.append(-1 + 2 * won + bonus)
+                    finished = True
+                turn = (turn + 1) % 2
+        return sum(evals)/len(evals)
+
+    def get_team_from_board(self, board, team):
+        team_list = []
+        for pos, piece in np.ndenumerate(board):
+            if piece is not None and piece.team == team:
+                team_list.append(piece)
+        return team_list
+
+    def goal_test(self, actions_possible, board, turn):
+        """
+        check the board for whether a flag has been captured already and return the winning game rewards,
+        if not check whether there are no actions possible anymore, return TRUE then, or FALSE.
+        :param actions_possible: list of moves
+        :param board: numpy array (5, 5)
+        :return: boolean: reached terminal state, boolean: own team (True) or other team won (False)
+        """
+        # if board is not None:
+        flag_alive = [False, False]
+        for pos, piece in np.ndenumerate(board):
+            if piece is not None and piece.type == 0:
+                flag_alive[piece.team] = True
+        if not flag_alive[self.other_team]:
+            return True, True
+        if not flag_alive[self.team]:
+            return True, False
+        if not actions_possible:
+            if turn == self.team:
+                return True, False
+            else:
+                return True, True
+        else:
+            return False, None

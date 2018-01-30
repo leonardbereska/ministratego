@@ -61,10 +61,13 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
         # restart game
         print("Game number: " + str(simu+1))
-        assert(agent_type_0 in ["random", "expectimax", "omniscientmax", "reinforce"])
+        assert(agent_type_0 in ["random", "expectimax", "omniscientmax", "reinforce", "montecarlo"])
         if agent_type_0 == "random":
             agent_0 = agent.Random(team=0, setup=copy.deepcopy(setup_agent_0))
             agent_output_type_0 = "RandomAgent"
+        elif agent_type_0 == "montecarlo":
+            agent_0 = agent.MonteCarlo(team=0, setup=copy.deepcopy(setup_agent_0))
+            agent_output_type_0 = "MonteCarloAgent"
         elif agent_type_0 == "expectimax":
             agent_0 = agent.MiniMax(team=0, setup=copy.deepcopy(setup_agent_0))
             agent_output_type_0 = "ExpectiAgent"
@@ -75,10 +78,13 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
             agent_0 = agent.Reinforce(team=0, setup=copy.deepcopy(setup_agent_0))
             agent_output_type_0 = "ReinforceLearningAgent"
 
-        assert(agent_type_1 in ["random", "expectimax", "omniscientmax", "reinforce"])
+        assert(agent_type_1 in ["random", "expectimax", "omniscientmax", "reinforce", "montecarlo"])
         if agent_type_1 == "random":
             agent_1 = agent.Random(team=1, setup=copy.deepcopy(setup_agent_1))
             agent_output_type_1 = "RandomAgent"
+        elif agent_type_1 == "montecarlo":
+            agent_1 = agent.MonteCarlo(team=1, setup=copy.deepcopy(setup_agent_1))
+            agent_output_type_1 = "MonteCarloAgent"
         elif agent_type_1 == "expectimax":
             agent_1 = agent.MiniMax(team=1, setup=copy.deepcopy(setup_agent_1))
             agent_output_type_1 = "OmnniscientMinMaxAgent"
@@ -90,15 +96,23 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
             agent_output_type_1 = "ReinforceLearningAgent"
         game_ = game.Game(agent_0, agent_1)
         if simu % 1 == 0:
-            print('BLUE won: {}, RED won: {}, Game {}/{}'.format(blue_won, red_won, simu, num_simulations))
-            print('BLUE won by flag capture: {}, BLUE won by moves: {}, Game {}/{}'.format(blue_wins_bc_flag,
-                                                                                           blue_wins_bc_noMovesLeft,
-                                                                                           simu,
-                                                                                           num_simulations))
-            print('RED won by flag capture: {}, RED won by moves: {}, Game {}/{}'.format(red_wins_bc_flag,
-                                                                                         red_wins_bc_noMovesLeft,
-                                                                                         simu,
-                                                                                         num_simulations))
+            print('{} won: {}, {} won: {}, Game {}/{}'.format(agent_output_type_1,
+                                                              blue_won,
+                                                              agent_output_type_0,
+                                                              red_won, simu,
+                                                              num_simulations))
+            print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_1,
+                                                                                       blue_wins_bc_flag,
+                                                                                       agent_output_type_1,
+                                                                                       blue_wins_bc_noMovesLeft,
+                                                                                       simu,
+                                                                                       num_simulations))
+            print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_0,
+                                                                                       red_wins_bc_flag,
+                                                                                       agent_output_type_0,
+                                                                                       red_wins_bc_noMovesLeft,
+                                                                                       simu,
+                                                                                       num_simulations))
         for step in range(2000):  # game longer than
             if show_game:
                 helpers.print_board(game_.board)
@@ -156,7 +170,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-# simulation(agent_type_0="random", agent_type_1="expectimax", num_simulations=1000)
+simulation(agent_type_0="random", agent_type_1="montecarlo", num_simulations=1000)
 # simulation()
 
 def simu_env(env, n_runs=100, watch=True):
@@ -194,11 +208,12 @@ def simu_env(env, n_runs=100, watch=True):
 
 # for higher depth heuristic becomes more useful somehow -> why?
 
-test = env.Stratego(agent.Heuristic(0, depth=2), agent.Random(1))
+# test = env.Stratego(agent.Heuristic(0, depth=2), agent.Random(1))
+test = env.Stratego(agent.MonteCarlo(0, number_of_iterations_game_sim=1000), agent.Random(1))
 # Heuristic : Omniscient (depth 2) 51 : 49, win ratio for Agent 0: 0.51
 # Reinforce : Random 53 : 47
 # MiniMax(2) : Random 61 : 39, win ratio for Agent 0: 0.61
 # Heuristic(2) : Random  65 : 35, win ratio for Agent 0: 0.65 (signifikant?)
 
 
-simu_env(test, 100, watch=False)
+# simu_env(test, 100, watch=True)

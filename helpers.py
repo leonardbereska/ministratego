@@ -194,7 +194,7 @@ def plot_stats(curr_average, episode_won, n_smooth, plot_freq):
     :param n_smooth:
     :return:
     """
-    plt.figure(3)
+    plt.figure(2)
     plt.clf()
     scores = np.array(episode_won)
     plt.xlabel('Episode')
