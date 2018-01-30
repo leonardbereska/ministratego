@@ -202,7 +202,7 @@ def plot_stats(curr_average, episode_won, n_smooth, plot_freq):
     if len(scores) >= n_smooth:
         mean = np.mean(scores[-n_smooth:])
         curr_average.append(mean)
-        x = [plot_freq*(i+1) for i in range(len(curr_average))]  # x axis values
+        x = [n_smooth+plot_freq*i for i in range(len(curr_average))]  # x axis values
         xi = [i for i in range(0, len(x))]  # ticks for each x point
         selection_val = int(np.floor(len(xi)/5)) + 1
         xi = [tick for tick in xi if tick % selection_val == 0]
