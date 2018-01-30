@@ -99,17 +99,21 @@ class ThreePieces(nn.Module):
         return x
 
 
-class FourPieces(nn.Module):
+class DeepThin(nn.Module):
 
     def __init__(self, state_dim, action_dim):
-        super(FourPieces, self).__init__()
-        self.feature_size = 20 * 25
+        super(DeepThin, self).__init__()
+        self.feature_size = 10 * 25
 
-        self.conv1 = nn.Conv2d(state_dim, 20, padding=1, kernel_size=3)
-        self.conv1_bn = nn.BatchNorm2d(20)
+        self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
+        self.conv1_bn = nn.BatchNorm2d(10)
 
-        self.lin1 = nn.Linear(self.feature_size, 32)
-        self.lin2 = nn.Linear(32, action_dim)
+        self.lin1 = nn.Linear(self.feature_size, 16)
+        # self.lin1_bn = nn.BatchNorm1d(16)  # TODO how to use batchnorm for linear
+        self.lin2 = nn.Linear(16, 16)
+        # self.lin2 = nn.Linear(16, 16)
+        # self.lin2_bn = nn.BatchNorm1d(16)
+        self.lin3 = nn.Linear(16, action_dim)
 
     def forward(self, x):
         x = F.tanh(self.conv1_bn(self.conv1(x)))
@@ -117,7 +121,38 @@ class FourPieces(nn.Module):
         x = x.view(-1, self.feature_size)
 
         x = F.relu(self.lin1(x))
-        x = self.lin2(x)
+        x = F.relu(self.lin2(x))
+        # x = F.relu(self.lin3(x))
+        x = self.lin3(x)
+        x = F.sigmoid(x)
+        return x
+
+
+class FourPieces(nn.Module):
+
+    def __init__(self, state_dim, action_dim):
+        super(FourPieces, self).__init__()
+        self.feature_size = 10 * 25
+
+        self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
+        self.conv1_bn = nn.BatchNorm2d(10)
+
+        self.lin1 = nn.Linear(self.feature_size, 16)
+        # self.lin1_bn = nn.BatchNorm1d(16)  # TODO how to use batchnorm for linear
+        self.lin2 = nn.Linear(16, 16)
+        # self.lin2 = nn.Linear(16, 16)
+        # self.lin2_bn = nn.BatchNorm1d(16)
+        self.lin3 = nn.Linear(16, action_dim)
+
+    def forward(self, x):
+        x = F.tanh(self.conv1_bn(self.conv1(x)))
+
+        x = x.view(-1, self.feature_size)
+
+        x = F.relu(self.lin1(x))
+        x = F.relu(self.lin2(x))
+        # x = F.relu(self.lin3(x))
+        x = self.lin3(x)
         x = F.sigmoid(x)
         return x
 

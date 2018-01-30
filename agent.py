@@ -191,25 +191,6 @@ class Agent:
     def update_prob_by_move(self, *args):
         pass
 
-    # def get_poss_actions(self, board, team):  # TODO deprecate this, all reference should go to helpers.py
-    #     """
-    #     get the possible actions for the agent of team "team" for the provided board.
-    #     :param board: numpy array (5, 5)
-    #     :param team: int (boolean 0,1)
-    #     :return: list of moves
-    #     """
-    #     return helpers.get_poss_moves(board, team)
-    #
-    # def is_legal_move(self, move_to_check, board):  # TODO deprecate this
-    #     """
-    #     Check if the given move on the provided board is legal in terms of the rules of the game. Return
-    #     a boolean TRUE for legal, FALSE for illegal.
-    #     :param move_to_check: tuple of board positions
-    #     :param board: numpy array (5, 5)
-    #     :return: boolean
-    #     """
-    #     return helpers.is_legal_move(board, move_to_check)
-
 
 class Random(Agent):
     """
@@ -404,8 +385,8 @@ class TwoPieces(Reinforce):
         super(TwoPieces, self).__init__(team=team)
         self.action_dim = 8
         self.state_dim = len(self.state_represent())
-        self.model = models.TwoPieces(self.state_dim, self.action_dim)
-        self.model.load_state_dict(torch.load('./saved_models/twopieces.pkl'))
+        self.model = models.DeepThin(self.state_dim, self.action_dim)
+        # self.model.load_state_dict(torch.load('./saved_models/twopieces.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -447,7 +428,7 @@ class FourPieces(Reinforce):
         super(FourPieces, self).__init__(team=team)
         self.action_dim = 28  # 16 (for piece 2) + 3 * 4 (for pieces 1, 3, 10)
         self.state_dim = len(self.state_represent())
-        self.model = models.FourPieces(self.state_dim, self.action_dim)
+        self.model = models.DeepThin(self.state_dim, self.action_dim)
         # self.model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))
 
     def state_represent(self):

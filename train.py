@@ -137,7 +137,7 @@ def train(env, num_episodes):
 
 # hyperparameters
 PLOT_FREQUENCY = 50
-BATCH_SIZE = 128  # for faster training take a smaller batch size, not too small as batchnorm will not work otherwise
+BATCH_SIZE = 256  # for faster training take a smaller batch size, not too small as batchnorm will not work otherwise
 GAMMA = 0.9  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
 EPS_START = 0.3  # for unstable models take higher randomness first
 EPS_END = 0.01
@@ -150,19 +150,19 @@ VERBOSE = 1  # level of printed output verbosity:
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
 num_episodes = 3000  # training for how many episodes
-agent0 = agent.FourPiecesBomb(0)
+agent0 = agent.FourPieces(0)
 agent1 = agent.Random(1)
 agent1.model = agent0.model
-env = env.FourPiecesBomb(agent0, agent1)
+env = env.FourPieces(agent0, agent1)
 
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
 memory = helpers.ReplayMemory(1000000)
 
-model.load_state_dict(torch.load('./saved_models/fourpiecesbomb.pkl'))  # trained against Random
+# model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))  # trained against Random
 train(env, num_episodes)
-torch.save(model.state_dict(), './saved_models/fourpiecesbomb.pkl')
+torch.save(model.state_dict(), './saved_models/fourpieces_deep.pkl')
 
 run_env(env, 10000)
 
