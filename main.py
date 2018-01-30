@@ -194,7 +194,11 @@ def simu_env(env, n_runs=100, watch=True):
 
 # for higher depth heuristic becomes more useful somehow -> why?
 
-test = env.Stratego(agent.Heuristic(0, depth=4), agent.Omniscient(1, depth=4))
+test = env.Stratego(agent.Heuristic(0, depth=2), agent.Random(1))
 # Heuristic : Omniscient (depth 2) 51 : 49, win ratio for Agent 0: 0.51
+# Reinforce : Random 53 : 47
+# MiniMax(2) : Random 61 : 39, win ratio for Agent 0: 0.61
+# Heuristic(2) : Random  65 : 35, win ratio for Agent 0: 0.65 (signifikant?)
+
 
 simu_env(test, 100, watch=False)

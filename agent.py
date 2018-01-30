@@ -778,7 +778,7 @@ class Omniscient(MiniMax):
         pass
 
 
-class Heuristic(Omniscient):
+class Heuristic(MiniMax):
     def __init__(self, team, setup=None, depth=2):
         super(Heuristic, self).__init__(team=team, setup=setup, depth=depth)
         self.evaluator = Stratego(team)
@@ -788,7 +788,7 @@ class Heuristic(Omniscient):
     def install_board(self, board):
         super().install_board(board)
         self.evaluator.install_board(board)
-        self.unhide_all()  # use if inheriting from Omniscient
+        # self.unhide_all()  # use if inheriting from Omniscient
 
     def get_network_reward(self):
         state = self.evaluator.board_to_state()
