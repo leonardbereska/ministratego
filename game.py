@@ -59,7 +59,7 @@ class Game:
 
     def run_step(self):
         turn = self.move_count % 2  # player 1 or player 0
-        print("Round: " + str(self.move_count))
+        # print("Round: " + str(self.move_count))
         for agent_ in self.agents:
             agent_.move_count = self.move_count
 

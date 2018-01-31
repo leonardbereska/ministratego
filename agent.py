@@ -811,6 +811,8 @@ class MonteCarlo(MiniMax):
     def __init__(self, team, setup=None, number_of_iterations_game_sim=100):
         super(MonteCarlo, self).__init__(team=team, setup=setup)
         self._nr_iterations_of_game_sim = number_of_iterations_game_sim
+        self._nr_of_max_turn_sim = 20
+        self._nr_of_enemy_setups_to_draw = 20
 
     def decide_move(self):
         """
@@ -822,12 +824,13 @@ class MonteCarlo(MiniMax):
         possible_moves = helpers.get_poss_moves(self.board, self.team)
         next_action = None
         if possible_moves:
-            values_of_moves = dict.fromkeys(possible_moves, None)
+            values_of_moves = dict.fromkeys(possible_moves, 0)
             for move in possible_moves:
-                curr_board = self.draw_consistent_enemy_setup(copy.deepcopy(self.board))
-                curr_board, _ = self.do_move(move, curr_board, bookkeeping=False, true_gameplay=False)
-                values_of_moves[move] = self.approximate_value_of_board(curr_board)
-                self.undo_last_move(curr_board)
+                for draw in range(self._nr_of_enemy_setups_to_draw):
+                    curr_board = self.draw_consistent_enemy_setup(copy.deepcopy(self.board))
+                    curr_board, _ = self.do_move(move, curr_board, bookkeeping=False, true_gameplay=False)
+                    values_of_moves[move] += self.approximate_value_of_board(curr_board) / self._nr_of_enemy_setups_to_draw
+                    self.undo_last_move(curr_board)
             evaluations = list(values_of_moves.values())
             actions = list(values_of_moves.keys())
             next_action = actions[evaluations.index(max(evaluations))]
@@ -852,6 +855,14 @@ class MonteCarlo(MiniMax):
                     # -1+2*won equals -1+2*0=-1 for won=False, and -1+2*1=1 for won=True
                     # bonus is negative if enemy team has more pieces
                     evals.append(-1 + 2 * won + bonus)
+                    finished = True
+                elif turn > self._nr_of_max_turn_sim:
+                    my_team = self.get_team_from_board(board, self.team)
+                    enemy_team = self.get_team_from_board(board, self.other_team)
+                    bonus = (len(my_team) - len(enemy_team)) / 20
+                    # -1+2*won equals -1+2*0=-1 for won=False, and -1+2*1=1 for won=True
+                    # bonus is negative if enemy team has more pieces
+                    evals.append(bonus)
                     finished = True
                 turn = (turn + 1) % 2
         return sum(evals)/len(evals)
