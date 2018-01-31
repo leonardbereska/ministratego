@@ -179,7 +179,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="omniscientminmax", agent_type_1="montecarlo", num_simulations=1000)
+simulation(agent_type_0="minmax", agent_type_1="montecarlo", num_simulations=1000)
 # simulation()
 
 def simu_env(env, n_runs=100, watch=True):

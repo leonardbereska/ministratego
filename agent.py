@@ -520,13 +520,15 @@ class MiniMax(Agent):
 
     def set_max_depth(self):
         n_alive_enemies = sum([True for piece in self.ordered_opp_pieces if not piece.dead])
-        # TODO is this really doing what it should?
-        if n_alive_enemies <= 1:
+        if 7 < n_alive_enemies <= 10:
+            # one move each player lookahead
             self.max_depth = 2
-        elif 3 <= n_alive_enemies <= 5:
+        elif 4 <= n_alive_enemies <= 7:
+            # two moves each player lookahead
             self.max_depth = 4
-        elif 5 < n_alive_enemies <= 10:
-            self.max_depth = 6
+        elif n_alive_enemies <= 3:
+            # four moves each player lookahead
+            self.max_depth = 8
 
     def minimax(self, max_depth):
         """
