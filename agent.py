@@ -514,13 +514,13 @@ class MiniMax(Agent):
         n_alive_enemies = sum([True for piece in self.ordered_opp_pieces if not piece.dead])
         if 7 < n_alive_enemies <= 10:
             # one move each player lookahead
-            self.max_depth = 4
+            self.max_depth = 2
         elif 4 <= n_alive_enemies <= 7:
             # two moves each player lookahead
-            self.max_depth = 8
+            self.max_depth = 4
         elif n_alive_enemies <= 3:
             # four moves each player lookahead
-            self.max_depth = 16
+            self.max_depth = 8
 
     def minimax(self, max_depth):
         """

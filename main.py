@@ -97,7 +97,6 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
     game_times_0 = []
     game_times_1 = []
-    sim_time_start = timer()
     for simu in range(num_simulations):  # simulate games
         # reset setup with new setup if none given
         if setup_0 is not None:
