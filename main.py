@@ -113,21 +113,21 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         game_ = game.Game(agent_0, agent_1)
         game_time_s = timer()
         if (simu+1) % 1 == 0:
-            print('{} won: {}, {} won: {}, Game {}/{}'.format(agent_output_type_1,
-                                                              blue_won,
-                                                              agent_output_type_0,
-                                                              red_won, simu,
+            print('{} won: {}, {} won: {}, Game {}/{}'.format(agent_output_type_0,
+                                                              red_won,
+                                                              agent_output_type_1,
+                                                              blue_won, simu,
                                                               num_simulations))
-            print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_1,
-                                                                                       blue_wins_bc_flag,
-                                                                                       agent_output_type_1,
-                                                                                       blue_wins_bc_noMovesLeft,
-                                                                                       simu,
-                                                                                       num_simulations))
             print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_0,
                                                                                        red_wins_bc_flag,
                                                                                        agent_output_type_0,
                                                                                        red_wins_bc_noMovesLeft,
+                                                                                       simu,
+                                                                                       num_simulations))
+            print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_1,
+                                                                                       blue_wins_bc_flag,
+                                                                                       agent_output_type_1,
+                                                                                       blue_wins_bc_noMovesLeft,
                                                                                        simu,
                                                                                        num_simulations))
         print("Game number: " + str(simu + 1))
@@ -207,7 +207,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="random", agent_type_1="random", num_simulations=1000)
+simulation(agent_type_0="montecarlo", agent_type_1="random", num_simulations=1000)
 # simulation()
 
 def simu_env(env, n_runs=100, watch=True):
