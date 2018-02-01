@@ -23,7 +23,6 @@ class Game:
         self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
         setup0, setup1 = agent0.setup, agent1.setup
 
-
         for idx, piece in np.ndenumerate(setup0):
             piece.hidden = False
             self.board[piece.position] = piece
@@ -33,8 +32,8 @@ class Game:
         obstacle = pieces.Piece(99, 99, (2, 2))
         obstacle.hidden = False
         self.board[2, 2] = obstacle  # set obstacle
-        agent0.install_board(self.board)
-        agent1.install_board(self.board)
+        agent0.install_board(self.board, reset=True)
+        agent1.install_board(self.board, reset=True)
 
         self.move_count = 1  # agent 1 starts
 

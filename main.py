@@ -5,16 +5,43 @@ import game
 import pieces
 import agent
 import helpers
-import copy
-import env
-import torch
+from timeit import default_timer as timer
+
+def draw_random_setup(team):
+    types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11]
+    setup_agent = np.empty((2, 5), dtype=object)
+    if team == 0:
+        flag_positions = [(4, j) for j in range(5)] + [(3, 2)]
+        flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
+        flag_pos = 4 - flag_positions[flag_choice][0], 4 - flag_positions[flag_choice][1]
+        setup_agent[flag_pos] = pieces.Piece(0, 0, flag_positions[flag_choice])
+
+        types_draw = np.random.choice(types_available, 9, replace=False)
+        positions_agent_0 = [(i, j) for i in range(3, 5) for j in range(5)]
+        positions_agent_0.remove(flag_positions[flag_choice])
+
+        for idx in range(9):
+            pos = positions_agent_0[idx]
+            setup_agent[(4 - pos[0], 4 - pos[1])] = pieces.Piece(types_draw[idx], 0, pos)
+    elif team == 1:
+        flag_positions = [(0, j) for j in range(5)] + [(1, 2)]
+        flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
+        setup_agent[flag_positions[flag_choice]] = pieces.Piece(0, 1, flag_positions[flag_choice])
+
+        types_draw = np.random.choice(types_available, 9, replace=False)
+        positions_agent_1 = [(i, j) for i in range(2) for j in range(5)]
+        positions_agent_1.remove(flag_positions[flag_choice])
+
+        for idx in range(9):
+            pos = positions_agent_1[idx]
+            setup_agent[pos] = pieces.Piece(types_draw[idx], 1, pos)
+    return setup_agent
 
 
 def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_1=None, show_game=False):
     """
     :return: tested_setups: list of setup and winning percentage
     """
-    types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11]
     blue_won = 0
     blue_wins_bc_flag = 0
     blue_wins_bc_noMovesLeft = 0
@@ -24,85 +51,68 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     rounds_counter_per_game = []
     rounds_counter_win_agent_0 = []
     rounds_counter_win_agent_1 = []
+    available_agents = ["random", "minmax", "omniscientminmax", "reinforce", "montecarlo"]
+    assert (agent_type_0 in available_agents)
+    if agent_type_0 == "random":
+        agent_0 = agent.Random(team=0)
+        agent_output_type_0 = "RandomAgent"
 
+    elif agent_type_0 == "montecarlo":
+        agent_0 = agent.MonteCarlo(team=0, number_of_iterations_game_sim=100)
+        agent_output_type_0 = "MonteCarloAgent"
+
+    elif agent_type_0 == "minmax":
+        agent_0 = agent.MiniMax(team=0)
+        agent_output_type_0 = "MinMaxAgent"
+
+    elif agent_type_0 == "omniscientminmax":
+        agent_0 = agent.Omniscient(team=0)
+        agent_output_type_0 = "OmnniscientMinMaxAgent"
+
+    else:
+        agent_0 = agent.Reinforce(team=0)
+        agent_output_type_0 = "ReinforceLearningAgent"
+
+    assert (agent_type_1 in available_agents)
+
+    if agent_type_1 == "random":
+        agent_1 = agent.Random(team=1)
+        agent_output_type_1 = "RandomAgent"
+
+    elif agent_type_1 == "montecarlo":
+        agent_1 = agent.MonteCarlo(team=1, number_of_iterations_game_sim=100)
+        agent_output_type_1 = "MonteCarloAgent"
+
+    elif agent_type_1 == "minmax":
+        agent_1 = agent.MiniMax(team=1)
+        agent_output_type_1 = "MinMaxAgent"
+
+    elif agent_type_1 == "omniscientminmax":
+        agent_1 = agent.Omniscient(team=1)
+        agent_output_type_1 = "OmnniscientMinMaxAgent"
+
+    else:
+        agent_1 = agent.Reinforce(team=1)
+        agent_output_type_1 = "ReinforceLearningAgent"
+
+    game_times_0 = []
+    game_times_1 = []
+    sim_time_start = timer()
     for simu in range(num_simulations):  # simulate games
         # reset setup with new setup if none given
         if setup_0 is not None:
             setup_agent_0 = setup_0
         else:
-            setup_agent_0 = np.empty((2, 5), dtype=object)
-            flag_positions = [(4, j) for j in range(5)] + [(3, 2)]
-            flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
-            flag_pos = 4 - flag_positions[flag_choice][0], 4 - flag_positions[flag_choice][1]
-            setup_agent_0[flag_pos] = pieces.Piece(0, 0, flag_positions[flag_choice])
-
-            types_draw = np.random.choice(types_available, 9, replace=False)
-            positions_agent_0 = [(i, j) for i in range(3, 5) for j in range(5)]
-            positions_agent_0.remove(flag_positions[flag_choice])
-
-            for idx in range(9):
-                pos = positions_agent_0[idx]
-                setup_agent_0[(4 - pos[0], 4 - pos[1])] = pieces.Piece(types_draw[idx], 0, pos)
+            setup_agent_0 = draw_random_setup(0)
         if setup_1 is not None:
             setup_agent_1 = setup_1
         else:
-            setup_agent_1 = np.empty((2, 5), dtype=object)
-            flag_positions = [(0, j) for j in range(5)] + [(1, 2)]
-            flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
-            setup_agent_1[flag_positions[flag_choice]] = pieces.Piece(0, 1, flag_positions[flag_choice])
-
-            types_draw = np.random.choice(types_available, 9, replace=False)
-            positions_agent_1 = [(i, j) for i in range(2) for j in range(5)]
-            positions_agent_1.remove(flag_positions[flag_choice])
-
-            for idx in range(9):
-                pos = positions_agent_1[idx]
-                setup_agent_1[pos] = pieces.Piece(types_draw[idx], 1, pos)
-
+            setup_agent_1 = draw_random_setup(1)
+        agent_0.setup = setup_agent_0
+        agent_1.setup = setup_agent_1
         # restart game
-        assert(agent_type_0 in ["random", "minmax", "omniscientminmax", "reinforce", "montecarlo"])
-        if agent_type_0 == "random":
-            agent_0 = agent.Random(team=0, setup=copy.deepcopy(setup_agent_0))
-            agent_output_type_0 = "RandomAgent"
-
-        elif agent_type_0 == "montecarlo":
-            agent_0 = agent.MonteCarlo(team=0, setup=copy.deepcopy(setup_agent_0), number_of_iterations_game_sim=100)
-            agent_output_type_0 = "MonteCarloAgent"
-
-        elif agent_type_0 == "minmax":
-            agent_0 = agent.MiniMax(team=0, setup=copy.deepcopy(setup_agent_0))
-            agent_output_type_0 = "MinMaxAgent"
-
-        elif agent_type_0 == "omniscientminmax":
-            agent_0 = agent.Omniscient(team=0, setup=copy.deepcopy(setup_agent_0))
-            agent_output_type_0 = "OmnniscientMinMaxAgent"
-
-        else:
-            agent_0 = agent.Reinforce(team=0, setup=copy.deepcopy(setup_agent_0))
-            agent_output_type_0 = "ReinforceLearningAgent"
-
-        assert(agent_type_1 in ["random", "minmax", "omniscientminmax", "reinforce", "montecarlo"])
-
-        if agent_type_1 == "random":
-            agent_1 = agent.Random(team=1, setup=copy.deepcopy(setup_agent_1))
-            agent_output_type_1 = "RandomAgent"
-
-        elif agent_type_1 == "montecarlo":
-            agent_1 = agent.MonteCarlo(team=1, setup=copy.deepcopy(setup_agent_1), number_of_iterations_game_sim=100)
-            agent_output_type_1 = "MonteCarloAgent"
-
-        elif agent_type_1 == "minmax":
-            agent_1 = agent.MiniMax(team=1, setup=copy.deepcopy(setup_agent_1))
-            agent_output_type_1 = "MinMaxAgent"
-
-        elif agent_type_1 == "omniscientminmax":
-            agent_1 = agent.Omniscient(team=1, setup=copy.deepcopy(setup_agent_1))
-            agent_output_type_1 = "OmnniscientMinMaxAgent"
-
-        else:
-            agent_1 = agent.Reinforce(team=1, setup=copy.deepcopy(setup_agent_1))
-            agent_output_type_1 = "ReinforceLearningAgent"
         game_ = game.Game(agent_0, agent_1)
+        game_time_s = timer()
         if (simu+1) % 1 == 0:
             print('{} won: {}, {} won: {}, Game {}/{}'.format(agent_output_type_1,
                                                               blue_won,
@@ -128,18 +138,22 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
             game_reward = game_.run_step()
             if game_reward is not None:
                 if game_reward[0] == 1:  # count wins
+                    game_times_0.append(timer() - game_time_s)
                     red_won += 1
                     red_wins_bc_flag += 1
                     rounds_counter_win_agent_0.append(game_.move_count)
                 elif game_reward[0] == 2:
+                    game_times_0.append(timer() - game_time_s)
                     red_won += 1
                     red_wins_bc_noMovesLeft += 1
                     rounds_counter_win_agent_0.append(game_.move_count)
                 elif game_reward[0] == -1:
+                    game_times_1.append(timer() - game_time_s)
                     blue_won += 1
                     blue_wins_bc_flag += 1
                     rounds_counter_win_agent_1.append(game_.move_count)
                 else:
+                    game_times_1.append(timer() - game_time_s)
                     blue_won += 1
                     blue_wins_bc_noMovesLeft += 1
                     rounds_counter_win_agent_1.append(game_.move_count)
@@ -149,20 +163,35 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
             helpers.print_board(game_.board)
     file = open("{}_vs_{}_with_{}_sims.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
     file.write("Statistics of {} vs. {} with {} games played.\n".format(agent_output_type_0, agent_output_type_1, num_simulations))
+    file.write("Overall computational time of simulation: {} seconds.\n".format(sum(game_times_0) + sum(game_times_1)))
+
     file.write("\nAgent {} won {}/{} games (~{}%).\n".format(agent_output_type_0, red_won, num_simulations, round(100*red_won/num_simulations, 2)))
     file.write("Reasons for winning: {} flag captures, {} wins through killing all enemies\n".format(red_wins_bc_flag, red_wins_bc_noMovesLeft))
+
     file.write("\nAgent {} won {}/{} games (~{}%).\n".format(agent_output_type_1, blue_won, num_simulations, round(100*blue_won/num_simulations, 2)))
     file.write("Reasons for winning: {} flag captures, {} wins through killing all enemies\n".format(blue_wins_bc_flag, blue_wins_bc_noMovesLeft))
+
     file.write("\nAverage game duration overall: {} rounds\n".format(round(sum(rounds_counter_per_game)/num_simulations), 2))
     file.write("Maximum number of rounds played: {} rounds\n".format(max(rounds_counter_per_game)))
     file.write("Minimum number of rounds played: {} rounds\n".format(min(rounds_counter_per_game)))
+
     file.write("\nAverage game duration for {} wins: {} rounds\n".format(agent_output_type_0, round(sum(rounds_counter_win_agent_0)/len(rounds_counter_win_agent_0)), 2))
     file.write("Maximum number of rounds played: {} rounds\n".format(max(rounds_counter_win_agent_0)))
     file.write("Minimum number of rounds played: {} rounds\n".format(min(rounds_counter_win_agent_0)))
+
     file.write("\nAverage game duration for {} wins: {} rounds\n".format(agent_output_type_1, round(sum(rounds_counter_win_agent_1)/len(rounds_counter_win_agent_1)), 2))
     file.write("Maximum number of rounds played: {} rounds\n".format(max(rounds_counter_win_agent_1)))
     file.write("Minimum number of rounds played: {} rounds\n".format(min(rounds_counter_win_agent_1)))
+
+    file.write("\nAverage computational time for {} wins: {} seconds\n".format(agent_output_type_1, sum(game_times_1)/len(game_times_1)))
+    file.write("Maximum computational time: {} seconds\n".format(max(game_times_1)))
+    file.write("Minimum computational time: {} seconds\n".format(min(game_times_1)))
+
+    file.write("\nAverage computational time for {} wins: {} seconds\n".format(agent_output_type_0, sum(game_times_0)/len(game_times_0)))
+    file.write("Maximum computational time: {} seconds\n".format(max(game_times_0)))
+    file.write("Minimum computational time: {} seconds\n".format(min(game_times_0)))
     file.close()
+    return
 
 
 # good_setups in helpers now
@@ -179,7 +208,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="minmax", agent_type_1="montecarlo", num_simulations=1000)
+simulation(agent_type_0="random", agent_type_1="random", num_simulations=1000)
 # simulation()
 
 def simu_env(env, n_runs=100, watch=True):
@@ -218,7 +247,7 @@ def simu_env(env, n_runs=100, watch=True):
 # for higher depth heuristic becomes more useful somehow -> why?
 
 # test = env.Stratego(agent.Heuristic(0, depth=2), agent.Random(1))
-test = env.Stratego(agent.MonteCarlo(0, number_of_iterations_game_sim=1000), agent.Random(1))
+# test = env.Stratego(agent.MonteCarlo(0, number_of_iterations_game_sim=1000), agent.Random(1))
 # Heuristic : Omniscient (depth 2) 51 : 49, win ratio for Agent 0: 0.51
 # Reinforce : Random 53 : 47
 # MiniMax(2) : Random 61 : 39, win ratio for Agent 0: 0.61

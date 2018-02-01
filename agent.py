@@ -21,7 +21,7 @@ class Agent:
         self.setup = setup
         self.board = np.empty((5, 5), dtype=object)
         if setup is not None:
-            for idx, piece in np.ndenumerate(setup):  # board is initialized in environment
+            for idx, piece in np.ndenumerate(setup):  # board is normally initialized in environment
                 piece.hidden = False
                 self.board[piece.position] = piece
 
@@ -37,19 +37,10 @@ class Agent:
 
         self.battleMatrix = helpers.get_battle_matrix()
 
-        # fallen pieces bookkeeping
-        self.deadPieces = []  # TODO do we need this?
-        dead_piecesdict = dict()
-        self.types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
-        for type_ in set(self.types_available):
-            dead_piecesdict[type_] = 0
-        self.deadPieces.append(dead_piecesdict)
-        self.deadPieces.append(copy.deepcopy(dead_piecesdict))
-
         # list of enemy pieces
         self.ordered_opp_pieces = []  # TODO replace this?
 
-    def install_board(self, board):
+    def install_board(self, board, reset=False):
         """
         Install the opponents setup in this agents board and evaluate information for potential
         minmax operations later on
@@ -72,6 +63,11 @@ class Agent:
         for idx, piece in np.ndenumerate(self.ordered_opp_pieces):
             piece.potential_types = copy.copy(enemy_types)
             piece.hidden = True
+        if reset:
+            self.move_count = 0  # round counter of the game
+            self.last_N_moves = []
+            self.pieces_last_N_Moves_beforePos = []
+            self.pieces_last_N_Moves_afterPos = []
         return None
 
     def action_represent(self, actors):  # does nothing but is important for Reinforce TODO deprecate
@@ -169,23 +165,19 @@ class Agent:
         if collect_dead_pieces:
             if outcome == 1:
                 piece_def.dead = True
-                self.deadPieces[piece_def.team][piece_def.type] += 1
             elif outcome == 0:
-                self.deadPieces[piece_def.team][piece_def.type] += 1
                 piece_def.dead = True
-                self.deadPieces[piece_att.team][piece_att.type] += 1
                 piece_att.dead = True
             elif outcome == -1:
-                self.deadPieces[piece_att.team][piece_att.type] += 1
                 piece_att.dead = True
             if piece_att.guessed or piece_def.guessed:
                 outcome *= 2
             return outcome
-        if piece_att.guessed or piece_def.guessed:
+        elif piece_att.guessed or piece_def.guessed:
             outcome *= 2
         return outcome
 
-    def update_prob_by_fight(self, *args):  # TODO can we use this only in ExpectiSmart?
+    def update_prob_by_fight(self, *args):
         pass
 
     def update_prob_by_move(self, *args):
@@ -522,13 +514,13 @@ class MiniMax(Agent):
         n_alive_enemies = sum([True for piece in self.ordered_opp_pieces if not piece.dead])
         if 7 < n_alive_enemies <= 10:
             # one move each player lookahead
-            self.max_depth = 2
+            self.max_depth = 4
         elif 4 <= n_alive_enemies <= 7:
             # two moves each player lookahead
-            self.max_depth = 4
+            self.max_depth = 8
         elif n_alive_enemies <= 3:
             # four moves each player lookahead
-            self.max_depth = 8
+            self.max_depth = 16
 
     def minimax(self, max_depth):
         """
@@ -565,7 +557,7 @@ class MiniMax(Agent):
                 val = new_val
                 best_action = action
             if val >= beta:
-                board = self.undo_last_move(board)  # TODO why is this needed?
+                board = self.undo_last_move(board)
                 best_action = action
                 return val, best_action
             alpha = max(alpha, val)
@@ -596,7 +588,7 @@ class MiniMax(Agent):
                 val = new_val
                 best_action = action
             if val <= alpha:
-                board = self.undo_last_move(board)  # TODO why is this needed?
+                board = self.undo_last_move(board)
                 return val, best_action
             beta = min(beta, val)
             board = self.undo_last_move(board)
@@ -624,9 +616,9 @@ class MiniMax(Agent):
         if not check whether there are no actions possible anymore, return TRUE then, or FALSE.
         :param actions_possible: list of moves
         :param board: numpy array (5, 5)
+        :param max_val: boolean, decider whether this is a goal test for maximizing player
         :return: boolean: reached terminal state, boolean: own team (True) or other team won (False)
         """
-        # if board is not None:
         flag_alive = [False, False]
         for pos, piece in np.ndenumerate(board):
             if piece is not None and piece.type == 0:
@@ -635,16 +627,12 @@ class MiniMax(Agent):
             return True, True
         if not flag_alive[self.team]:
             return True, False
-        # else:             # TODO deprecate this, board should not be None
-        #     if 0 in self.deadPieces[0] or 0 in self.deadPieces[1]:
-        #         # print('flag captured')
-        #         return True
-        if not actions_possible:  # TODO no reward for winning with killing all enemies?
+        if not actions_possible:
             # print('cannot move anymore')
-            if max_val:  # TODO think about, if this order is correct
+            if max_val:  # the minmax agent is the one doing max_val, so if he cant move -> loss for him
                 won = False
             else:
-                won = True  # empirically False 65 : 35, 63 : 37 vs  True: 78 : 22, 65 : 35, 71 : 29 against Random
+                won = True
             return True, won
         else:
             return False, None
@@ -757,8 +745,8 @@ class Omniscient(MiniMax):
         self.neutralFightReward = 5
         self.winGameReward = 1000
 
-    def install_board(self, board):
-        super().install_board(board)
+    def install_board(self, board, reset=False):
+        super().install_board(board, reset)
         self.unhide_all()
 
     def unhide_all(self):
@@ -788,9 +776,9 @@ class Heuristic(MiniMax):
         self.winFightReward = 10
         self.winGameReward = 100
 
-    def install_board(self, board):
-        super().install_board(board)
-        self.evaluator.install_board(board)
+    def install_board(self, board, reset=False):
+        super().install_board(board, reset)
+        self.evaluator.install_board(board, reset)
         # self.unhide_all()  # use if inheriting from Omniscient
 
     def get_network_reward(self):
