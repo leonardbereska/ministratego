@@ -52,26 +52,14 @@ class TwoPieces(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(TwoPieces, self).__init__()
         self.feature_size = 10 * 25
-        # self.conv1 = nn.Conv2d(state_dim, 10, padding=1, kernel_size=3)
-        # self.conv1_bn = nn.BatchNorm2d(10)
-        # self.conv2 = nn.Conv2d(10, 10, padding=2, kernel_size=5)
-        # self.conv2_bn = nn.BatchNorm2d(10)
-        # self.lin1 = nn.Linear(self.feature_size, 32)
-        # # self.lin1 = nn.Linear(self.feature_size, 32)
-        # self.lin2 = nn.Linear(32, action_dim)
 
         self.conv1 = nn.Conv2d(state_dim, 10, padding=2, kernel_size=5)
         self.conv1_bn = nn.BatchNorm2d(10)
-        # self.conv2 = nn.Conv2d(20, 20, padding=2, kernel_size=5)
-        # self.conv2_bn = nn.BatchNorm2d(20)
         self.lin1 = nn.Linear(self.feature_size, 64)
-        # self.lin1 = nn.Linear(self.feature_size, 32)
         self.lin2 = nn.Linear(64, action_dim)
 
     def forward(self, x):
         x = F.relu(self.conv1_bn(self.conv1(x)))
-        # x = F.relu(self.conv2_bn(self.conv2(x)))
-
         x = x.view(-1, self.feature_size)
         x = F.relu(self.lin1(x))
         x = F.sigmoid(self.lin2(x))
@@ -109,10 +97,7 @@ class DeepThin(nn.Module):
         self.conv1_bn = nn.BatchNorm2d(10)
 
         self.lin1 = nn.Linear(self.feature_size, 16)
-        # self.lin1_bn = nn.BatchNorm1d(16)  # TODO how to use batchnorm for linear
         self.lin2 = nn.Linear(16, 16)
-        # self.lin2 = nn.Linear(16, 16)
-        # self.lin2_bn = nn.BatchNorm1d(16)
         self.lin3 = nn.Linear(16, action_dim)
 
     def forward(self, x):
@@ -122,10 +107,10 @@ class DeepThin(nn.Module):
 
         x = F.relu(self.lin1(x))
         x = F.relu(self.lin2(x))
-        # x = F.relu(self.lin3(x))
         x = self.lin3(x)
         x = F.sigmoid(x)
         return x
+
 
 class SuperDeep(nn.Module):
 
@@ -137,10 +122,8 @@ class SuperDeep(nn.Module):
         self.conv1_bn = nn.BatchNorm2d(10)
 
         self.lin1 = nn.Linear(self.feature_size, 16)
-        # self.lin1_bn = nn.BatchNorm1d(16)  # TODO how to use batchnorm for linear
         self.lin2 = nn.Linear(16, 16)
         self.lin3 = nn.Linear(16, 16)
-        # self.lin2_bn = nn.BatchNorm1d(16)
         self.lin4 = nn.Linear(16, action_dim)
 
     def forward(self, x):
@@ -166,10 +149,8 @@ class FourPieces(nn.Module):
         self.conv1_bn = nn.BatchNorm2d(10)
 
         self.lin1 = nn.Linear(self.feature_size, 16)
-        # self.lin1_bn = nn.BatchNorm1d(16)  # TODO how to use batchnorm for linear
+        # self.lin1_bn = nn.BatchNorm1d(16)  # TODO how to use batchnorm for linear -> model.eval()
         self.lin2 = nn.Linear(16, 16)
-        # self.lin2 = nn.Linear(16, 16)
-        # self.lin2_bn = nn.BatchNorm1d(16)
         self.lin3 = nn.Linear(16, action_dim)
 
     def forward(self, x):
@@ -179,54 +160,43 @@ class FourPieces(nn.Module):
 
         x = F.relu(self.lin1(x))
         x = F.relu(self.lin2(x))
-        # x = F.relu(self.lin3(x))
         x = self.lin3(x)
         x = F.sigmoid(x)
         return x
 
 
-class FourPiecesBomb(nn.Module):
-
-    def __init__(self, state_dim, action_dim):
-        super(FourPiecesBomb, self).__init__()
-        self.feature_size = 20 * 25
-
-        self.conv1 = nn.Conv2d(state_dim, 20, padding=1, kernel_size=3)
-        self.conv1_bn = nn.BatchNorm2d(20)
-
-        self.lin1 = nn.Linear(self.feature_size, 32)
-        self.lin2 = nn.Linear(32, action_dim)
-
-    def forward(self, x):
-        x = F.tanh(self.conv1_bn(self.conv1(x)))
-
-        x = x.view(-1, self.feature_size)
-
-        x = F.relu(self.lin1(x))
-        x = self.lin2(x)
-        x = F.sigmoid(x)
-        return x
+# class FourPiecesBomb(nn.Module):
+#
+#     def __init__(self, state_dim, action_dim):
+#         super(FourPiecesBomb, self).__init__()
+#         self.feature_size = 20 * 25
+#
+#         self.conv1 = nn.Conv2d(state_dim, 20, padding=1, kernel_size=3)
+#         self.conv1_bn = nn.BatchNorm2d(20)
+#
+#         self.lin1 = nn.Linear(self.feature_size, 32)
+#         self.lin2 = nn.Linear(32, action_dim)
+#
+#     def forward(self, x):
+#         x = F.tanh(self.conv1_bn(self.conv1(x)))
+#
+#         x = x.view(-1, self.feature_size)
+#
+#         x = F.relu(self.lin1(x))
+#         x = self.lin2(x)
+#         x = F.sigmoid(x)
+#         return x
 
 
 class Stratego(nn.Module):
 
     def __init__(self, state_dim, action_dim):
         super(Stratego, self).__init__()
-        self.filter = 10
-        self.feature_size = 10 * 25
+        self.filter = 20
+        self.feature_size = 20 * 25
 
         self.conv1 = nn.Conv2d(state_dim, self.filter, padding=1, kernel_size=3)
         self.conv1_bn = nn.BatchNorm2d(self.filter)
-        self.conv2 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
-        self.conv2_bn = nn.BatchNorm2d(self.filter)
-        self.conv3 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
-        self.conv3_bn = nn.BatchNorm2d(self.filter)
-        self.conv4 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
-        self.conv4_bn = nn.BatchNorm2d(self.filter)
-        self.conv5 = nn.Conv2d(self.filter, self.filter, padding=1, kernel_size=3)
-        self.conv5_bn = nn.BatchNorm2d(self.filter)
-        # self.conv2 = nn.Conv2d(50, 20, padding=1, kernel_size=3)
-        # self.conv2_bn = nn.BatchNorm2d(20)
 
         self.lin1 = nn.Linear(self.feature_size, 128)
         self.lin2 = nn.Linear(128, 64)
@@ -234,11 +204,7 @@ class Stratego(nn.Module):
         self.lin4 = nn.Linear(64, action_dim)
 
     def forward(self, x):
-        x = F.tanh(self.conv1_bn(self.conv1(x)))
-        x = F.tanh(self.conv2_bn(self.conv2(x)))
-        x = F.tanh(self.conv3_bn(self.conv3(x)))
-        x = F.tanh(self.conv4_bn(self.conv4(x)))
-        x = F.tanh(self.conv5_bn(self.conv5(x)))
+        x = F.relu(self.conv1_bn(self.conv1(x)))
 
         x = x.view(-1, self.feature_size)
 

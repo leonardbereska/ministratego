@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 import torch
 import torch.nn.functional as F
@@ -91,6 +92,7 @@ def train(env, num_episodes):
     episode_scores = []  # score = total reward
     episode_won = []  # win-ratio win = 1 loss = -1
     averages = []
+    best_winratio = 0.5
     for i_episode in range(num_episodes):
             env.reset()  # initialize environment
             state = env.agents[0].board_to_state()  # initialize state
@@ -113,22 +115,28 @@ def train(env, num_episodes):
                     memory.push(state, action, next_state, reward)  # store the transition in memory
                     state = next_state  # move to the next state
                     optimize_model()  # one step of optimization of target network
-                    # env.agents[1].model = model  # TODO real self play?
 
                     if done:
                         # after each episode print stats
-                        print("Episode {}/{}".format(i_episode, num_episodes))
-                        print("Score: {}".format(env.score))
-                        print("Won: {}".format(won))
-                        print("Noise: {}".format(p_random))
-                        print("Illegal: {}/{}\n".format(env.illegal_moves, env.steps))
+                        if VERBOSE > 1:
+                            print("Episode {}/{}".format(i_episode, num_episodes))
+                            print("Score: {}".format(env.score))
+                            print("Won: {}".format(won))
+                            print("Noise: {}".format(p_random))
+                            print("Illegal: {}/{}\n".format(env.illegal_moves, env.steps))
                         episode_scores.append(env.score)
                         episode_won.append(won)
                         if VERBOSE > 0:
                             if (i_episode+1) % PLOT_FREQUENCY == 0:
+                                print("Episode {}/{}".format(i_episode, num_episodes))
                                 global N_SMOOTH
                                 # helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
-                                averages = helpers.plot_stats(averages, episode_won, N_SMOOTH, PLOT_FREQUENCY)  # takes run time
+                                averages = helpers.plot_stats(averages, episode_won, N_SMOOTH, PLOT_FREQUENCY) # takes run time
+                                if averages:
+                                    if averages[-1] > best_winratio:
+                                        best_winratio = averages[-1]
+                                        print("Best win ratio: {}".format(np.round(best_winratio, 2)))
+                                        torch.save(model.state_dict(), './saved_models/stratego_linear.pkl')
                         break
             if i_episode % 500 == 2:
                     if VERBOSE > 2:
@@ -150,22 +158,25 @@ VERBOSE = 1  # level of printed output verbosity:
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
 num_episodes = 10000  # training for how many episodes
-agent0 = agent.Stratego(0)
+agent0 = agent.FourPieces(0)
 agent1 = agent.Random(1)
 agent1.model = agent0.model
-env = env.Stratego(agent0, agent1)
+env = env.FourPieces(agent0, agent1)
 
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
-memory = helpers.ReplayMemory(1000000)
+memory = helpers.ReplayMemory(100000)
 
-#model.load_state_dict(torch.load('./saved_models/stratego_deep.pkl'))  # trained against Random
-train(env, num_episodes)
-#torch.save(model.state_dict(), './saved_models/stratego_deep2.pkl')
+# model.load_state_dict(torch.load('./saved_models/stratego_linear.pkl'))  # trained against Random
+# train(env, num_episodes)
+
 
 run_env(env, 10000)
 
 
 # increased memory size -> why good?: less bias in estimate, why bad?: not on-policy anymore
 # increased batch size -> good, especially with batchnorm
+
+# models: stratego_linear2 : state representation: opp_full_team, no obstacle
+#                            model: conv (20 filters) tanh, 128, 64, 32, action_dim relu

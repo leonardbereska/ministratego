@@ -4,8 +4,10 @@ from matplotlib import pyplot as plt
 import game
 import pieces
 import agent
+import env
 import helpers
 from timeit import default_timer as timer
+
 
 def draw_random_setup(team):
     types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11]
@@ -207,8 +209,9 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="montecarlo", agent_type_1="random", num_simulations=1000)
+# simulation(agent_type_0="montecarlo", agent_type_1="random", num_simulations=1000)
 # simulation()
+
 
 def simu_env(env, n_runs=100, watch=True):
     """
@@ -237,11 +240,11 @@ def simu_env(env, n_runs=100, watch=True):
     print("Simulation over: {} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won / (n_won + n_lost), 2)))
 
 
-# test = env.ThreePieces(agent.Heuristic(0, depth=4), agent.Random(1))  # MinMax Heuristic
+# test = env.Stratego(agent.Heuristic(0, depth=2), agent.Omniscient(1, depth=2))  # MinMax Heuristic
 # simu_env(test, 100, watch=False)
-#
-# test = env.ThreePieces(agent.MiniMax(0, depth=4), agent.Random(1))
-# simu_env(test, 100, watch=False)
+
+test = env.Stratego(agent.Heuristic(0, depth=4), agent.Omniscient(1, depth=4))
+simu_env(test, 100, watch=False)
 
 # for higher depth heuristic becomes more useful somehow -> why?
 
@@ -249,8 +252,13 @@ def simu_env(env, n_runs=100, watch=True):
 # test = env.Stratego(agent.MonteCarlo(0, number_of_iterations_game_sim=1000), agent.Random(1))
 # Heuristic : Omniscient (depth 2) 51 : 49, win ratio for Agent 0: 0.51
 # Reinforce : Random 53 : 47
-# MiniMax(2) : Random 61 : 39, win ratio for Agent 0: 0.61
-# Heuristic(2) : Random  65 : 35, win ratio for Agent 0: 0.65 (signifikant?)
+# MiniMax(2) : Random 0.61 (of 100)
+
+# Stratego : Random 0.56 (of 1000)
+# Heuristic(2)(MiniMax) : Random  0.63 (of 100)
+# Heuristic(2)(Omniscient) : Random  0.83 (of 100)
+# Heuristic(2)(Omniscient) : Omniscient(2)  0.50 (of 100)
+# Heuristic(4)(Omniscient) : Omniscient(4)  0.50 (of 100)
 
 
 # simu_env(test, 100, watch=True)

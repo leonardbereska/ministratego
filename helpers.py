@@ -260,4 +260,5 @@ class ReplayMemory(object):
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
 
+
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))

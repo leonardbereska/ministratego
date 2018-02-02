@@ -101,24 +101,19 @@ class Env:
         Places available types for each team in the teams respective half of the board
         :return:
         """
-        # known_place = []
-        # # draw random setup for 10 figures for each team
-        # for team in (0, 1):
-        #     setup_pos = np.array([(i, j) for i in range(team * 3, 2 + team * 5) for j in range(5)])
-        #     setup = np.random.choice(setup_pos, len(setup_pos), replace=False)
-        #     setup = np.random.choice(self.types_available, len(self.types_available), replace=False)
-        #
-        #     for i, pos in enumerate(setup):
-        #         known_place.append(pieces.Piece(setup[i], team, setup_pos[i]))
-        # random_place = []  # random_place is across whole board
-        # return known_place, random_place
         known_place = []
-        # draw random setup for 10 figures for each team
+        # place flags at last row
         for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            flag_pos_list = [(i, j) for i in range(0 + team * 4, 1 + team * 4) for j in range(5)]
+            index = np.random.choice(range(len(flag_pos_list)), len(flag_pos_list), replace=False)
+            flag_pos = flag_pos_list[index[0]]
+            known_place.append(pieces.Piece(0, team, flag_pos))
+
+            setup_pos = [(i, j) for i in range(0 + team * 3, 2 + team * 3) for j in range(5)]
+            setup_pos.remove(flag_pos)
             index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
             for i, piece_type in enumerate(self.types_available):
-            # print(setup_pos[index[i]])
+
                 known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
         random_place = []  # random_place is across whole board
         return known_place, random_place
@@ -296,7 +291,7 @@ class TwoPieces(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 10]
+        self.types_available = [1, 10]
         return self.place_types()
 
 
@@ -306,7 +301,7 @@ class ThreePieces(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 3, 10]
+        self.types_available = [1, 3, 10]
         return self.place_types()
 
 
@@ -316,7 +311,7 @@ class FourPieces(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 2, 3, 10]
+        self.types_available = [1, 2, 3, 10]
         return self.place_types()
 
 
@@ -326,7 +321,7 @@ class Stratego(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
+        self.types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11]
         return self.place_types()
 
 
