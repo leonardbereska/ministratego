@@ -79,7 +79,7 @@ class Env:
         self.score = 0
         self.reward = 0
         self.steps = 0
-        self.death_thresh = None
+        self.death_steps = None
         self.illegal_moves = 0
 
         # rewards (to be overridden by subclass environment)
@@ -101,24 +101,19 @@ class Env:
         Places available types for each team in the teams respective half of the board
         :return:
         """
-        # known_place = []
-        # # draw random setup for 10 figures for each team
-        # for team in (0, 1):
-        #     setup_pos = np.array([(i, j) for i in range(team * 3, 2 + team * 5) for j in range(5)])
-        #     setup = np.random.choice(setup_pos, len(setup_pos), replace=False)
-        #     setup = np.random.choice(self.types_available, len(self.types_available), replace=False)
-        #
-        #     for i, pos in enumerate(setup):
-        #         known_place.append(pieces.Piece(setup[i], team, setup_pos[i]))
-        # random_place = []  # random_place is across whole board
-        # return known_place, random_place
         known_place = []
-        # draw random setup for 10 figures for each team
+        # place flags at last row
         for team in (0, 1):
-            setup_pos = [(i, j) for i in range(team * 3, 2 + team * 3) for j in range(5)]
+            flag_pos_list = [(i, j) for i in range(0 + team * 4, 1 + team * 4) for j in range(5)]
+            index = np.random.choice(range(len(flag_pos_list)), len(flag_pos_list), replace=False)
+            flag_pos = flag_pos_list[index[0]]
+            known_place.append(pieces.Piece(0, team, flag_pos))
+
+            setup_pos = [(i, j) for i in range(0 + team * 3, 2 + team * 3) for j in range(5)]
+            setup_pos.remove(flag_pos)
             index = np.random.choice(range(len(setup_pos)), len(setup_pos), replace=False)
             for i, piece_type in enumerate(self.types_available):
-            # print(setup_pos[index[i]])
+
                 known_place.append(pieces.Piece(piece_type, team, setup_pos[index[i]]))
         random_place = []  # random_place is across whole board
         return known_place, random_place
@@ -249,8 +244,8 @@ class Env:
             if p.type == 0:
                 self.reward += self.reward_loss
                 return True, False
-        if self.death_thresh is not None:
-            if self.score < self.death_thresh:
+        if self.death_steps is not None:
+            if self.steps > self.death_steps:
                 self.reward += self.reward_loss
                 return True, False
         return False, False
@@ -280,6 +275,7 @@ class Maze(Env):
     def __init__(self, agent0, agent1):
         super(Maze, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1
+        self.death_steps = 80
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 1, (4, 4))]
@@ -296,7 +292,7 @@ class TwoPieces(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 10]
+        self.types_available = [1, 10]
         return self.place_types()
 
 
@@ -306,7 +302,7 @@ class ThreePieces(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 3, 10]
+        self.types_available = [1, 3, 10]
         return self.place_types()
 
 
@@ -316,7 +312,7 @@ class FourPieces(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 2, 3, 10]
+        self.types_available = [1, 2, 3, 10]
         return self.place_types()
 
 
@@ -326,7 +322,7 @@ class Stratego(Env):
         self.reward_win = 1
 
     def decide_pieces(self):
-        self.types_available = [0, 1, 2, 2, 2, 3, 3, 10, 11, 11]
+        self.types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11]
         return self.place_types()
 
 

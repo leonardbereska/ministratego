@@ -247,6 +247,7 @@ class Reinforce(Agent):
             return torch.LongTensor([[random.randint(0, self.action_dim-1)]])
         sample = random.random()
         if sample > p_random:
+            self.model.eval()
             state_action_values = self.model(Variable(state, volatile=True))
             q_values = list(state_action_values.data[0].numpy())
 
@@ -315,18 +316,20 @@ class Reinforce(Agent):
         move = (piece_pos, pos_to)
         return move
 
-    def board_to_state(self):
+    def board_to_state(self, board=None):
         """
         Converts the board of pieces (aka self.board) to the state input for a neural network,
         according to the environment for which the agent is specified
         (e.g. Finder only needs his own position, but MiniStratego will need all opponents pieces also)
         :return: (state_dim * 5 * 5) Tensor
         """
+        if board is None:
+            board = self.board
         conditions = self.state_represent()
         state_dim = len(conditions)
         board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
-        for pos, val in np.ndenumerate(self.board):
-            p = self.board[pos]
+        for pos, val in np.ndenumerate(board):
+            p = board[pos]
             # for reinforce as team 1, reverse board to have same state representation
             if self.team == 1:
                 pos = (4 - pos[0], 4 - pos[1])
@@ -340,15 +343,68 @@ class Reinforce(Agent):
         return board_state
 
 
+# class Evaluator(Reinforce):
+#     def __init__(self, team):
+#         super(Evaluator, self).__init__(team=team)
+#         self.action_dim = 12
+#         self.state_dim = len(self.state_represent())
+#         self.model = models.Eval(self.state_dim)
+#
+#     def state_represent(self):
+#         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
+#         own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
+#         own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
+#         # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
+#         own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+#         opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
+#         opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
+#         opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
+#         opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
+#         obstacle = lambda p: (p.type == 99, 1)
+#         return own_team_one, own_team_three, own_team_ten, own_team_flag, \
+#                opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+#
+#     def select_action(self, state, p_random):
+#         """
+#         Minmax one step, return action with highest next state value
+#         """
+#         poss_actions = self.poss_actions(action_dim=self.action_dim)
+#         if not poss_actions:
+#             return torch.LongTensor([[random.randint(0, self.action_dim-1)]])
+#         sample = random.random()
+#         if sample > p_random:
+#             self.model.eval()
+#             # curr_board = copy.deepcopy(self.board)
+#             best_value = 0
+#             for action in poss_actions:
+#                 move = self.action_to_move(action)
+#                 board = copy.deepcopy(self.board)
+#                 board, _ = self.do_move(move, board)
+#                 after_state = self.board_to_state(board)
+#
+#                 state_value = self.model(Variable(after_state, volatile=True)).data.numpy()  # train on after-states
+#                 if state_value > best_value:
+#                     best_action = action
+#                     best_value = state_value
+#
+#             return torch.LongTensor([[best_action]])
+#         else:
+#             # random from possible (not-illegal) actions
+#             i = random.randint(0, len(poss_actions) - 1)
+#             random_action = poss_actions[i]
+#             return torch.LongTensor([[random_action]])
+
+
 class Finder(Reinforce):
     """
-    Agent for FindFlag environment
+    Agent for solving the FindFlag environment
     """
     def __init__(self, team):
         super(Finder, self).__init__(team=team)
         self.action_dim = 4
         self.state_dim = len(self.state_represent())
-        self.model = models.Finder(self.state_dim)
+        self.model = models.MiniConv(self.state_dim, self.action_dim)
+        self.model.load_state_dict(torch.load('./saved_models/finder_best.pkl'))
 
     def state_represent(self):
         own_team = lambda piece: (piece.team == 0, 1)
@@ -362,8 +418,10 @@ class Mazer(Reinforce):
         super(Mazer, self).__init__(team=team)
         self.action_dim = 4
         self.state_dim = len(self.state_represent())
-        self.model = models.Mazer(self.state_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/mazer.pkl'))
+        # self.model = models.SmallConv(self.state_dim, self.action_dim, n_filter=1, n_hidden=16)
+        self.model = models.SmallConv(self.state_dim, self.action_dim, n_filter=10, n_hidden=32)
+
+        # self.model.load_state_dict(torch.load('./saved_models/maze_best.pkl'))
 
     def state_represent(self):
         own_team = lambda piece: (piece.team == 0, 1)
@@ -377,8 +435,8 @@ class TwoPieces(Reinforce):
         super(TwoPieces, self).__init__(team=team)
         self.action_dim = 8
         self.state_dim = len(self.state_represent())
-        self.model = models.DeepThin(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/twopieces.pkl'))
+        self.model = models.SmallConv(self.state_dim, self.action_dim, n_filter=20, n_hidden=16)
+        # self.model.load_state_dict(torch.load('./saved_models/twopieces_current.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -397,15 +455,16 @@ class ThreePieces(Reinforce):
         super(ThreePieces, self).__init__(team=team)
         self.action_dim = 12  #
         self.state_dim = len(self.state_represent())
-        self.model = models.ThreePieces(self.state_dim, self.action_dim)
-        self.model.load_state_dict(torch.load('./saved_models/threepieces.pkl'))
+        self.model = models.SmallConv(self.state_dim, self.action_dim, n_filter=20, n_hidden=32)
+        # self.model = models.ThreePieces(self.state_dim, self.action_dim)
+        self.model.load_state_dict(torch.load('./saved_models/threepieces_current.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
         own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
         own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-        # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
         own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
+
         opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
         opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
         opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
@@ -420,8 +479,8 @@ class FourPieces(Reinforce):
         super(FourPieces, self).__init__(team=team)
         self.action_dim = 28  # 16 (for piece 2) + 3 * 4 (for pieces 1, 3, 10)
         self.state_dim = len(self.state_represent())
-        self.model = models.DeepThin(self.state_dim, self.action_dim)
-        # self.model.load_state_dict(torch.load('./saved_models/fourpieces.pkl'))
+        self.model = models.SmallConv(self.state_dim, self.action_dim, n_filter=20, n_hidden=128)
+        # self.model.load_state_dict(torch.load('./saved_models/fourpieces_best.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -448,8 +507,9 @@ class Stratego(Reinforce):
         super(Stratego, self).__init__(team=team)
         self.action_dim = 64  # all pieces 3 * 16 (for pieces: 2, 2, 2) + 4 * 4 for (for pieces 1, 3, 3, 10)
         self.state_dim = len(self.state_represent())
-        self.model = models.Stratego(self.state_dim, self.action_dim)
-        #self.model.load_state_dict(torch.load('./saved_models/stratego_deep2.pkl'))
+        self.model = models.MoreLayer(self.state_dim, self.action_dim, n_filter=20, n_hidden=128)
+        # self.model = models.Linear(self.state_dim, self.action_dim)
+        self.model.load_state_dict(torch.load('./saved_models/stratego_current.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -472,8 +532,7 @@ class Stratego(Reinforce):
         obstacle = lambda p: (p.type == 99, 1)
         return own_team_one, own_team_two_1, own_team_two_2, own_team_two_3, own_team_three_1, own_team_three_2, \
                own_team_ten, own_team_flag, own_team_bombs, \
-                opp_full_team
-                # opp_team_one, opp_team_twos, opp_team_threes, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
+               opp_team_one, opp_team_twos, opp_team_threes, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
 
 
 class MiniMax(Agent):
@@ -769,20 +828,22 @@ class Omniscient(MiniMax):
         pass
 
 
-class Heuristic(MiniMax):
+class Heuristic(Omniscient):
     def __init__(self, team, setup=None, depth=2):
         super(Heuristic, self).__init__(team=team, setup=setup, depth=depth)
         self.evaluator = Stratego(team)
-        self.winFightReward = 10
+        self.winFightReward = 0
+        self.neutralFightReward = 0
         self.winGameReward = 100
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
         self.evaluator.install_board(board, reset)
-        # self.unhide_all()  # use if inheriting from Omniscient
+        self.unhide_all()  # use if inheriting from Omniscient
 
     def get_network_reward(self):
         state = self.evaluator.board_to_state()
+        self.evaluator.model.eval()
         state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
         return np.max(state_action_values)
 

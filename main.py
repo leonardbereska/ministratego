@@ -2,6 +2,7 @@ import numpy as np
 import game
 import pieces
 import agent
+import env
 import helpers
 from timeit import default_timer as timer
 
@@ -206,7 +207,9 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
 #simulation(setup_agent0, setup_agent1)
 simulation(agent_type_0="montecarlo", agent_type_1="omniscientminmax", num_simulations=1000)
+
 # simulation()
+
 
 def simu_env(env, n_runs=100, watch=True):
     """
@@ -235,11 +238,11 @@ def simu_env(env, n_runs=100, watch=True):
     print("Simulation over: {} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won / (n_won + n_lost), 2)))
 
 
-# test = env.ThreePieces(agent.Heuristic(0, depth=4), agent.Random(1))  # MinMax Heuristic
-# simu_env(test, 100, watch=False)
-#
-# test = env.ThreePieces(agent.MiniMax(0, depth=4), agent.Random(1))
-# simu_env(test, 100, watch=False)
+# test = env.FindFlag(agent.Finder(0), agent.Random(1))  # MinMax Heuristic
+# simu_env(test, 100, watch=True)
+
+# test = env.Stratego(agent.Stratego(0), agent.Random(1))
+# simu_env(test, 100, watch=True)
 
 # for higher depth heuristic becomes more useful somehow -> why?
 
@@ -247,8 +250,18 @@ def simu_env(env, n_runs=100, watch=True):
 # test = env.Stratego(agent.MonteCarlo(0, number_of_iterations_game_sim=1000), agent.Random(1))
 # Heuristic : Omniscient (depth 2) 51 : 49, win ratio for Agent 0: 0.51
 # Reinforce : Random 53 : 47
-# MiniMax(2) : Random 61 : 39, win ratio for Agent 0: 0.61
-# Heuristic(2) : Random  65 : 35, win ratio for Agent 0: 0.65 (signifikant?)
+# MiniMax(2) : Random 0.61 (of 100)
+
+# Stratego : Random 0.56 (of 1000)
+# Heuristic(2)(MiniMax) : Random  0.63 (of 100)
+# Heuristic(2)(Omniscient) : Random  0.83 (of 100)
+# Heuristic(2)(Omniscient) : Omniscient(2)  0.50 (of 100)
+# Heuristic(4)(Omniscient) : Omniscient(4)  0.50 (of 100)
 
 
 # simu_env(test, 100, watch=True)
+
+
+# environment = env.FourPieces(agent.FourPieces(0), agent.Random(1))
+# helpers.visualize_features(5000, environment, "fourpieces")
+

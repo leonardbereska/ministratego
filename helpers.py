@@ -1,10 +1,15 @@
 import numpy as np
 from scipy import spatial
 from matplotlib import pyplot as plt
-import copy
-import torch
+import matplotlib as mpl
+
 from collections import namedtuple
 import random
+from sklearn.manifold import TSNE
+import torch
+from torch.nn import functional as F
+from torch.autograd import Variable
+import copy
 
 good_setup = np.empty((2, 5), dtype=int)
 good_setup[0, 0] = 3
@@ -109,13 +114,17 @@ def is_legal_move(board, move_to_check):
     return True
 
 
-def print_board(board):
+def print_board(board, same_figure=True):
     """
     Plots a board object in a pyplot figure
+    :param same_figure: Should the plot be in the same figure?
     """
     board = copy.deepcopy(board)  # ensure to not accidentally change input
-    plt.interactive(False)  # make plot stay? true: close plot, false: keep plot
-    plt.figure(1)
+    # plt.interactive(False)  # make plot stay? true: close plot, false: keep plot
+    if same_figure:
+        plt.figure(1)  # needs to be one
+    else:
+        plt.figure()
     plt.clf()
     layout = np.add.outer(range(5), range(5)) % 2  # chess-pattern board
     plt.imshow(layout, cmap=plt.cm.magma, alpha=.5, interpolation='nearest')  # plot board
@@ -123,7 +132,7 @@ def print_board(board):
         piece = board[pos]  # select piece on respective board position
         # decide which marker type to use for piece
         if piece is not None:
-            piece.hidden = False  # not the best but ensures everything is printed without "?"
+            piece.hidden = False  # omniscient view
 
             if piece.team == 1:
                 color = 'b'  # blue: player 1
@@ -137,6 +146,10 @@ def print_board(board):
                 form = 's'  # square: either immovable or unknown piece
             if piece.type == 0:
                 form = 'X'  # cross: flag
+            # if piece.team == 0:
+            #     piece.hidden = False
+            # else:
+            #     form = 's'
             piece_marker = ''.join(('-', color, form))
             plt.plot(pos[1], pos[0], piece_marker, markersize=37)  # plot markers for pieces
             plt.annotate(str(piece), xy=(pos[1], pos[0]), size=20, ha="center", va="center")  # piece type on marker
@@ -144,7 +157,8 @@ def print_board(board):
     #plt.pause(1)
     plt.pause(.2)
 
-    plt.show(block=False)
+    # plt.show(block=False)
+    plt.show(block=True)
 
 
 def get_poss_moves(board, team):
@@ -260,4 +274,88 @@ class ReplayMemory(object):
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
 
+
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
+
+
+def visualize_features(n_points, environment, env_name):
+    """
+    Visualize with t-SNE the models representation of a board state
+    :param n_points: number of points in t-SNE plot
+    :param env_name: environment name for plotting
+    :return: plot of t-SNE and plot of some board states
+    """
+    boards = []
+    states = []
+    model = environment.agents[0].model
+    interrupt = False
+
+    print("Acquiring features")
+    for i in range(n_points):
+        environment.reset()
+        done = False
+
+        while not done:
+            _, done, won = environment.step()
+
+            board = copy.deepcopy(environment.board)
+            state = environment.agents[0].board_to_state()
+            boards.append(board)
+            states.append(state)
+            if environment.steps > 20:  # break loops to obtain more diverse feature space
+                break
+            if len(states) >= n_points:  # interrupt simulation if enough states
+                interrupt = True
+                break
+        if interrupt:
+            break
+
+    states = Variable(torch.cat(states))
+    features = model.extract_features(states)
+    action_values = F.sigmoid(model.lin_final(features))
+    features = features.data.numpy()
+    state_values = action_values.data.numpy().max(1)
+
+    print("Computing t-SNE embedding")
+    tsne = TSNE(n_components=2, init='pca', random_state=0)
+    X_tsne = tsne.fit_transform(features)
+
+    x_min, x_max = np.min(X_tsne, 0), np.max(X_tsne, 0)
+    X_tsne = (X_tsne - x_min) / (x_max - x_min)  # scale to interval (0, 1)
+
+    # print out 10 randomly chosen board states with positions and state-values
+    # and mark choice in embedding
+    choice = np.random.choice(len(boards), 10, replace=False)
+    for i, c in enumerate(choice):
+        print(i, c)
+        print(X_tsne[c])
+        print(state_values[c])
+        print_board(boards[c], same_figure=False)
+        # plt.title("state value: {}, position: {}".format(state_values[c], X_tsne[c]))
+        plt.savefig('{}{}.png'.format(env_name, i))
+
+    def plot_embedding(features, values, choice):
+        """
+        Plot an embedding
+        :param features: vectors to be plotted
+        :param values: value between 0 and 1 for respective color (e.g. state-value)
+        :return: plot
+        """
+        fig, ax = plt.subplots()
+        mymap = plt.cm.get_cmap('Spectral')
+        sm = plt.cm.ScalarMappable(cmap=mymap, norm=plt.Normalize(vmin=0, vmax=1))
+        sm._A = []  # fake array for scalar mappable urrgh..
+        for i in range(features.shape[0]):
+            plt.plot(features[i, 0], features[i, 1], '.', color=mymap(values[i]))
+        cb = plt.colorbar(sm)
+        cb.set_label('Q-Values')
+        for i in range(features.shape[0]):  # overwrite old plotted points
+            if i in choice:
+                plt.plot(features[i, 0], features[i, 1], 'o', color='k')
+        plt.xticks([]), plt.yticks([])
+        plt.title("t-SNE of Board Evaluator Features")
+        plt.show(block=False)
+
+    print("Plotting t-SNE embedding")
+    plot_embedding(X_tsne, state_values, choice)
+    plt.savefig('{}-tsne.png'.format(env_name))
