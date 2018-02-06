@@ -1,0 +1,28 @@
+Statistics of MonteCarloAgent vs. RandomAgent with 1000 games played.
+Overall computational time of simulation: 112951.54809068365 seconds.
+
+Agent MonteCarloAgent won 819/1000 games (~81.9%).
+Reasons for winning: 632 flag captures, 187 wins through killing all enemies
+
+Agent RandomAgent won 181/1000 games (~18.1%).
+Reasons for winning: 129 flag captures, 52 wins through killing all enemies
+
+Average game duration overall: 38 rounds
+Maximum number of rounds played: 140 rounds
+Minimum number of rounds played: 3 rounds
+
+Average game duration for MonteCarloAgent wins: 38 rounds
+Maximum number of rounds played: 132 rounds
+Minimum number of rounds played: 4 rounds
+
+Average game duration for RandomAgent wins: 39 rounds
+Maximum number of rounds played: 140 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for RandomAgent wins: 97.43131262157722 seconds
+Maximum computational time: 225.31964952588896 seconds
+Minimum computational time: 4.248497682121524 seconds
+
+Average computational time for MonteCarloAgent wins: 116.38153907958262 seconds
+Maximum computational time: 392.3865101600677 seconds
+Minimum computational time: 14.663299900435959 seconds

@@ -1,0 +1,28 @@
+Statistics of MonteCarloAgent vs. MinMaxAgent with 1000 games played.
+Overall computational time of simulation: 153197.11601030652 seconds.
+
+Agent MonteCarloAgent won 519/1000 games (~51.9%).
+Reasons for winning: 305 flag captures, 214 wins through killing all enemies
+
+Agent MinMaxAgent won 481/1000 games (~48.1%).
+Reasons for winning: 422 flag captures, 59 wins through killing all enemies
+
+Average game duration overall: 27 rounds
+Maximum number of rounds played: 99 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for MonteCarloAgent wins: 30 rounds
+Maximum number of rounds played: 99 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for MinMaxAgent wins: 24 rounds
+Maximum number of rounds played: 81 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for MinMaxAgent wins: 129.40528120881785 seconds
+Maximum computational time: 669.9438904437557 seconds
+Minimum computational time: 5.438176474490319 seconds
+
+Average computational time for MonteCarloAgent wins: 175.2469667608191 seconds
+Maximum computational time: 989.7554979328561 seconds
+Minimum computational time: 16.81252219176895 seconds

@@ -798,17 +798,16 @@ class Heuristic(MiniMax):
 
 
 class MonteCarlo(MiniMax):
-    def __init__(self, team, setup=None, number_of_iterations_game_sim=100):
+    def __init__(self, team, setup=None, number_of_iterations_game_sim=50):
         super(MonteCarlo, self).__init__(team=team, setup=setup)
         self._nr_iterations_of_game_sim = number_of_iterations_game_sim
         self._nr_of_max_turn_sim = 20
-        self._nr_of_enemy_setups_to_draw = 20
+        self._nr_of_enemy_setups_to_draw = 30
 
     def decide_move(self):
         """
         given the maximum depth, copy the known board so far, assign the pieces by random, while still
         respecting the current knowledge, and then decide the move via minimax algorithm.
-        :param max_depth: int
         :return: tuple of position tuples
         """
         possible_moves = helpers.get_poss_moves(self.board, self.team)

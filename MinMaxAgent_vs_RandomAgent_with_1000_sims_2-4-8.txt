@@ -1,0 +1,28 @@
+Statistics of MinMaxAgent vs. RandomAgent with 1000 games played.
+Overall computational time of simulation: 6649.724835097899 seconds.
+
+Agent MinMaxAgent won 738/1000 games (~73.8%).
+Reasons for winning: 623 flag captures, 115 wins through killing all enemies
+
+Agent RandomAgent won 262/1000 games (~26.2%).
+Reasons for winning: 113 flag captures, 149 wins through killing all enemies
+
+Average game duration overall: 31 rounds
+Maximum number of rounds played: 144 rounds
+Minimum number of rounds played: 3 rounds
+
+Average game duration for MinMaxAgent wins: 29 rounds
+Maximum number of rounds played: 116 rounds
+Minimum number of rounds played: 4 rounds
+
+Average game duration for RandomAgent wins: 37 rounds
+Maximum number of rounds played: 144 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for RandomAgent wins: 2.467700777691327 seconds
+Maximum computational time: 36.39488830551909 seconds
+Minimum computational time: 0.03193800832787019 seconds
+
+Average computational time for MinMaxAgent wins: 8.13440004246988 seconds
+Maximum computational time: 332.35170589024256 seconds
+Minimum computational time: 0.051905692749642185 seconds

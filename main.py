@@ -1,14 +1,12 @@
 import numpy as np
-from matplotlib import pyplot as plt
-
 import game
 import pieces
 import agent
 import helpers
 from timeit import default_timer as timer
 
-def draw_random_setup(team):
-    types_available = [1, 2, 2, 2, 3, 3, 10, 11, 11]
+
+def draw_random_setup(types_available, team):
     setup_agent = np.empty((2, 5), dtype=object)
     if team == 0:
         flag_positions = [(4, j) for j in range(5)] + [(3, 2)]
@@ -102,11 +100,11 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         if setup_0 is not None:
             setup_agent_0 = setup_0
         else:
-            setup_agent_0 = draw_random_setup(0)
+            setup_agent_0 = draw_random_setup([1, 2, 2, 2, 3, 3, 10, 11, 11], 0)
         if setup_1 is not None:
             setup_agent_1 = setup_1
         else:
-            setup_agent_1 = draw_random_setup(1)
+            setup_agent_1 = draw_random_setup([1, 2, 2, 2, 3, 3, 10, 11, 11], 1)
         agent_0.setup = setup_agent_0
         agent_1.setup = setup_agent_1
         # restart game
@@ -207,7 +205,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="montecarlo", agent_type_1="random", num_simulations=1000)
+simulation(agent_type_0="montecarlo", agent_type_1="omniscientminmax", num_simulations=1000)
 # simulation()
 
 def simu_env(env, n_runs=100, watch=True):
