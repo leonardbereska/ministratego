@@ -1,5 +1,5 @@
 import numpy as np
-from matplotlib import pyplot as plt
+
 
 import game
 import pieces
@@ -7,6 +7,7 @@ import agent
 import env
 import helpers
 from timeit import default_timer as timer
+
 
 
 def draw_random_setup(team):
@@ -240,11 +241,11 @@ def simu_env(env, n_runs=100, watch=True):
     print("Simulation over: {} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won / (n_won + n_lost), 2)))
 
 
-# test = env.Stratego(agent.Heuristic(0, depth=2), agent.Omniscient(1, depth=2))  # MinMax Heuristic
-# simu_env(test, 100, watch=False)
+# test = env.FindFlag(agent.Finder(0), agent.Random(1))  # MinMax Heuristic
+# simu_env(test, 100, watch=True)
 
-test = env.Stratego(agent.Heuristic(0, depth=4), agent.Omniscient(1, depth=4))
-simu_env(test, 100, watch=False)
+# test = env.Stratego(agent.Stratego(0), agent.Random(1))
+# simu_env(test, 100, watch=True)
 
 # for higher depth heuristic becomes more useful somehow -> why?
 
@@ -262,3 +263,8 @@ simu_env(test, 100, watch=False)
 
 
 # simu_env(test, 100, watch=True)
+
+
+# environment = env.FourPieces(agent.FourPieces(0), agent.Random(1))
+# helpers.visualize_features(5000, environment, "fourpieces")
+

@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from matplotlib import pyplot as plt
 
 import torch
 import torch.nn.functional as F
@@ -10,6 +11,7 @@ import agent
 import env
 import helpers
 import models
+import pickle
 
 
 # training of DQN network code is adjusted from Adam Paszke
@@ -22,6 +24,7 @@ def optimize_model():
     """
     if len(memory) < BATCH_SIZE:
             return  # not optimizing for not enough memory
+    model.train()
     transitions = memory.sample(BATCH_SIZE)  # sample memories batch
     batch = helpers.Transition(*zip(*transitions))  # transpose the batch
 
@@ -37,13 +40,11 @@ def optimize_model():
 
     # Compute V(s_{t+1}) for all next states.
     next_state_values = Variable(torch.zeros(BATCH_SIZE).type(torch.FloatTensor))  # zero for terminal states
-    # TODO next state value should be masked by possible actions too
     next_state_values[non_final_mask] = model(non_final_next_states).max(1)[0]  # what would the model predict
     next_state_values.volatile = False  # requires_grad = False to not mess with loss
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch  # compute the expected Q values
 
     loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)  # compute Huber loss
-    # use L2 loss?
 
     # optimize network
     optimizer.zero_grad()  # optimize towards expected q-values
@@ -127,16 +128,20 @@ def train(env, num_episodes):
                         episode_scores.append(env.score)
                         episode_won.append(won)
                         if VERBOSE > 0:
-                            if (i_episode+1) % PLOT_FREQUENCY == 0:
+                            if i_episode % PLOT_FREQUENCY == 0:
                                 print("Episode {}/{}".format(i_episode, num_episodes))
                                 global N_SMOOTH
                                 # helpers.plot_scores(episode_scores, N_SMOOTH)  # takes run time
                                 averages = helpers.plot_stats(averages, episode_won, N_SMOOTH, PLOT_FREQUENCY) # takes run time
+                                torch.save(model.state_dict(), './saved_models/{}_current.pkl'.format(env_name))
                                 if averages:
                                     if averages[-1] > best_winratio:
                                         best_winratio = averages[-1]
                                         print("Best win ratio: {}".format(np.round(best_winratio, 2)))
-                                        torch.save(model.state_dict(), './saved_models/stratego_linear.pkl')
+                                        torch.save(model.state_dict(), './saved_models/{}_best.pkl'.format(env_name))
+                                pickle.dump(averages, open("{}-averages.p".format(env_name), "wb"))
+                                pickle.dump(episode_won, open("{}-episode_won.p".format(env_name), "wb"))
+
                         break
             if i_episode % 500 == 2:
                     if VERBOSE > 2:
@@ -144,39 +149,38 @@ def train(env, num_episodes):
 
 
 # hyperparameters
-PLOT_FREQUENCY = 50
+PLOT_FREQUENCY = 500
 BATCH_SIZE = 256  # for faster training take a smaller batch size, not too small as batchnorm will not work otherwise
 GAMMA = 0.9  # already favors reaching goal faster, no need for reward_step, the lower GAMMA the faster
-EPS_START = 0.3  # for unstable models take higher randomness first
-EPS_END = 0.001
-EPS_DECAY = 100
-N_SMOOTH = 1000  # plotting scores averaged over this number of episodes
+EPS_START = 0.9  # for unstable models take higher randomness first
+EPS_END = 0.01
+EPS_DECAY = 2000
+N_SMOOTH = 500  # plotting scores averaged over this number of episodes
 VERBOSE = 1  # level of printed output verbosity:
                 # 1: plot averaged episode stats
                 # 2: also print actions taken and rewards
                 # 3: every 100 episodes run_env()
                 # also helpful sometimes: printing probabilities in "select_action" function of agent
 
-num_episodes = 10000  # training for how many episodes
-agent0 = agent.FourPieces(0)
+num_episodes = 100000  # training for how many episodes
+agent0 = agent.Stratego(0)
 agent1 = agent.Random(1)
-agent1.model = agent0.model
-env = env.FourPieces(agent0, agent1)
+agent1.model = agent0.model  # if want to train by self-play
+env = env.Stratego(agent0, agent1)
+env_name = "stratego"
 
 model = env.agents[0].model  # optimize model of agent0
 
 optimizer = optim.RMSprop(model.parameters())
-memory = helpers.ReplayMemory(100000)
+memory = helpers.ReplayMemory(10000)
 
-# model.load_state_dict(torch.load('./saved_models/stratego_linear.pkl'))  # trained against Random
+model.load_state_dict(torch.load('./saved_models/{}_current.pkl'.format(env_name)))  # trained against Random
 # train(env, num_episodes)
-
+# model.load_state_dict(torch.load('./saved_models/{}.pkl'.format(env_name)))  # trained against Random
 
 run_env(env, 10000)
 
-
-# increased memory size -> why good?: less bias in estimate, why bad?: not on-policy anymore
-# increased batch size -> good, especially with batchnorm
-
-# models: stratego_linear2 : state representation: opp_full_team, no obstacle
-#                            model: conv (20 filters) tanh, 128, 64, 32, action_dim relu
+# Recovering the training curve
+# averages = pickle.load(open("{}-averages.p".format(env_name), "rb"))
+# episode_won = pickle.load(open("{}-episode_won.p".format(env_name), "rb"))
+# averages = helpers.plot_stats(averages, episode_won, N_SMOOTH, PLOT_FREQUENCY)  # takes run time

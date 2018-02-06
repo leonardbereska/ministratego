@@ -79,7 +79,7 @@ class Env:
         self.score = 0
         self.reward = 0
         self.steps = 0
-        self.death_thresh = None
+        self.death_steps = None
         self.illegal_moves = 0
 
         # rewards (to be overridden by subclass environment)
@@ -244,8 +244,8 @@ class Env:
             if p.type == 0:
                 self.reward += self.reward_loss
                 return True, False
-        if self.death_thresh is not None:
-            if self.score < self.death_thresh:
+        if self.death_steps is not None:
+            if self.steps > self.death_steps:
                 self.reward += self.reward_loss
                 return True, False
         return False, False
@@ -275,6 +275,7 @@ class Maze(Env):
     def __init__(self, agent0, agent1):
         super(Maze, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1
+        self.death_steps = 80
 
     def decide_pieces(self):
         known_place = [pieces.Piece(0, 1, (4, 4))]
