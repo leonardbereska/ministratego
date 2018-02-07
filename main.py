@@ -113,17 +113,17 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
     game_times_0 = []
     game_times_1 = []
-    # [1, 2, 2, 2, 3, 3, 10, 11, 11]
+    types = [1, 2, 2, 2, 3, 3, 10, 11, 11]
     for simu in range(num_simulations):  # simulate games
         # reset setup with new setup if none given
         if setup_0 is not None:
             setup_agent_0 = setup_0
         else:
-            setup_agent_0 = draw_random_setup([1, 3, 10], 0)
+            setup_agent_0 = draw_random_setup(types, 0)
         if setup_1 is not None:
             setup_agent_1 = setup_1
         else:
-            setup_agent_1 = draw_random_setup([1, 3, 10], 1)
+            setup_agent_1 = draw_random_setup(types, 1)
         agent_0.setup = setup_agent_0
         agent_1.setup = setup_agent_1
         # restart game
@@ -177,7 +177,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
                 break
         if show_game:
             helpers.print_board(game_.board)
-    file = open("{}_vs_{}_with_{}_sims_threepieces.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
+    file = open("{}_vs_{}_with_{}_sims.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
     file.write("Statistics of {} vs. {} with {} games played.\n".format(agent_output_type_0, agent_output_type_1, num_simulations))
     file.write("Overall computational time of simulation: {} seconds.\n".format(sum(game_times_0) + sum(game_times_1)))
 
@@ -224,7 +224,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="random", agent_type_1="heuristic", num_simulations=1000)
+simulation(agent_type_0="minmax", agent_type_1="heuristic", num_simulations=1000)
 
 # simulation()
 
