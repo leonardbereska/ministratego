@@ -89,7 +89,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         agent_output_type_0 = "OmnniscientMinMaxAgent"
 
     else:
-        agent_0 = agent.Reinforce(team=0)
+        agent_0 = agent.Stratego(team=0)
         agent_output_type_0 = "ReinforceLearningAgent"
 
     assert (agent_type_1 in available_agents)

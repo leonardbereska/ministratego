@@ -1,0 +1,28 @@
+Statistics of MonteCarloHeuristicAgent vs. HeuristicAgent with 1000 games played.
+Overall computational time of simulation: 8011.307938664 seconds.
+
+Agent MonteCarloHeuristicAgent won 424/1000 games (~42.4%).
+Reasons for winning: 280 flag captures, 144 wins through killing all enemies
+
+Agent HeuristicAgent won 576/1000 games (~57.6%).
+Reasons for winning: 438 flag captures, 138 wins through killing all enemies
+
+Average game duration overall: 25 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 3 rounds
+
+Average game duration for MonteCarloHeuristicAgent wins: 22 rounds
+Maximum number of rounds played: 153 rounds
+Minimum number of rounds played: 4 rounds
+
+Average game duration for HeuristicAgent wins: 27 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for HeuristicAgent wins: 10.94962972449185 seconds
+Maximum computational time: 264.33368742790844 seconds
+Minimum computational time: 0.2029248309331706 seconds
+
+Average computational time for MonteCarloHeuristicAgent wins: 4.019625512633715 seconds
+Maximum computational time: 25.693516971553436 seconds
+Minimum computational time: 0.364369454973712 seconds
