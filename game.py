@@ -24,11 +24,13 @@ class Game:
         setup0, setup1 = agent0.setup, agent1.setup
 
         for idx, piece in np.ndenumerate(setup0):
-            piece.hidden = False
-            self.board[piece.position] = piece
+            if piece is not None:
+                piece.hidden = False
+                self.board[piece.position] = piece
         for idx, piece in np.ndenumerate(setup1):
-            piece.hidden = False
-            self.board[piece.position] = piece
+            if piece is not None:
+                piece.hidden = False
+                self.board[piece.position] = piece
         obstacle = pieces.Piece(99, 99, (2, 2))
         obstacle.hidden = False
         self.board[2, 2] = obstacle  # set obstacle

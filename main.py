@@ -9,17 +9,18 @@ from timeit import default_timer as timer
 
 def draw_random_setup(types_available, team):
     setup_agent = np.empty((2, 5), dtype=object)
+    nr_pieces = len(types_available)
     if team == 0:
         flag_positions = [(4, j) for j in range(5)] + [(3, 2)]
         flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
         flag_pos = 4 - flag_positions[flag_choice][0], 4 - flag_positions[flag_choice][1]
         setup_agent[flag_pos] = pieces.Piece(0, 0, flag_positions[flag_choice])
 
-        types_draw = np.random.choice(types_available, 9, replace=False)
+        types_draw = np.random.choice(types_available, nr_pieces, replace=False)
         positions_agent_0 = [(i, j) for i in range(3, 5) for j in range(5)]
         positions_agent_0.remove(flag_positions[flag_choice])
 
-        for idx in range(9):
+        for idx in range(nr_pieces):
             pos = positions_agent_0[idx]
             setup_agent[(4 - pos[0], 4 - pos[1])] = pieces.Piece(types_draw[idx], 0, pos)
     elif team == 1:
@@ -27,11 +28,11 @@ def draw_random_setup(types_available, team):
         flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
         setup_agent[flag_positions[flag_choice]] = pieces.Piece(0, 1, flag_positions[flag_choice])
 
-        types_draw = np.random.choice(types_available, 9, replace=False)
+        types_draw = np.random.choice(types_available, nr_pieces, replace=False)
         positions_agent_1 = [(i, j) for i in range(2) for j in range(5)]
         positions_agent_1.remove(flag_positions[flag_choice])
 
-        for idx in range(9):
+        for idx in range(nr_pieces):
             pos = positions_agent_1[idx]
             setup_agent[pos] = pieces.Piece(types_draw[idx], 1, pos)
     return setup_agent
