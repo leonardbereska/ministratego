@@ -50,11 +50,19 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     rounds_counter_per_game = []
     rounds_counter_win_agent_0 = []
     rounds_counter_win_agent_1 = []
-    available_agents = ["random", "minmax", "omniscientminmax", "reinforce", "montecarlo"]
+    available_agents = ["random", "minmax", "omniscientminmax", "reinforce", "montecarlo", "heuristic", "omniscientheuristic"]
     assert (agent_type_0 in available_agents)
     if agent_type_0 == "random":
         agent_0 = agent.Random(team=0)
         agent_output_type_0 = "RandomAgent"
+
+    elif agent_type_0 == "heuristic":
+        agent_0 = agent.Heuristic(team=0)
+        agent_output_type_0 = "HeuristicAgent"
+
+    elif agent_type_0 == "omniscientheuristic":
+        agent_0 = agent.OmniscientHeuristic(team=0)
+        agent_output_type_0 = "OmniscientHeuristicAgent"
 
     elif agent_type_0 == "montecarlo":
         agent_0 = agent.MonteCarlo(team=0, number_of_iterations_game_sim=100)
@@ -78,6 +86,14 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         agent_1 = agent.Random(team=1)
         agent_output_type_1 = "RandomAgent"
 
+    elif agent_type_1 == "heuristic":
+        agent_1 = agent.Heuristic(team=1)
+        agent_output_type_1 = "HeuristicAgent"
+
+    elif agent_type_1 == "omniscientheuristic":
+        agent_1 = agent.OmniscientHeuristic(team=1)
+        agent_output_type_1 = "OmniscientHeuristicAgent"
+
     elif agent_type_1 == "montecarlo":
         agent_1 = agent.MonteCarlo(team=1, number_of_iterations_game_sim=100)
         agent_output_type_1 = "MonteCarloAgent"
@@ -96,16 +112,17 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
     game_times_0 = []
     game_times_1 = []
+    # [1, 2, 2, 2, 3, 3, 10, 11, 11]
     for simu in range(num_simulations):  # simulate games
         # reset setup with new setup if none given
         if setup_0 is not None:
             setup_agent_0 = setup_0
         else:
-            setup_agent_0 = draw_random_setup([1, 2, 2, 2, 3, 3, 10, 11, 11], 0)
+            setup_agent_0 = draw_random_setup([1, 3, 10], 0)
         if setup_1 is not None:
             setup_agent_1 = setup_1
         else:
-            setup_agent_1 = draw_random_setup([1, 2, 2, 2, 3, 3, 10, 11, 11], 1)
+            setup_agent_1 = draw_random_setup([1, 3, 10], 1)
         agent_0.setup = setup_agent_0
         agent_1.setup = setup_agent_1
         # restart game
@@ -159,7 +176,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
                 break
         if show_game:
             helpers.print_board(game_.board)
-    file = open("{}_vs_{}_with_{}_sims.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
+    file = open("{}_vs_{}_with_{}_sims_threepieces.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
     file.write("Statistics of {} vs. {} with {} games played.\n".format(agent_output_type_0, agent_output_type_1, num_simulations))
     file.write("Overall computational time of simulation: {} seconds.\n".format(sum(game_times_0) + sum(game_times_1)))
 
@@ -206,7 +223,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="montecarlo", agent_type_1="omniscientminmax", num_simulations=1000)
+simulation(agent_type_0="random", agent_type_1="heuristic", num_simulations=1000)
 
 # simulation()
 

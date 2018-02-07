@@ -457,7 +457,7 @@ class ThreePieces(Reinforce):
         self.state_dim = len(self.state_represent())
         self.model = models.SmallConv(self.state_dim, self.action_dim, n_filter=20, n_hidden=32)
         # self.model = models.ThreePieces(self.state_dim, self.action_dim)
-        self.model.load_state_dict(torch.load('./saved_models/threepieces_current.pkl'))
+        self.model.load_state_dict(torch.load('./saved_models/threepieces_best.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -799,10 +799,6 @@ class Omniscient(MiniMax):
     """
     def __init__(self, team, setup=None, depth=None):
         super(Omniscient, self).__init__(team=team, setup=setup, depth=depth)
-        self.setup = setup
-        self.winFightReward = 10
-        self.neutralFightReward = 5
-        self.winGameReward = 1000
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
@@ -828,13 +824,10 @@ class Omniscient(MiniMax):
         pass
 
 
-class Heuristic(Omniscient):
-    def __init__(self, team, setup=None, depth=2):
-        super(Heuristic, self).__init__(team=team, setup=setup, depth=depth)
-        self.evaluator = Stratego(team)
-        self.winFightReward = 0
-        self.neutralFightReward = 0
-        self.winGameReward = 100
+class OmniscientHeuristic(Omniscient):
+    def __init__(self, team, setup=None):
+        super(OmniscientHeuristic, self).__init__(team=team, setup=setup)
+        self.evaluator = ThreePieces(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
@@ -857,6 +850,31 @@ class Heuristic(Omniscient):
                 terminal_reward = - self.winGameReward
             return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
 
+
+class Heuristic(MiniMax):
+    def __init__(self, team, setup=None):
+        super(Heuristic, self).__init__(team=team, setup=setup)
+        self.evaluator = ThreePieces(team)
+
+    def install_board(self, board, reset=False):
+        super().install_board(board, reset)
+        self.evaluator.install_board(board, reset)
+
+    def get_network_reward(self):
+        state = self.evaluator.board_to_state()
+        self.evaluator.model.eval()
+        state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
+        return np.max(state_action_values)
+
+    def get_terminal_reward(self, done, won, depth):
+        if not done:
+            return self.get_network_reward()
+        else:
+            if won:
+                terminal_reward = self.winGameReward
+            elif not won:
+                terminal_reward = - self.winGameReward
+            return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
 
 class MonteCarlo(MiniMax):
     def __init__(self, team, setup=None, number_of_iterations_game_sim=50):
