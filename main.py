@@ -123,7 +123,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         agent_output_type_1 = "OmnniscientMinMaxAgent"
 
     else:
-        agent_1 = agent.Reinforce(team=1)
+        agent_1 = agent.Stratego(team=1)
         agent_output_type_1 = "ReinforceLearningAgent"
 
     game_times_0 = []
@@ -239,7 +239,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="heuristic", agent_type_1="omniscientminmax", num_simulations=1000)
+simulation(agent_type_0="montecarloheuristic", agent_type_1="minmax", num_simulations=1000)
 
 # simulation()
 

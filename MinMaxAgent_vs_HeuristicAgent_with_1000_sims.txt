@@ -1,0 +1,28 @@
+Statistics of MinMaxAgent vs. HeuristicAgent with 1000 games played.
+Overall computational time of simulation: 7150.174920577132 seconds.
+
+Agent MinMaxAgent won 515/1000 games (~51.5%).
+Reasons for winning: 378 flag captures, 137 wins through killing all enemies
+
+Agent HeuristicAgent won 485/1000 games (~48.5%).
+Reasons for winning: 346 flag captures, 139 wins through killing all enemies
+
+Average game duration overall: 24 rounds
+Maximum number of rounds played: 84 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for MinMaxAgent wins: 24 rounds
+Maximum number of rounds played: 84 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for HeuristicAgent wins: 24 rounds
+Maximum number of rounds played: 71 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for HeuristicAgent wins: 7.221024601282384 seconds
+Maximum computational time: 465.88425052595466 seconds
+Minimum computational time: 0.0726587456638299 seconds
+
+Average computational time for MinMaxAgent wins: 7.083452405738207 seconds
+Maximum computational time: 291.4402401842499 seconds
+Minimum computational time: 0.03483209341766269 seconds

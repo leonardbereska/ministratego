@@ -1,0 +1,28 @@
+Statistics of RandomAgent vs. OmniscientHeuristicAgent with 1000 games played.
+Overall computational time of simulation: 27337.154249149527 seconds.
+
+Agent RandomAgent won 99/1000 games (~9.9%).
+Reasons for winning: 46 flag captures, 53 wins through killing all enemies
+
+Agent OmniscientHeuristicAgent won 901/1000 games (~90.1%).
+Reasons for winning: 750 flag captures, 151 wins through killing all enemies
+
+Average game duration overall: 24 rounds
+Maximum number of rounds played: 103 rounds
+Minimum number of rounds played: 7 rounds
+
+Average game duration for RandomAgent wins: 29 rounds
+Maximum number of rounds played: 80 rounds
+Minimum number of rounds played: 8 rounds
+
+Average game duration for OmniscientHeuristicAgent wins: 23 rounds
+Maximum number of rounds played: 103 rounds
+Minimum number of rounds played: 7 rounds
+
+Average computational time for OmniscientHeuristicAgent wins: 28.927361775514687 seconds
+Maximum computational time: 218.2766695315695 seconds
+Minimum computational time: 0.4872650153865834 seconds
+
+Average computational time for RandomAgent wins: 12.864659488997932 seconds
+Maximum computational time: 90.9508044278673 seconds
+Minimum computational time: 0.5653596729043784 seconds
