@@ -51,7 +51,14 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     rounds_counter_per_game = []
     rounds_counter_win_agent_0 = []
     rounds_counter_win_agent_1 = []
-    available_agents = ["random", "minmax", "omniscientminmax", "reinforce", "montecarlo", "heuristic", "omniscientheuristic"]
+    available_agents = ["random",
+                        "minmax",
+                        "omniscientminmax",
+                        "reinforce",
+                        "montecarlo",
+                        "heuristic",
+                        "omniscientheuristic",
+                        "montecarloheuristic"]
     assert (agent_type_0 in available_agents)
     if agent_type_0 == "random":
         agent_0 = agent.Random(team=0)
@@ -60,6 +67,10 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     elif agent_type_0 == "heuristic":
         agent_0 = agent.Heuristic(team=0)
         agent_output_type_0 = "HeuristicAgent"
+
+    elif agent_type_0 == "montecarloheuristic":
+        agent_0 = agent.MonteCarloHeuristic(team=0)
+        agent_output_type_0 = "MonteCarloHeuristicAgent"
 
     elif agent_type_0 == "omniscientheuristic":
         agent_0 = agent.OmniscientHeuristic(team=0)
@@ -90,6 +101,10 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     elif agent_type_1 == "heuristic":
         agent_1 = agent.Heuristic(team=1)
         agent_output_type_1 = "HeuristicAgent"
+
+    elif agent_type_1 == "montecarloheuristic":
+        agent_1 = agent.MonteCarloHeuristic(team=1)
+        agent_output_type_1 = "MonteCarloHeuristicAgent"
 
     elif agent_type_1 == "omniscientheuristic":
         agent_1 = agent.OmniscientHeuristic(team=1)
@@ -224,7 +239,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 #         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
 
 #simulation(setup_agent0, setup_agent1)
-simulation(agent_type_0="minmax", agent_type_1="heuristic", num_simulations=1000)
+simulation(agent_type_0="heuristic", agent_type_1="omniscientminmax", num_simulations=1000)
 
 # simulation()
 

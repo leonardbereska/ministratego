@@ -509,7 +509,7 @@ class Stratego(Reinforce):
         self.state_dim = len(self.state_represent())
         self.model = models.MoreLayer(self.state_dim, self.action_dim, n_filter=20, n_hidden=128)
         # self.model = models.Linear(self.state_dim, self.action_dim)
-        self.model.load_state_dict(torch.load('./saved_models/stratego_current.pkl'))
+        self.model.load_state_dict(torch.load('./saved_models/stratego_best.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -827,7 +827,7 @@ class Omniscient(MiniMax):
 class OmniscientHeuristic(Omniscient):
     def __init__(self, team, setup=None):
         super(OmniscientHeuristic, self).__init__(team=team, setup=setup)
-        self.evaluator = ThreePieces(team)
+        self.evaluator = Stratego(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
@@ -854,7 +854,7 @@ class OmniscientHeuristic(Omniscient):
 class Heuristic(MiniMax):
     def __init__(self, team, setup=None):
         super(Heuristic, self).__init__(team=team, setup=setup)
-        self.evaluator = ThreePieces(team)
+        self.evaluator = Stratego(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
@@ -966,3 +966,39 @@ class MonteCarlo(MiniMax):
                 return True, True
         else:
             return False, None
+
+
+class MonteCarloHeuristic(MonteCarlo):
+    def __init__(self, team, setup=None):
+        super(MonteCarloHeuristic, self).__init__(team=team,
+                                                  setup=setup,
+                                                  number_of_iterations_game_sim=1)
+        self.evaluator = Stratego(team)
+
+    def get_network_reward(self):
+        state = self.evaluator.board_to_state()
+        self.evaluator.model.eval()
+        state_action_values = self.evaluator.model(Variable(state, volatile=True)).data.numpy()
+        return np.max(state_action_values)
+
+    def decide_move(self):
+        """
+        given the maximum depth, copy the known board so far, assign the pieces by random, while still
+        respecting the current knowledge, and then decide the move via minimax algorithm.
+        :return: tuple of position tuples
+        """
+        possible_moves = helpers.get_poss_moves(self.board, self.team)
+        next_action = None
+        if possible_moves:
+            values_of_moves = dict.fromkeys(possible_moves, 0)
+            for move in possible_moves:
+                for draw in range(self._nr_of_enemy_setups_to_draw):
+                    curr_board = self.draw_consistent_enemy_setup(copy.deepcopy(self.board))
+                    curr_board, _ = self.do_move(move, curr_board, bookkeeping=False, true_gameplay=False)
+                    self.evaluator.board = curr_board
+                    values_of_moves[move] += self.get_network_reward() / self._nr_of_enemy_setups_to_draw
+                    self.undo_last_move(curr_board)
+            evaluations = list(values_of_moves.values())
+            actions = list(values_of_moves.keys())
+            next_action = actions[evaluations.index(max(evaluations))]
+        return next_action
