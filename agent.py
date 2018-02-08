@@ -210,10 +210,25 @@ class Reinforce(Agent):
         self.action_dim = NotImplementedError
         self.model = NotImplementedError
 
+    def install_board(self, board, reset=False):
+        super().install_board(board, reset=False)
+        actors = []
+        for _, piece in np.ndenumerate(self.board):
+            if piece is not None:
+                if piece.team == self.team:
+                    if piece.can_move:
+                        actors.append(piece)
+        actors = sorted(actors, key=lambda actor: actor.type + actor.version/10)
+        # train for unique actor sequence, sort by type and version
+        self.action_represent(actors)
+
     def decide_move(self):
         state = self.board_to_state()
         action = self.select_action(state, p_random=0.00)
-        move = self.action_to_move(action[0, 0])
+        if action is not None:
+            move = self.action_to_move(action[0, 0])
+        else:
+            return None
         return move
 
     def state_represent(self):
@@ -244,7 +259,8 @@ class Reinforce(Agent):
         """
         poss_actions = self.poss_actions(action_dim=self.action_dim)
         if not poss_actions:
-            return torch.LongTensor([[random.randint(0, self.action_dim-1)]])
+            return None
+            # return torch.LongTensor([[random.randint(0, self.action_dim-1)]])
         sample = random.random()
         if sample > p_random:
             self.model.eval()
@@ -296,6 +312,8 @@ class Reinforce(Agent):
         :param action: action integer e.g. 3
         :return: move e.g. ((0, 0), (0, 1))
         """
+        if action is None:
+            return None
         i, action = self.piece_action[action]
         piece = self.actors[i]
         piece_pos = piece.position  # where is the piece
@@ -827,7 +845,7 @@ class Omniscient(MiniMax):
 class OmniscientHeuristic(Omniscient):
     def __init__(self, team, setup=None):
         super(OmniscientHeuristic, self).__init__(team=team, setup=setup)
-        self.evaluator = Stratego(team)
+        self.evaluator = ThreePieces(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
@@ -854,7 +872,7 @@ class OmniscientHeuristic(Omniscient):
 class Heuristic(MiniMax):
     def __init__(self, team, setup=None):
         super(Heuristic, self).__init__(team=team, setup=setup)
-        self.evaluator = Stratego(team)
+        self.evaluator = ThreePieces(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
@@ -973,7 +991,7 @@ class MonteCarloHeuristic(MonteCarlo):
         super(MonteCarloHeuristic, self).__init__(team=team,
                                                   setup=setup,
                                                   number_of_iterations_game_sim=1)
-        self.evaluator = Stratego(team)
+        self.evaluator = ThreePieces(team)
 
     def get_network_reward(self):
         state = self.evaluator.board_to_state()
