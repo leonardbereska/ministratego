@@ -68,9 +68,10 @@ class Agent:
             self.last_N_moves = []
             self.pieces_last_N_Moves_beforePos = []
             self.pieces_last_N_Moves_afterPos = []
+        self.action_represent()  # for installing action representation in reinforcement agents
         return None
 
-    def action_represent(self, actors):  # does nothing but is important for Reinforce TODO deprecate
+    def action_represent(self):  # does nothing but is important for Reinforce
         return
 
     def update_board(self, updated_piece, board=None):
@@ -222,13 +223,23 @@ class Reinforce(Agent):
         """
         return NotImplementedError
 
-    def action_represent(self, actors):
+    def action_represent(self):
         """
         Initialize pieces to be controlled by agent (self.actors) (only known and to be set by environment)
         and list of (piece number, action number)
         e.g. for two pieces with 4 actions each: ((0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3))
         """
-        self.actors = actors
+        actors = []
+        for pos in [(i, j) for i in range(5) for j in range(5)]:
+            p = self.board[pos]
+            if p is not None:
+                if p.team == self.team:
+                    if p.can_move:
+                        actors.append(p)
+        self.actors = sorted(actors, key=lambda actor: actor.type + actor.version / 10)
+        # train for unique actor sequence, sort by type and version
+
+        # self.actors = actors
         piece_action = []
         for i, a in enumerate(self.actors):
             if a.type == 2:
@@ -824,15 +835,15 @@ class Omniscient(MiniMax):
         pass
 
 
-class OmniscientHeuristic(Omniscient):
+class OmniscientHeuristic(MiniMax):
     def __init__(self, team, setup=None):
         super(OmniscientHeuristic, self).__init__(team=team, setup=setup)
-        self.evaluator = Stratego(team)
+        self.evaluator = ThreePieces(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
         self.evaluator.install_board(board, reset)
-        self.unhide_all()  # use if inheriting from Omniscient
+        # self.unhide_all()  # use if inheriting from Omniscient
 
     def get_network_reward(self):
         state = self.evaluator.board_to_state()
@@ -854,7 +865,7 @@ class OmniscientHeuristic(Omniscient):
 class Heuristic(MiniMax):
     def __init__(self, team, setup=None):
         super(Heuristic, self).__init__(team=team, setup=setup)
-        self.evaluator = Stratego(team)
+        self.evaluator = ThreePieces(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)

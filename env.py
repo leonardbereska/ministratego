@@ -57,17 +57,8 @@ class Env:
         self.agents = (agent0, agent1)
 
         # give agent actors (pieces whose movements he controls)
-        for team in (0, 1):
-            actors = []
-            for pos in self.board_positions:
-                p = self.board[pos]
-                if p is not None:
-                    if p.team == team:
-                        if p.can_move:
-                            actors.append(p)
-            actors = sorted(actors, key=lambda actor: actor.type + actor.version/10)
-            # train for unique actor sequence, sort by type and version
-            self.agents[team].action_represent(actors)
+        # for team in (0, 1):
+        #     self.agents[team].action_represent(actors)
 
         self.battleMatrix = helpers.get_battle_matrix()
 
