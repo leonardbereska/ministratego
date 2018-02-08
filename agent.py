@@ -835,7 +835,7 @@ class Omniscient(MiniMax):
         pass
 
 
-class OmniscientHeuristic(MiniMax):
+class OmniscientHeuristic(Omniscient):
     def __init__(self, team, setup=None):
         super(OmniscientHeuristic, self).__init__(team=team, setup=setup)
         self.evaluator = ThreePieces(team)
@@ -843,7 +843,7 @@ class OmniscientHeuristic(MiniMax):
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
         self.evaluator.install_board(board, reset)
-        # self.unhide_all()  # use if inheriting from Omniscient
+        self.unhide_all()  # use if inheriting from Omniscient
 
     def get_network_reward(self):
         state = self.evaluator.board_to_state()
@@ -886,6 +886,7 @@ class Heuristic(MiniMax):
             elif not won:
                 terminal_reward = - self.winGameReward
             return terminal_reward * (depth + 1) / (self.max_depth + 1) * (terminal_reward / self.kill_reward)
+
 
 class MonteCarlo(MiniMax):
     def __init__(self, team, setup=None, number_of_iterations_game_sim=50):
