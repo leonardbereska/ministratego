@@ -89,7 +89,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         agent_output_type_0 = "OmnniscientMinMaxAgent"
 
     else:
-        agent_0 = agent.ThreePieces(team=0)
+        agent_0 = agent.Stratego(team=0)
         agent_output_type_0 = "ReinforceLearningAgent"
 
     assert (agent_type_1 in available_agents)
@@ -123,13 +123,13 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
         agent_output_type_1 = "OmnniscientMinMaxAgent"
 
     else:
-        agent_1 = agent.ThreePieces(team=1)
+        agent_1 = agent.Stratego(team=1)
         agent_output_type_1 = "ReinforceLearningAgent"
 
     game_times_0 = []
     game_times_1 = []
-    # types = [1, 2, 2, 2, 3, 3, 10, 11, 11]
-    types = [1, 3, 10]
+    types = [1, 2, 2, 2, 3, 3, 10, 11, 11]
+    #types = [1, 3, 10]
     for simu in range(num_simulations):  # simulate games
         # reset setup with new setup if none given
         if setup_0 is not None:
@@ -193,7 +193,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
                 break
         if show_game:
             helpers.print_board(game_.board)
-    file = open("{}_vs_{}_with_{}_sims_threepieces.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
+    file = open("{}_vs_{}_with_{}_sims.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
     file.write("Statistics of {} vs. {} with {} games played.\n".format(agent_output_type_0, agent_output_type_1, num_simulations))
     file.write("Overall computational time of simulation: {} seconds.\n".format(sum(game_times_0) + sum(game_times_1)))
 
@@ -241,7 +241,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
 #simulation(setup_agent0, setup_agent1)
 
-simulation(agent_type_0="reinforce", agent_type_1="heuristic", num_simulations=1000)
+simulation(agent_type_0="reinforce", agent_type_1="random", num_simulations=1000)
 
 # simulation(agent_type_0="reinforce", agent_type_1="minmax", num_simulations=1000)
 
