@@ -241,14 +241,14 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
 #simulation(setup_agent0, setup_agent1)
 
-simulation(agent_type_0="reinforce", agent_type_1="random", num_simulations=1000)
+#simulation(agent_type_0="reinforce", agent_type_1="random", num_simulations=1000)
 
 # simulation(agent_type_0="reinforce", agent_type_1="minmax", num_simulations=1000)
 
 
 
 
-def simu_env(env, n_runs=100, watch=True):
+def simu_env(env, n_runs=1000, watch=True):
     """
     Plots simulated games in an environment for visualization
     :param env: environment to be run
@@ -260,15 +260,15 @@ def simu_env(env, n_runs=100, watch=True):
     n_lost = 0
     for i in range(n_runs):
         env.reset()
-        # env.show()
+        # environment.show()
         done = False
         while not done:
-            _, done, won = env.step()
+            _, done, won = environment.step()
             if watch:
-                env.show()
+                environment.show()
             if done and won:
                 n_won += 1
-            elif done and not won or env.steps > 2000:  # break game that takes too long
+            elif done and not won or environment.steps > 2000:  # break game that takes too long
                 n_lost += 1
                 break
         print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won/(n_won+n_lost), 2)))
@@ -299,6 +299,7 @@ def simu_env(env, n_runs=100, watch=True):
 # simu_env(test, 100, watch=True)
 
 
-# environment = env.FourPieces(agent.FourPieces(0), agent.Random(1))
+environment = env.ThreePieces(agent.Heuristic(0), agent.MiniMax(1))
+simu_env(environment, 100, watch=False)
 # helpers.visualize_features(5000, environment, "fourpieces")
 

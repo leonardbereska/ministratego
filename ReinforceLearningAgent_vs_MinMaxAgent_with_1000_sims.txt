@@ -1,0 +1,28 @@
+Statistics of ReinforceLearningAgent vs. MinMaxAgent with 1000 games played.
+Overall computational time of simulation: 15875.516162064552 seconds.
+
+Agent ReinforceLearningAgent won 182/1000 games (~18.2%).
+Reasons for winning: 23 flag captures, 159 wins through killing all enemies
+
+Agent MinMaxAgent won 818/1000 games (~81.8%).
+Reasons for winning: 743 flag captures, 75 wins through killing all enemies
+
+Average game duration overall: 52 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 3 rounds
+
+Average game duration for ReinforceLearningAgent wins: 66 rounds
+Maximum number of rounds played: 213 rounds
+Minimum number of rounds played: 8 rounds
+
+Average game duration for MinMaxAgent wins: 49 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for MinMaxAgent wins: 17.58405820250478 seconds
+Maximum computational time: 1917.2215140279095 seconds
+Minimum computational time: 0.09573587342492829 seconds
+
+Average computational time for ReinforceLearningAgent wins: 8.196464573712312 seconds
+Maximum computational time: 60.90204997091291 seconds
+Minimum computational time: 0.296739935786718 seconds
