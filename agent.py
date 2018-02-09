@@ -213,15 +213,7 @@ class Reinforce(Agent):
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset=False)
-        actors = []
-        for _, piece in np.ndenumerate(self.board):
-            if piece is not None:
-                if piece.team == self.team:
-                    if piece.can_move:
-                        actors.append(piece)
-        actors = sorted(actors, key=lambda actor: actor.type + actor.version/10)
-        # train for unique actor sequence, sort by type and version
-        self.action_represent(actors)
+        self.action_represent()
 
     def decide_move(self):
         state = self.board_to_state()
@@ -583,6 +575,8 @@ class MiniMax(Agent):
 
         # the matrix table for deciding battle outcomes between two pieces
         self.battleMatrix = helpers.get_battle_matrix()
+
+    def 
 
     def decide_move(self):
         """

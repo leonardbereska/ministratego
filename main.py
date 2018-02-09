@@ -241,7 +241,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
 #simulation(setup_agent0, setup_agent1)
 
-simulation(agent_type_0="reinforce", agent_type_1="heuristic", num_simulations=1000)
+#simulation(agent_type_0="montecarlo", agent_type_1="omniscientminmax", num_simulations=1000)
 
 # simulation(agent_type_0="reinforce", agent_type_1="minmax", num_simulations=1000)
 
@@ -299,6 +299,6 @@ def simu_env(env, n_runs=100, watch=True):
 # simu_env(test, 100, watch=True)
 
 
-# environment = env.FourPieces(agent.FourPieces(0), agent.Random(1))
+environment = env.ThreePieces(agent.ThreePieces(0), agent.Random(1))
 # helpers.visualize_features(5000, environment, "fourpieces")
 
