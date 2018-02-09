@@ -267,12 +267,12 @@ def simu_env(env, n_runs=1000, watch=True):
         # environment.show()
         done = False
         while not done:
-            _, done, won = environment.step()
+            _, done, won = env.step()
             if watch:
-                environment.show()
+                env.show()
             if done and won:
                 n_won += 1
-            elif done and not won or environment.steps > 2000:  # break game that takes too long
+            elif done and not won or env.steps > 2000:  # break game that takes too long
                 n_lost += 1
                 break
         print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won/(n_won+n_lost), 2)))
@@ -304,7 +304,7 @@ def simu_env(env, n_runs=1000, watch=True):
 
 
 environment = env.ThreePieces(agent.Heuristic(0), agent.MiniMax(1))
-simu_env(environment, 100, watch=False)
+simu_env(environment, 100, watch=True)
 
 # helpers.visualize_features(5000, environment, "fourpieces")
 
