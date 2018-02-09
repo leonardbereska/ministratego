@@ -1,0 +1,28 @@
+Statistics of ReinforceLearningAgent vs. HeuristicAgent with 1000 games played.
+Overall computational time of simulation: 16690.880308824868 seconds.
+
+Agent ReinforceLearningAgent won 182/1000 games (~18.2%).
+Reasons for winning: 23 flag captures, 159 wins through killing all enemies
+
+Agent HeuristicAgent won 818/1000 games (~81.8%).
+Reasons for winning: 715 flag captures, 103 wins through killing all enemies
+
+Average game duration overall: 56 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 3 rounds
+
+Average game duration for ReinforceLearningAgent wins: 70 rounds
+Maximum number of rounds played: 367 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for HeuristicAgent wins: 53 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for HeuristicAgent wins: 18.385318844652552 seconds
+Maximum computational time: 730.3416975111363 seconds
+Minimum computational time: 0.14161734696790518 seconds
+
+Average computational time for ReinforceLearningAgent wins: 9.075216999445495 seconds
+Maximum computational time: 52.02736084296248 seconds
+Minimum computational time: 0.3078443551548844 seconds

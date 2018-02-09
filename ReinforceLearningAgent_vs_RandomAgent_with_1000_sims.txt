@@ -1,0 +1,28 @@
+Statistics of ReinforceLearningAgent vs. RandomAgent with 1000 games played.
+Overall computational time of simulation: 159.46110560911217 seconds.
+
+Agent ReinforceLearningAgent won 368/1000 games (~36.8%).
+Reasons for winning: 49 flag captures, 319 wins through killing all enemies
+
+Agent RandomAgent won 632/1000 games (~63.2%).
+Reasons for winning: 511 flag captures, 121 wins through killing all enemies
+
+Average game duration overall: 95 rounds
+Maximum number of rounds played: 435 rounds
+Minimum number of rounds played: 3 rounds
+
+Average game duration for ReinforceLearningAgent wins: 117 rounds
+Maximum number of rounds played: 435 rounds
+Minimum number of rounds played: 12 rounds
+
+Average game duration for RandomAgent wins: 83 rounds
+Maximum number of rounds played: 381 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for RandomAgent wins: 0.1417848719351365 seconds
+Maximum computational time: 0.5168849369312198 seconds
+Minimum computational time: 0.0067507747698698495 seconds
+
+Average computational time for ReinforceLearningAgent wins: 0.18981811561441822 seconds
+Maximum computational time: 0.6304817480875897 seconds
+Minimum computational time: 0.028213356482751806 seconds

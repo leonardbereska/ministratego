@@ -576,7 +576,11 @@ class MiniMax(Agent):
         # the matrix table for deciding battle outcomes between two pieces
         self.battleMatrix = helpers.get_battle_matrix()
 
-    def 
+    def install_board(self, board, reset=False):
+        super().install_board(board, reset=reset)
+        enemy_types = set([piece.type for piece in self.ordered_opp_pieces])
+        for piece in self.ordered_opp_pieces:
+            piece.potential_types = enemy_types
 
     def decide_move(self):
         """
