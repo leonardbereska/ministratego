@@ -9,6 +9,7 @@ class Piece:
         self.position = position
         # self.positions_history = [position]
         self.unique_identifier = np.random.randint(0, 10000)
+        self.potential_types = [0, 1, 2, 3, 10, 11]
         self.version = 1
         self.dead = False
         self.hidden = True

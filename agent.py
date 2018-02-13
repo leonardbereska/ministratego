@@ -57,7 +57,7 @@ class Agent:
                 elif piece.team == self.other_team:
                     enemy_pieces.append(piece)
         enemy_types = [piece.type for piece in enemy_pieces]
-        self.ordered_opp_pieces = np.array(enemy_pieces)
+        self.ordered_opp_pieces = enemy_pieces
         self.own_pieces = np.array(self.own_pieces)
 
         for idx, piece in np.ndenumerate(self.ordered_opp_pieces):
@@ -575,12 +575,6 @@ class MiniMax(Agent):
 
         # the matrix table for deciding battle outcomes between two pieces
         self.battleMatrix = helpers.get_battle_matrix()
-
-    def install_board(self, board, reset=False):
-        super().install_board(board, reset=reset)
-        enemy_types = set([piece.type for piece in self.ordered_opp_pieces])
-        for piece in self.ordered_opp_pieces:
-            piece.potential_types = enemy_types
 
     def decide_move(self):
         """
