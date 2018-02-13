@@ -8,6 +8,13 @@ from timeit import default_timer as timer
 
 
 def draw_random_setup(types_available, team):
+    """
+    Draw a random setup from the set of types types_available after placing the flag
+    somewhere in the last row of the board of the side of 'team', or behind the obstacle.
+    :param types_available: list of types to draw from, integers
+    :param team: boolean, 1 or 0 depending on the team
+    :return: the setup, in numpy array form
+    """
     setup_agent = np.empty((2, 5), dtype=object)
     nr_pieces = len(types_available)
     if team == 0:
@@ -40,7 +47,17 @@ def draw_random_setup(types_available, team):
 
 def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_1=None, show_game=False):
     """
-    :return: tested_setups: list of setup and winning percentage
+    Simulate num_simulations many games of the agent of type agent_type_0 against the agent of
+    type agent_type_1. If setup_0 or setup_1 are provided respectively, then take the pieces
+    setup from those. If show_game is True, the game will be printed by the internal function.
+    :param agent_type_0: string, possible values are "random", "minmax", "omniscientminmax", "reinforce",
+    "montecarlo", "heuristic", "omniscientheuristic", "montecarloheuristic"
+    :param agent_type_1: string, possible values are equal to those of agent_type_0
+    :param num_simulations: integer number of games to simulate
+    :param setup_0: (optional) numpy array of the setup of agent 0
+    :param setup_1: (optional) numpy array of the setup of agent 1
+    :param show_game: (optional) boolean, whether to show the game or not
+    :return: None, writes results to a file named after the agents acting
     """
     blue_won = 0
     blue_wins_bc_flag = 0
@@ -225,27 +242,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     file.close()
     return
 
-
-# good_setups in helpers now
-# good_setup = helpers.get_good_setup()
-# good_setup2 = helpers.get_good_setup2()
-
-# setup_agent0 = np.empty((2, 5), dtype=object)
-# setup_agent1 = np.empty((2, 5), dtype=object)
-# for pos, piece in np.ndenumerate(good_setup):
-#     setup_agent0[pos] = pieces.Piece(piece, 0, (4-pos[0], 4-pos[1]))
-#     setup_agent1[pos] = pieces.Piece(piece, 1, pos)
-# for pos, type in np.ndenumerate(rd_setup):
-#     if not type != type:  # check if type is NaN
-#         setup_agent1[pos] = pieces.Piece(int(type), 1, pos)
-
-#simulation(setup_agent0, setup_agent1)
-
 #simulation(agent_type_0="reinforce", agent_type_1="random", num_simulations=1000)
-
-# simulation(agent_type_0="reinforce", agent_type_1="minmax", num_simulations=1000)
-
-
 
 
 def simu_env(env, n_runs=1000, watch=True):
@@ -275,31 +272,6 @@ def simu_env(env, n_runs=1000, watch=True):
     print("Simulation over: {} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won / (n_won + n_lost), 2)))
 
 
-# test = env.FindFlag(agent.Finder(0), agent.Random(1))  # MinMax Heuristic
-# simu_env(test, 100, watch=True)
-
-# test = env.Stratego(agent.Stratego(0), agent.Random(1))
-# simu_env(test, 100, watch=True)
-
-# for higher depth heuristic becomes more useful somehow -> why?
-
-# test = env.Stratego(agent.Heuristic(0, depth=2), agent.Random(1))
-# test = env.Stratego(agent.MonteCarlo(0, number_of_iterations_game_sim=1000), agent.Random(1))
-# Heuristic : Omniscient (depth 2) 51 : 49, win ratio for Agent 0: 0.51
-# Reinforce : Random 53 : 47
-# MiniMax(2) : Random 0.61 (of 100)
-
-# Stratego : Random 0.56 (of 1000)
-# Heuristic(2)(MiniMax) : Random  0.63 (of 100)
-# Heuristic(2)(Omniscient) : Random  0.83 (of 100)
-# Heuristic(2)(Omniscient) : Omniscient(2)  0.50 (of 100)
-# Heuristic(4)(Omniscient) : Omniscient(4)  0.50 (of 100)
-
-
-# simu_env(test, 100, watch=True)
-
-
-environment = env.ThreePieces(agent.Heuristic(0), agent.MiniMax(1))
+environment = env.Stratego(agent.Omniscient(0), agent.Random(1))
 simu_env(environment, 100, watch=False)
-# helpers.visualize_features(5000, environment, "fourpieces")
 

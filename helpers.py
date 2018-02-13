@@ -157,8 +157,8 @@ def print_board(board, same_figure=True):
     #plt.pause(1)
     plt.pause(.2)
 
-    # plt.show(block=False)
-    plt.show(block=True)
+    plt.show(block=False)
+    #plt.show(block=True)
 
 
 def get_poss_moves(board, team):
