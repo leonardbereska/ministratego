@@ -364,58 +364,6 @@ class Reinforce(Agent):
         return board_state
 
 
-# class Evaluator(Reinforce):
-#     def __init__(self, team):
-#         super(Evaluator, self).__init__(team=team)
-#         self.action_dim = 12
-#         self.state_dim = len(self.state_represent())
-#         self.model = models.Eval(self.state_dim)
-#
-#     def state_represent(self):
-#         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
-#         own_team_three = lambda p: (p.team == self.team and p.type == 3, 1)
-#         own_team_ten = lambda p: (p.team == self.team and p.type == 10, 1)
-#         # own_team = lambda p: (p.team == self.team and p.can_move, p.type)
-#         own_team_flag = lambda p: (p.team == self.team and not p.can_move, 1)
-#         opp_team_one = lambda p: (p.team == self.other_team and p.type == 1, 1)
-#         opp_team_three = lambda p: (p.team == self.other_team and p.type == 3, 1)
-#         opp_team_ten = lambda p: (p.team == self.other_team and p.type == 10, 1)
-#         opp_team_flag = lambda p: (p.team == self.other_team and not p.can_move, 1)
-#         obstacle = lambda p: (p.type == 99, 1)
-#         return own_team_one, own_team_three, own_team_ten, own_team_flag, \
-#                opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
-#
-#     def select_action(self, state, p_random):
-#         """
-#         Minmax one step, return action with highest next state value
-#         """
-#         poss_actions = self.poss_actions(action_dim=self.action_dim)
-#         if not poss_actions:
-#             return torch.LongTensor([[random.randint(0, self.action_dim-1)]])
-#         sample = random.random()
-#         if sample > p_random:
-#             self.model.eval()
-#             # curr_board = copy.deepcopy(self.board)
-#             best_value = 0
-#             for action in poss_actions:
-#                 move = self.action_to_move(action)
-#                 board = copy.deepcopy(self.board)
-#                 board, _ = self.do_move(move, board)
-#                 after_state = self.board_to_state(board)
-#
-#                 state_value = self.model(Variable(after_state, volatile=True)).data.numpy()  # train on after-states
-#                 if state_value > best_value:
-#                     best_action = action
-#                     best_value = state_value
-#
-#             return torch.LongTensor([[best_action]])
-#         else:
-#             # random from possible (not-illegal) actions
-#             i = random.randint(0, len(poss_actions) - 1)
-#             random_action = poss_actions[i]
-#             return torch.LongTensor([[random_action]])
-
-
 class Finder(Reinforce):
     """
     Agent for solving the FindFlag environment
@@ -615,6 +563,17 @@ class MiniMax(Agent):
         return chosen_action
 
     def max_val(self, board, current_reward, alpha, beta, depth):
+        """
+        Do the max players step in the minimax algorithm. Check first if the given board is in
+        a terminal state. If not, we will do each possible move once and send the process to
+        min_val to do the min players step.
+        :param board: the current board, numpy array
+        :param current_reward: the current value the path has accumulated
+        :param alpha: alpha threshold of the minimax alg
+        :param beta: beta threshold of the minimax alg
+        :param depth: the depth the process is at, integer
+        :return: tuple of best value, and a associated best_action (float, tuple)
+        """
         # this is what the expectimax agent will think
 
         # get my possible actions, then shuffle them to ensure randomness when no action
@@ -645,6 +604,9 @@ class MiniMax(Agent):
         return val, best_action
 
     def min_val(self, board, current_reward, alpha, beta, depth):
+        """
+        Step of the minimizing player in the minimax algorithm. See max_val for documentation.
+        """
         # this is what the opponent will think, the min-player
 
         # get my possible actions, then shuffle them to ensure randomness when no action
@@ -662,7 +624,7 @@ class MiniMax(Agent):
         # iterate through all actions
         for action in my_doable_actions:
             board, fight_result = self.do_move(action, board=board, bookkeeping=False, true_gameplay=False)
-            temp_reward = current_reward + self.add_temp_reward(fight_result)
+            temp_reward = current_reward - self.add_temp_reward(fight_result)
             new_val = self.max_val(board, temp_reward, alpha, beta, depth-1)[0]
             if val > new_val:
                 val = new_val
@@ -675,18 +637,23 @@ class MiniMax(Agent):
         return val, best_action
 
     def add_temp_reward(self, fight_result):
+        """
+        reward the fight given the outcome of it.
+        :param fight_result: integer category of the fight outcome
+        :return: reward, float
+        """
         # depending on the fight we want to update the current paths value
         temp_reward = 0
         if fight_result is not None:
-            if fight_result == 1:
+            if fight_result == 1:  # attacker won
                 temp_reward = self.kill_reward
-            elif fight_result == 2:
+            elif fight_result == 2:  # attacker won, every piece was known before
                 temp_reward = int(self.certainty_multiplier * self.kill_reward)
-            elif fight_result == 0:
+            elif fight_result == 0:  # neutral outcome
                 temp_reward = self.neutral_fight  # both pieces die
-            elif fight_result == -1:
+            elif fight_result == -1:  # attacker lost
                 temp_reward = -self.kill_reward
-            elif fight_result == -2:
+            elif fight_result == -2:  # attacker lost, every piece was known before
                 temp_reward = -int(self.certainty_multiplier * self.kill_reward)
         return temp_reward
 
@@ -718,6 +685,15 @@ class MiniMax(Agent):
             return False, None
 
     def get_terminal_reward(self, done, won, depth):
+        """
+        Reward for ending the game on a certain depth. If ended because of flag capture, then
+        reward with a depth discounted winGameReward. If ended because of depth limitation,
+        return 0
+        :param done: boolean, indicate whether the game ended
+        :param won: boolean, indicate whether the game was won or lost
+        :param depth: the depth at which the game ended
+        :return: game end reward, float
+        """
         if not done:
             return 0
         else:
@@ -815,7 +791,7 @@ class MiniMax(Agent):
 
 class Omniscient(MiniMax):
     """
-    Child of ExpectiSmart agent. This agent is omniscient and thus knows the location and type of each
+    Child of MiniMax agent. This agent is omniscient and thus knows the location and type of each
     piece of the enemy. It then plans by doing a minimax algorithm.
     """
     def __init__(self, team, setup=None, depth=None):
@@ -846,6 +822,9 @@ class Omniscient(MiniMax):
 
 
 class OmniscientHeuristic(Omniscient):
+    """
+    Omniscient Minimax planner, that uses a learned board heuristic as evaluation function.
+    """
     def __init__(self, team, setup=None):
         super(OmniscientHeuristic, self).__init__(team=team, setup=setup)
         self.evaluator = ThreePieces(team)
@@ -873,6 +852,9 @@ class OmniscientHeuristic(Omniscient):
 
 
 class Heuristic(MiniMax):
+    """
+    Non omniscient Minimax planner with learned board evluation function.
+    """
     def __init__(self, team, setup=None):
         super(Heuristic, self).__init__(team=team, setup=setup)
         self.evaluator = ThreePieces(team)
@@ -899,6 +881,9 @@ class Heuristic(MiniMax):
 
 
 class MonteCarlo(MiniMax):
+    """
+    Monte carlo agent, simulating the value of each move and choosing the best.
+    """
     def __init__(self, team, setup=None, number_of_iterations_game_sim=50):
         super(MonteCarlo, self).__init__(team=team, setup=setup)
         self._nr_iterations_of_game_sim = number_of_iterations_game_sim
@@ -927,6 +912,12 @@ class MonteCarlo(MiniMax):
         return next_action
 
     def approximate_value_of_board(self, board):
+        """
+        Simulate the game to the max number of turns a lot of times and evaluating the simulation
+        by whether he won and how many more pieces he has left than the opponent.
+        :param board:
+        :return:
+        """
         finished = False
         turn = 0
         evals = []
@@ -934,11 +925,13 @@ class MonteCarlo(MiniMax):
             board_copy = copy.deepcopy(board)
             while not finished:
                 actions = helpers.get_poss_moves(board_copy, turn)
-                if actions:
+                if actions:  # as long as actions are left to be done, we do them
                     move = random.choice(actions)
                     board_copy, _ = self.do_move(move, board_copy)
+                # check whether the game is terminal
                 done, won = self.goal_test(actions, board_copy, turn)
                 if done:
+                    # if terminal, calculate the bonus we want to reward this simulation with
                     my_team = self.get_team_from_board(board, self.team)
                     enemy_team = self.get_team_from_board(board, self.other_team)
                     bonus = (len(my_team) - len(enemy_team)) / 20
@@ -946,7 +939,8 @@ class MonteCarlo(MiniMax):
                     # bonus is negative if enemy team has more pieces
                     evals.append(-1 + 2 * won + bonus)
                     finished = True
-                elif turn > self._nr_of_max_turn_sim:
+                elif turn > self._nr_of_max_turn_sim:  # check if we reached the max number of turns
+                    # calculate bonus
                     my_team = self.get_team_from_board(board, self.team)
                     enemy_team = self.get_team_from_board(board, self.other_team)
                     bonus = (len(my_team) - len(enemy_team)) / 20
@@ -991,6 +985,10 @@ class MonteCarlo(MiniMax):
 
 
 class MonteCarloHeuristic(MonteCarlo):
+    """
+    Monte Carlo agent that evaluates boards not by simulating the game, but by taking the heuristic
+    from a learner.
+    """
     def __init__(self, team, setup=None):
         super(MonteCarloHeuristic, self).__init__(team=team,
                                                   setup=setup,

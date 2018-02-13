@@ -11,7 +11,7 @@ import pieces
 
 class Env:
     """
-    Environment superclass
+    Environment superclass. Used for training the agent.
     """
 
     def __init__(self, agent0, agent1, board_size=(5, 5)):
@@ -56,10 +56,6 @@ class Env:
         agent1.install_board(self.board)
         self.agents = (agent0, agent1)
 
-        # give agent actors (pieces whose movements he controls)
-        # for team in (0, 1):
-        #     self.agents[team].action_represent(actors)
-
         self.battleMatrix = helpers.get_battle_matrix()
 
         self.opp_can_move = False  # static opponent would be e.g. only flag
@@ -92,7 +88,7 @@ class Env:
     def place_types(self):
         """
         Places available types for each team in the teams respective half of the board
-        :return:
+        :return: tuple of list of places with fixed position and a list of pieces with random position
         """
         known_place = []
         # place flags at last row
@@ -169,9 +165,15 @@ class Env:
         return self.reward, done, won
 
     def do_move(self, move, team):
+        """
+        Perfom the move provided by the team of 'team'
+        :param move: tuple of tuple defining the 'from' position to the 'to' position
+        :param team: boolean, 1 or 0
+        :return: True for correct exectution, False if not
+        """
         if move is None:  # no move chosen (network)?
-            return
-        if not helpers.is_legal_move(self.board, move):
+            return False
+        if not helpers.is_legal_move(self.board, move):  # if move is illegal
             return False  # illegal move chosen
         other_team = (team + 1) % 2
         pos_from, pos_to = move
@@ -189,33 +191,38 @@ class Env:
             if fight_outcome is None:
                 print('Warning, cant let pieces of same team fight!')
                 return False
-            elif fight_outcome == 1:
+            elif fight_outcome == 1:  # attacker won
                 self.update_board((pos_to, piece_from))
                 self.update_board((pos_from, None))
                 self.dead_pieces[other_team].append(piece_to)
                 if team == 0:
                     self.reward += self.reward_kill
-            elif fight_outcome == 0:
+            elif fight_outcome == 0:  # both pieces died
                 self.update_board((pos_to, None))
                 self.update_board((pos_from, None))
                 self.dead_pieces[team].append(piece_from)
                 self.dead_pieces[other_team].append(piece_to)
-            elif fight_outcome == -1:
+            elif fight_outcome == -1:  # defender won
                 self.update_board((pos_from, None))
                 self.update_board((pos_to, piece_to))
                 self.dead_pieces[team].append(piece_from)
                 if team == 0:
                     self.reward += self.reward_die
 
-        else:
+        else:  # if there is no piece on the spot we want to move on, then we simply move
             self.update_board((pos_to, piece_from))
             self.update_board((pos_from, None))
-            if team == 0:
+            if team == 0:  # punish doing a step
                 self.reward += self.reward_step
 
         return True
 
     def update_board(self, updated_piece):
+        """
+        Put the piece in updated_piece at the position given by updated_piece
+        :param updated_piece: tuple of a position and a piece
+        :return: None, change in-place
+        """
         pos = updated_piece[0]
         piece = updated_piece[1]
         if piece is not None:
@@ -229,10 +236,12 @@ class Env:
         (note: in env.step it is already checked if there are still pieces to move)
         :return: (bool: is environment in a terminal state, bool: is it won (True) or lost (False)
         """
+        # check whether the flag of team 1 has been captured
         for p in self.dead_pieces[1]:
             if p.type == 0:
                 self.reward += self.reward_win
                 return True, True
+        # check whether the flag of team 0 has been captured
         for p in self.dead_pieces[0]:
             if p.type == 0:
                 self.reward += self.reward_loss
@@ -254,6 +263,9 @@ class Env:
 # Subclasses
 
 class FindFlag(Env):
+    """
+    Simple environment with only an opponent flag and one movable piece of your own team.
+    """
     def __init__(self, agent0, agent1):
         super(FindFlag, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1
@@ -265,6 +277,9 @@ class FindFlag(Env):
 
 
 class Maze(Env):
+    """
+    Maze the agent needs to run through to get the opponent's flag
+    """
     def __init__(self, agent0, agent1):
         super(Maze, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1
@@ -280,6 +295,9 @@ class Maze(Env):
 
 
 class TwoPieces(Env):
+    """
+    Simple game of two pieces, a 1 and a 10 for each team.
+    """
     def __init__(self, agent0, agent1):
         super(TwoPieces, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1
@@ -290,6 +308,9 @@ class TwoPieces(Env):
 
 
 class ThreePieces(Env):
+    """
+    Game with a 1, 3 and a 10.
+    """
     def __init__(self, agent0, agent1):
         super(ThreePieces, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1
@@ -300,6 +321,9 @@ class ThreePieces(Env):
 
 
 class FourPieces(Env):
+    """
+    Game with a 1, 2, 3 and a 10
+    """
     def __init__(self, agent0, agent1):
         super(FourPieces, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1
@@ -310,6 +334,9 @@ class FourPieces(Env):
 
 
 class Stratego(Env):
+    """
+    Full game environment.
+    """
     def __init__(self, agent0, agent1):
         super(Stratego, self).__init__(agent0=agent0, agent1=agent1)
         self.reward_win = 1

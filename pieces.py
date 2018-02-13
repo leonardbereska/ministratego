@@ -29,8 +29,6 @@ class Piece:
             self.can_move = True
             self.move_radius = 1
 
-    # CAVEAT: Turning this specific form into __repr__ fucks up numpy arrays that hold objects of class pieces
-    #         thus we either need to read further into __repr__ in combo with numpy or leave it as __str__ atm
     def __str__(self):  # for printing pieces on the board return type of piece
         if self.hidden:
             return "?"
