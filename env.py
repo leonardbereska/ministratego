@@ -81,6 +81,8 @@ class Env:
 
     def reset(self):  # resetting means freshly initializing
         self.__init__(agent0=self.agents[0], agent1=self.agents[1])
+        self.agents[0].install_board(self.board)
+        self.agents[1].install_board(self.board)
 
     def decide_pieces(self):
         raise NotImplementedError

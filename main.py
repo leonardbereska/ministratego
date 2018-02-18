@@ -243,9 +243,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     file.close()
     return
 
-
-#simulation(agent_type_0="reinforce", agent_type_1="random", num_simulations=1000)
-
+#simulation(agent_type_0="minmax", agent_type_1="heuristic", num_simulations=1000)
 
 def simu_env(env, num_simulations=1000, watch=True):
     """
@@ -353,6 +351,7 @@ def simu_env(env, num_simulations=1000, watch=True):
     file.write("Maximum computational time: {} seconds\n".format(max(game_times_0)))
     file.write("Minimum computational time: {} seconds\n".format(min(game_times_0)))
     file.close()
+
 
 environment = env.ThreePieces(agent.ThreePieces(0), agent.Random(1))
 simu_env(environment, 1000, watch=False)
