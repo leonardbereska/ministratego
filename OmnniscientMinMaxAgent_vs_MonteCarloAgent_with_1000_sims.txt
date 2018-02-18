@@ -1,0 +1,28 @@
+Statistics of OmnniscientMinMaxAgent vs. MonteCarloAgent with 1000 games played.
+Overall computational time of simulation: 159487.29353980854 seconds.
+
+Agent OmnniscientMinMaxAgent won 798/1000 games (~79.8%).
+Reasons for winning: 719 flag captures, 79 wins through killing all enemies
+
+Agent MonteCarloAgent won 202/1000 games (~20.2%).
+Reasons for winning: 170 flag captures, 32 wins through killing all enemies
+
+Average game duration overall: 25 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for OmnniscientMinMaxAgent wins: 21 rounds
+Maximum number of rounds played: 192 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for MonteCarloAgent wins: 41 rounds
+Maximum number of rounds played: 1001 rounds
+Minimum number of rounds played: 3 rounds
+
+Average computational time for MonteCarloAgent wins: 256.37630751470385 seconds
+Maximum computational time: 7291.333598781959 seconds
+Minimum computational time: 25.177700270025525 seconds
+
+Average computational time for OmnniscientMinMaxAgent wins: 134.96150303488517 seconds
+Maximum computational time: 1561.4515862625194 seconds
+Minimum computational time: 8.224089097231627 seconds

@@ -1,28 +1,28 @@
 Statistics of MinMaxAgent vs. RandomAgent with 1000 games played.
-Overall computational time of simulation: 6649.724835097899 seconds.
+Overall computational time of simulation: 4856.056846821044 seconds.
 
-Agent MinMaxAgent won 738/1000 games (~73.8%).
-Reasons for winning: 623 flag captures, 115 wins through killing all enemies
+Agent MinMaxAgent won 773/1000 games (~77.3%).
+Reasons for winning: 641 flag captures, 132 wins through killing all enemies
 
-Agent RandomAgent won 262/1000 games (~26.2%).
-Reasons for winning: 113 flag captures, 149 wins through killing all enemies
+Agent RandomAgent won 227/1000 games (~22.7%).
+Reasons for winning: 128 flag captures, 99 wins through killing all enemies
 
 Average game duration overall: 31 rounds
-Maximum number of rounds played: 144 rounds
+Maximum number of rounds played: 123 rounds
 Minimum number of rounds played: 3 rounds
 
-Average game duration for MinMaxAgent wins: 29 rounds
-Maximum number of rounds played: 116 rounds
+Average game duration for MinMaxAgent wins: 30 rounds
+Maximum number of rounds played: 123 rounds
 Minimum number of rounds played: 4 rounds
 
-Average game duration for RandomAgent wins: 37 rounds
-Maximum number of rounds played: 144 rounds
+Average game duration for RandomAgent wins: 34 rounds
+Maximum number of rounds played: 94 rounds
 Minimum number of rounds played: 3 rounds
 
-Average computational time for RandomAgent wins: 2.467700777691327 seconds
-Maximum computational time: 36.39488830551909 seconds
-Minimum computational time: 0.03193800832787019 seconds
+Average computational time for RandomAgent wins: 2.3667669867850556 seconds
+Maximum computational time: 55.55160175108426 seconds
+Minimum computational time: 0.01722298853258053 seconds
 
-Average computational time for MinMaxAgent wins: 8.13440004246988 seconds
-Maximum computational time: 332.35170589024256 seconds
-Minimum computational time: 0.051905692749642185 seconds
+Average computational time for MinMaxAgent wins: 5.587064347763049 seconds
+Maximum computational time: 242.93391381345918 seconds
+Minimum computational time: 0.059061685389224294 seconds
