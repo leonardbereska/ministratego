@@ -77,6 +77,8 @@ class Env:
         self.reward_kill = 0  # kill enemy figure reward
         self.reward_die = 0  # lose to enemy figure
 
+        self.move_count = 0
+
     def reset(self):  # resetting means freshly initializing
         self.__init__(agent0=self.agents[0], agent1=self.agents[1])
         self.agents[0].install_board(self.board)
@@ -124,7 +126,7 @@ class Env:
         if not helpers.get_poss_moves(self.board, team=0):
             self.reward += self.reward_loss
             self.score += self.reward
-            return self.reward, True, False  # 0 for lost
+            return self.reward, True, -2  # 0 for lost
 
         # move decided by agent or externally?
         if move is not None:
@@ -140,7 +142,7 @@ class Env:
             self.score += self.reward
             done, won = self.goal_test()
             return self.reward, done, won  # environment does not change for illegal
-
+        self.move_count += 1
         self.do_move(agent_move, team=0)
 
         # opponents move
@@ -150,7 +152,7 @@ class Env:
             if not helpers.get_poss_moves(self.board, team=1):
                 self.reward += self.reward_win
                 self.score = self.reward
-                return self.reward, True, True  # 1 for won
+                return self.reward, True, 2  # 1 for won
             opp_move = self.agents[1].decide_move()
 
             # is move legal?
@@ -159,10 +161,11 @@ class Env:
                 # print("Warning: agent 1 selected an illegal move: {}".format(opp_move))
 
             self.do_move(opp_move, team=1)  # assuming only legal moves selected
+            self.move_count += 1
 
         done, won = self.goal_test()
         self.score += self.reward
-        return self.reward, done, won
+        return self.reward, done, -1+2*won
 
     def do_move(self, move, team):
         """
@@ -234,7 +237,7 @@ class Env:
         """
         Check if the game is in a terminal state due to flag capture
         (note: in env.step it is already checked if there are still pieces to move)
-        :return: (bool: is environment in a terminal state, bool: is it won (True) or lost (False)
+        :return: (bool: is environment in a terminal state, bool: is it won (True) or lost (False) for player 0
         """
         # check whether the flag of team 1 has been captured
         for p in self.dead_pieces[1]:

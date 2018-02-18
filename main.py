@@ -5,6 +5,7 @@ import agent
 import env
 import helpers
 from timeit import default_timer as timer
+import re
 
 
 def draw_random_setup(types_available, team):
@@ -244,7 +245,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
 
 #simulation(agent_type_0="minmax", agent_type_1="heuristic", num_simulations=1000)
 
-def simu_env(env, n_runs=1000, watch=True):
+def simu_env(env, num_simulations=1000, watch=True):
     """
     Plots simulated games in an environment for visualization
     :param env: environment to be run
@@ -252,26 +253,105 @@ def simu_env(env, n_runs=1000, watch=True):
     :param watch: do you want to plot the game (watch=True) or just see the results (watch=False)?
     :return: plot of each step in the environment
     """
-    n_won = 0
-    n_lost = 0
-    for i in range(n_runs):
+    blue_won = 0
+    blue_wins_bc_flag = 0
+    blue_wins_bc_noMovesLeft = 0
+    red_won = 0
+    red_wins_bc_flag = 0
+    red_wins_bc_noMovesLeft = 0
+    rounds_counter_per_game = []
+    rounds_counter_win_agent_0 = []
+    rounds_counter_win_agent_1 = []
+  #  n_lost = 0
+    agent_output_type_0 = str(env.agents[0])
+    agent_output_type_1 = str(env.agents[1])
+    agent_output_type_0 = re.search('agent.(.+?) object', agent_output_type_0).group(1)
+    agent_output_type_1 = re.search('agent.(.+?) object', agent_output_type_1).group(1)
+    game_times_0 = []
+    game_times_1 = []
+    for simu in range(num_simulations):
+        print('{} won: {}, {} won: {}, Game {}/{}'.format(agent_output_type_0,
+                                                          red_won,
+                                                          agent_output_type_1,
+                                                          blue_won, simu,
+                                                          num_simulations))
+        print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_0,
+                                                                                   red_wins_bc_flag,
+                                                                                   agent_output_type_0,
+                                                                                   red_wins_bc_noMovesLeft,
+                                                                                   simu,
+                                                                                   num_simulations))
+        print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_1,
+                                                                                   blue_wins_bc_flag,
+                                                                                   agent_output_type_1,
+                                                                                   blue_wins_bc_noMovesLeft,
+                                                                                   simu,
+                                                                                   num_simulations))
+        game_time_s = timer()
         env.reset()
         # environment.show()
         done = False
         while not done:
             _, done, won = env.step()
+
             if watch:
                 env.show()
-            if done and won:
-                n_won += 1
-            elif done and not won or env.steps > 2000:  # break game that takes too long
-                n_lost += 1
-                break
-        print("{} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won/(n_won+n_lost), 2)))
-    print("Simulation over: {} : {}, win ratio for Agent 0: {}".format(n_won, n_lost, np.round(n_won / (n_won + n_lost), 2)))
+            if done:
+                if won == 1:
+                    game_times_0.append(timer() - game_time_s)
+                    red_won += 1
+                    red_wins_bc_flag += 1
+                    rounds_counter_win_agent_0.append(env.move_count)
+                elif won == 2:
+                    game_times_0.append(timer() - game_time_s)
+                    red_won += 1
+                    red_wins_bc_noMovesLeft += 1
+                    rounds_counter_win_agent_0.append(env.move_count)
+                elif won == -1:
+                    game_times_1.append(timer() - game_time_s)
+                    blue_won += 1
+                    blue_wins_bc_flag += 1
+                    rounds_counter_win_agent_1.append(env.move_count)
+                elif won == -2:
+                    game_times_1.append(timer() - game_time_s)
+                    blue_won += 1
+                    blue_wins_bc_noMovesLeft += 1
+                    rounds_counter_win_agent_1.append(env.move_count)
+                rounds_counter_per_game.append(env.move_count)
+            # elif done and not won or env.steps > 2000:  # break game that takes too long
+            #     n_lost += 1
+            #     break
+    file = open("{}_vs_{}_with_{}_sims.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
+    file.write("Statistics of {} vs. {} with {} games played.\n".format(agent_output_type_0, agent_output_type_1, num_simulations))
+    file.write("Overall computational time of simulation: {} seconds.\n".format(sum(game_times_0) + sum(game_times_1)))
+
+    file.write("\nAgent {} won {}/{} games (~{}%).\n".format(agent_output_type_0, red_won, num_simulations, round(100*red_won/num_simulations, 2)))
+    file.write("Reasons for winning: {} flag captures, {} wins through killing all enemies\n".format(red_wins_bc_flag, red_wins_bc_noMovesLeft))
+
+    file.write("\nAgent {} won {}/{} games (~{}%).\n".format(agent_output_type_1, blue_won, num_simulations, round(100*blue_won/num_simulations, 2)))
+    file.write("Reasons for winning: {} flag captures, {} wins through killing all enemies\n".format(blue_wins_bc_flag, blue_wins_bc_noMovesLeft))
+
+    file.write("\nAverage game duration overall: {} rounds\n".format(round(sum(rounds_counter_per_game)/num_simulations), 2))
+    file.write("Maximum number of rounds played: {} rounds\n".format(max(rounds_counter_per_game)))
+    file.write("Minimum number of rounds played: {} rounds\n".format(min(rounds_counter_per_game)))
+
+    file.write("\nAverage game duration for {} wins: {} rounds\n".format(agent_output_type_0, round(sum(rounds_counter_win_agent_0)/len(rounds_counter_win_agent_0)), 2))
+    file.write("Maximum number of rounds played: {} rounds\n".format(max(rounds_counter_win_agent_0)))
+    file.write("Minimum number of rounds played: {} rounds\n".format(min(rounds_counter_win_agent_0)))
+
+    file.write("\nAverage game duration for {} wins: {} rounds\n".format(agent_output_type_1, round(sum(rounds_counter_win_agent_1)/len(rounds_counter_win_agent_1)), 2))
+    file.write("Maximum number of rounds played: {} rounds\n".format(max(rounds_counter_win_agent_1)))
+    file.write("Minimum number of rounds played: {} rounds\n".format(min(rounds_counter_win_agent_1)))
+
+    file.write("\nAverage computational time for {} wins: {} seconds\n".format(agent_output_type_1, sum(game_times_1)/len(game_times_1)))
+    file.write("Maximum computational time: {} seconds\n".format(max(game_times_1)))
+    file.write("Minimum computational time: {} seconds\n".format(min(game_times_1)))
+
+    file.write("\nAverage computational time for {} wins: {} seconds\n".format(agent_output_type_0, sum(game_times_0)/len(game_times_0)))
+    file.write("Maximum computational time: {} seconds\n".format(max(game_times_0)))
+    file.write("Minimum computational time: {} seconds\n".format(min(game_times_0)))
+    file.close()
 
 
-environment = env.Stratego(agent.Stratego(0), agent.Random(1))
+environment = env.ThreePieces(agent.ThreePieces(0), agent.Random(1))
 simu_env(environment, 1000, watch=False)
-
-
