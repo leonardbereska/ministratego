@@ -58,7 +58,7 @@ class Agent:
                     enemy_pieces.append(piece)
         enemy_types = [piece.type for piece in enemy_pieces]
         self.ordered_opp_pieces = enemy_pieces
-        self.own_pieces = np.array(self.own_pieces)
+        self.own_pieces = self.own_pieces
 
         for idx, piece in np.ndenumerate(self.ordered_opp_pieces):
             piece.potential_types = copy.copy(enemy_types)
@@ -192,6 +192,11 @@ class Random(Agent):
     def __init__(self, team, setup=None):
         super(Random, self).__init__(team=team, setup=setup)
 
+    def install_board(self, board, reset=False):
+        super().install_board(board, reset=reset)
+        for piece in self.own_pieces + self.ordered_opp_pieces:
+            piece.hidden = False
+
     def decide_move(self):
         actions = helpers.get_poss_moves(self.board, self.team)
         if not actions:
@@ -213,10 +218,17 @@ class Reinforce(Agent):
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset=False)
+        opp_types = sorted(set([piece.type for piece in self.ordered_opp_pieces]))
+        for piece in self.ordered_opp_pieces:
+            piece.potential_types = opp_types
+        for piece in self.own_pieces:
+            piece.hidden = False
         self.action_represent()
 
     def decide_move(self):
-        state = self.board_to_state()
+        board = self.draw_consistent_enemy_setup(copy.deepcopy(self.board))
+        state = self.board_to_state(board)
+        # state = self.board_to_state(board)
         action = self.select_action(state, p_random=0.00)
         if action is not None:
             move = self.action_to_move(action[0, 0])
@@ -363,6 +375,74 @@ class Reinforce(Agent):
         board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
         return board_state
 
+    def update_prob_by_fight(self, enemy_piece):
+        """
+        update the information about the given piece, after a fight occured
+        :param enemy_piece: object of class Piece
+        :return: change is in-place, no value specified
+        """
+        enemy_piece.potential_types = [enemy_piece.type]
+
+    def update_prob_by_move(self, move, moving_piece):
+        """
+        update the information about the given piece, after it did the given move
+        :param move: tuple of positions tuples
+        :param moving_piece: object of class Piece
+        :return: change is in-place, no value specified
+        """
+        move_dist = spatial.distance.cityblock(move[0], move[1])
+        if move_dist > 1:
+            moving_piece.hidden = False
+            moving_piece.potential_types = [moving_piece.type]  # piece is 2
+        else:
+            immobile_enemy_types = [idx for idx, type in enumerate(moving_piece.potential_types)
+                                    if type in [0, 11]]
+            moving_piece.potential_types = np.delete(moving_piece.potential_types, immobile_enemy_types)
+
+    def draw_consistent_enemy_setup(self, board):
+        """
+        Draw a setup of the enemies pieces on the board provided that aligns with the current status of
+        information about said pieces, then place them on the board. This is done via iterative random sampling,
+        until a consistent draw occurs. This draw may or may not represent the overall true distribution of the pieces.
+        :param board: numpy array (5, 5)
+        :return: board with the assigned enemy pieces in it.
+        """
+        # get information about enemy pieces (how many, which alive, which types, and indices in assign. array)
+        enemy_pieces = copy.deepcopy(self.ordered_opp_pieces)
+        enemy_pieces_alive = [piece for piece in enemy_pieces if not piece.dead]
+        types_alive = [piece.type for piece in enemy_pieces_alive]
+
+        # do the following as long as the drawn assignment is not consistent with the current knowledge about them
+        consistent = False
+        sample = None
+        while not consistent:
+            # choose as many pieces randomly as there are enemy pieces alive
+            sample = np.random.choice(types_alive, len(types_alive), replace=False)
+            # while-loop break condition
+            consistent = True
+            for idx, piece in enumerate(enemy_pieces_alive):
+                # if the drawn type doesn't fit the potential types of the current piece, then redraw
+                if sample[idx] not in piece.potential_types:
+                    consistent = False
+                    break
+        # place this draw now on the board by assigning the types and changing critical attributes
+        for idx, piece in enumerate(enemy_pieces_alive):
+            # add attribute of the piece being guessed (only happens in non-real gameplay aka planning)
+            piece.guessed = not piece.hidden
+            piece.type = sample[idx]
+            if piece.type in [0, 11]:
+                piece.can_move = False
+                piece.move_radius = 0
+            elif piece.type == 2:
+                piece.can_move = True
+                piece.move_radius = float('inf')
+            else:
+                piece.can_move = True
+                piece.move_radius = 1
+            piece.hidden = False
+            board[piece.position] = piece
+        return board
+
 
 class Finder(Reinforce):
     """
@@ -441,6 +521,20 @@ class ThreePieces(Reinforce):
         obstacle = lambda p: (p.type == 99, 1)
         return own_team_one, own_team_three, own_team_ten, own_team_flag, \
                opp_team_one, opp_team_three, opp_team_ten, opp_team_flag, obstacle
+
+
+class OmniscientThreePieces(ThreePieces):
+    def __init__(self, team):
+        super().__init__(team)
+
+    def decide_move(self):
+        state = self.board_to_state()
+        action = self.select_action(state, p_random=0.00)
+        if action is not None:
+            move = self.action_to_move(action[0, 0])
+        else:
+            return None
+        return move
 
 
 class FourPieces(Reinforce):
@@ -884,11 +978,11 @@ class MonteCarlo(MiniMax):
     """
     Monte carlo agent, simulating the value of each move and choosing the best.
     """
-    def __init__(self, team, setup=None, number_of_iterations_game_sim=50):
+    def __init__(self, team, setup=None, number_of_iterations_game_sim=40):
         super(MonteCarlo, self).__init__(team=team, setup=setup)
         self._nr_iterations_of_game_sim = number_of_iterations_game_sim
-        self._nr_of_max_turn_sim = 20
-        self._nr_of_enemy_setups_to_draw = 30
+        self._nr_of_max_turn_sim = 15
+        self._nr_of_enemy_setups_to_draw = 20
 
     def decide_move(self):
         """

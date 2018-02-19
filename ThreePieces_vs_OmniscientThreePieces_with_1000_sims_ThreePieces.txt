@@ -1,0 +1,28 @@
+Statistics of ThreePieces vs. OmniscientThreePieces with 1000 games played.
+Overall computational time of simulation: 11.999784621193385 seconds.
+
+Agent ThreePieces won 274/1000 games (~27.4%).
+Reasons for winning: 254 flag captures, 20 wins through killing all enemies
+
+Agent OmniscientThreePieces won 726/1000 games (~72.6%).
+Reasons for winning: 715 flag captures, 11 wins through killing all enemies
+
+Average game duration overall: 11 rounds
+Maximum number of rounds played: 76 rounds
+Minimum number of rounds played: 5 rounds
+
+Average game duration for ThreePieces wins: 13 rounds
+Maximum number of rounds played: 76 rounds
+Minimum number of rounds played: 5 rounds
+
+Average game duration for OmniscientThreePieces wins: 11 rounds
+Maximum number of rounds played: 46 rounds
+Minimum number of rounds played: 6 rounds
+
+Average computational time for OmniscientThreePieces wins: 0.011412715908516698 seconds
+Maximum computational time: 0.03647207761352078 seconds
+Minimum computational time: 0.006541437187415511 seconds
+
+Average computational time for ThreePieces wins: 0.013555302451132345 seconds
+Maximum computational time: 0.08020069681034947 seconds
+Minimum computational time: 0.006148378171285884 seconds

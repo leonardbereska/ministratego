@@ -1,0 +1,28 @@
+Statistics of OmnniscientMinMaxAgent vs. HeuristicAgent with 1000 games played.
+Overall computational time of simulation: 41378.87832412498 seconds.
+
+Agent OmnniscientMinMaxAgent won 747/1000 games (~74.7%).
+Reasons for winning: 644 flag captures, 103 wins through killing all enemies
+
+Agent HeuristicAgent won 253/1000 games (~25.3%).
+Reasons for winning: 217 flag captures, 36 wins through killing all enemies
+
+Average game duration overall: 25 rounds
+Maximum number of rounds played: 154 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for OmnniscientMinMaxAgent wins: 23 rounds
+Maximum number of rounds played: 154 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for HeuristicAgent wins: 30 rounds
+Maximum number of rounds played: 115 rounds
+Minimum number of rounds played: 9 rounds
+
+Average computational time for HeuristicAgent wins: 43.60648069528399 seconds
+Maximum computational time: 285.19325995842064 seconds
+Minimum computational time: 1.574651697110312 seconds
+
+Average computational time for OmnniscientMinMaxAgent wins: 40.62441594138973 seconds
+Maximum computational time: 750.0718514803848 seconds
+Minimum computational time: 0.7645608639450074 seconds

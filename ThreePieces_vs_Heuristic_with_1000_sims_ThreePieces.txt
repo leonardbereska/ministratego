@@ -1,0 +1,28 @@
+Statistics of ThreePieces vs. Heuristic with 1000 games played.
+Overall computational time of simulation: 11478.518655837535 seconds.
+
+Agent ThreePieces won 453/1000 games (~45.3%).
+Reasons for winning: 398 flag captures, 55 wins through killing all enemies
+
+Agent Heuristic won 547/1000 games (~54.7%).
+Reasons for winning: 426 flag captures, 121 wins through killing all enemies
+
+Average game duration overall: 15 rounds
+Maximum number of rounds played: 68 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for ThreePieces wins: 14 rounds
+Maximum number of rounds played: 44 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for Heuristic wins: 16 rounds
+Maximum number of rounds played: 68 rounds
+Minimum number of rounds played: 6 rounds
+
+Average computational time for Heuristic wins: 16.71483978980965 seconds
+Maximum computational time: 104.17942165091699 seconds
+Minimum computational time: 0.20451255129501078 seconds
+
+Average computational time for ThreePieces wins: 5.155631988546702 seconds
+Maximum computational time: 99.46906873944681 seconds
+Minimum computational time: 0.12560529627307915 seconds

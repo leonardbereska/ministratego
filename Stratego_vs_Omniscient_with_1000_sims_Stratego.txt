@@ -1,0 +1,28 @@
+Statistics of Stratego vs. Omniscient with 1000 games played.
+Overall computational time of simulation: 1289.2668696354317 seconds.
+
+Agent Stratego won 191/1000 games (~19.1%).
+Reasons for winning: 173 flag captures, 18 wins through killing all enemies
+
+Agent Omniscient won 807/1000 games (~80.7%).
+Reasons for winning: 683 flag captures, 124 wins through killing all enemies
+
+Average game duration overall: 21 rounds
+Maximum number of rounds played: 728 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for Stratego wins: 19 rounds
+Maximum number of rounds played: 171 rounds
+Minimum number of rounds played: 4 rounds
+
+Average game duration for Omniscient wins: 21 rounds
+Maximum number of rounds played: 728 rounds
+Minimum number of rounds played: 2 rounds
+
+Average computational time for Omniscient wins: 1.462379586936011 seconds
+Maximum computational time: 74.36129686870322 seconds
+Minimum computational time: 0.008888114783758283 seconds
+
+Average computational time for Stratego wins: 0.5713431569532502 seconds
+Maximum computational time: 39.19071952699596 seconds
+Minimum computational time: 0.011154125240750545 seconds

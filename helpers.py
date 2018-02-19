@@ -172,10 +172,29 @@ def get_poss_moves(board, team):
                 if piece.team == team:
                     # check which moves are possible
                     if piece.can_move:
-                        for pos_to in ((i, j) for i in range(5) for j in range(5)):
-                            move = (pos, pos_to)
-                            if is_legal_move(board, move):
-                                actions_possible.append(move)
+                        if piece.type == 2:
+                            poss_fields = [(pos[0] + i, pos[1]) for i in range(1, 5 - pos[0])] +\
+                                          [(pos[0], pos[1] + i) for i in range(1, 5 - pos[1])] + \
+                                          [(pos[0] - i, pos[1]) for i in range(1, pos[0]+1)] +\
+                                          [(pos[0], pos[1] - i) for i in range(1, pos[1]+1)]
+                            for pos_to in poss_fields:
+                                move = (pos, pos_to)
+                                if is_legal_move(board, move):
+                                    actions_possible.append(move)
+                        else:
+                            poss_fields = [(pos[0]+1, pos[1]),
+                                           (pos[0], pos[1]+1),
+                                           (pos[0]-1, pos[1]),
+                                           (pos[0], pos[1]-1)]
+                            for pos_to in poss_fields:
+                                move = (pos, pos_to)
+                                if is_legal_move(board, move):
+                                    actions_possible.append(move)
+
+                        # for pos_to in ((i, j) for i in range(5) for j in range(5)):
+                        #     move = (pos, pos_to)
+                        #     if is_legal_move(board, move):
+                        #         actions_possible.append(move)
     return actions_possible
 
 

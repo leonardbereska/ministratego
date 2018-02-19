@@ -1,0 +1,28 @@
+Statistics of Stratego vs. MiniMax with 1000 games played.
+Overall computational time of simulation: 488.0653741386659 seconds.
+
+Agent Stratego won 406/1000 games (~40.6%).
+Reasons for winning: 254 flag captures, 152 wins through killing all enemies
+
+Agent MiniMax won 594/1000 games (~59.4%).
+Reasons for winning: 345 flag captures, 249 wins through killing all enemies
+
+Average game duration overall: 23 rounds
+Maximum number of rounds played: 131 rounds
+Minimum number of rounds played: 0 rounds
+
+Average game duration for Stratego wins: 24 rounds
+Maximum number of rounds played: 131 rounds
+Minimum number of rounds played: 4 rounds
+
+Average game duration for MiniMax wins: 23 rounds
+Maximum number of rounds played: 112 rounds
+Minimum number of rounds played: 0 rounds
+
+Average computational time for MiniMax wins: 0.6046247486956998 seconds
+Maximum computational time: 22.114895847975657 seconds
+Minimum computational time: 0.0028545770108792112 seconds
+
+Average computational time for Stratego wins: 0.317532693136503 seconds
+Maximum computational time: 19.736905490063492 seconds
+Minimum computational time: 0.014679095337548631 seconds

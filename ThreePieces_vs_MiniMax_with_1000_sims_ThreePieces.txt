@@ -1,0 +1,28 @@
+Statistics of ThreePieces vs. MiniMax with 1000 games played.
+Overall computational time of simulation: 7942.090038569472 seconds.
+
+Agent ThreePieces won 416/1000 games (~41.6%).
+Reasons for winning: 369 flag captures, 47 wins through killing all enemies
+
+Agent MiniMax won 584/1000 games (~58.4%).
+Reasons for winning: 434 flag captures, 150 wins through killing all enemies
+
+Average game duration overall: 15 rounds
+Maximum number of rounds played: 58 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for ThreePieces wins: 14 rounds
+Maximum number of rounds played: 37 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for MiniMax wins: 17 rounds
+Maximum number of rounds played: 58 rounds
+Minimum number of rounds played: 6 rounds
+
+Average computational time for MiniMax wins: 11.277667880916184 seconds
+Maximum computational time: 62.209028784778184 seconds
+Minimum computational time: 0.12601238267325243 seconds
+
+Average computational time for ThreePieces wins: 3.259451913736589 seconds
+Maximum computational time: 42.58708229808235 seconds
+Minimum computational time: 0.05963830387872804 seconds

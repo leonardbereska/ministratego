@@ -263,8 +263,10 @@ def simu_env(env, num_simulations=1000, watch=True):
     rounds_counter_win_agent_0 = []
     rounds_counter_win_agent_1 = []
   #  n_lost = 0
+    env_type = str(env)
     agent_output_type_0 = str(env.agents[0])
     agent_output_type_1 = str(env.agents[1])
+    env_type = re.search('env.(.+?) object', env_type).group(1)
     agent_output_type_0 = re.search('agent.(.+?) object', agent_output_type_0).group(1)
     agent_output_type_1 = re.search('agent.(.+?) object', agent_output_type_1).group(1)
     game_times_0 = []
@@ -287,6 +289,7 @@ def simu_env(env, num_simulations=1000, watch=True):
                                                                                    blue_wins_bc_noMovesLeft,
                                                                                    simu,
                                                                                    num_simulations))
+        print("Game number: {}".format(simu+1))
         game_time_s = timer()
         env.reset()
         # environment.show()
@@ -318,10 +321,9 @@ def simu_env(env, num_simulations=1000, watch=True):
                     blue_wins_bc_noMovesLeft += 1
                     rounds_counter_win_agent_1.append(env.move_count)
                 rounds_counter_per_game.append(env.move_count)
-            # elif done and not won or env.steps > 2000:  # break game that takes too long
-            #     n_lost += 1
-            #     break
-    file = open("{}_vs_{}_with_{}_sims.txt".format(agent_output_type_0, agent_output_type_1, num_simulations), "w")
+            elif env.steps > 2000:  # break game that takes too long
+                break
+    file = open("{}_vs_{}_with_{}_sims_{}.txt".format(agent_output_type_0, agent_output_type_1, num_simulations, env_type), "w")
     file.write("Statistics of {} vs. {} with {} games played.\n".format(agent_output_type_0, agent_output_type_1, num_simulations))
     file.write("Overall computational time of simulation: {} seconds.\n".format(sum(game_times_0) + sum(game_times_1)))
 
@@ -353,5 +355,6 @@ def simu_env(env, num_simulations=1000, watch=True):
     file.close()
 
 
-environment = env.ThreePieces(agent.ThreePieces(0), agent.Random(1))
+environment = env.Stratego(agent.Stratego(0), agent.Omniscient(1))
 simu_env(environment, 1000, watch=False)
+#simulation(agent_type_0="omniscientminmax", agent_type_1="heuristic", num_simulations=1000)

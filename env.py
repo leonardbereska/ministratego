@@ -142,8 +142,8 @@ class Env:
             self.score += self.reward
             done, won = self.goal_test()
             return self.reward, done, won  # environment does not change for illegal
-        self.move_count += 1
         self.do_move(agent_move, team=0)
+        self.move_count += 1
 
         # opponents move
         if self.opp_can_move:  # only if opponent is playing, killing his pieces wins (opponent can be e.g. flag only)

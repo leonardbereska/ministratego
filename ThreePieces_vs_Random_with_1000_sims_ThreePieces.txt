@@ -1,0 +1,28 @@
+Statistics of ThreePieces vs. Random with 1000 games played.
+Overall computational time of simulation: 19.994962707612615 seconds.
+
+Agent ThreePieces won 811/1000 games (~81.1%).
+Reasons for winning: 719 flag captures, 92 wins through killing all enemies
+
+Agent Random won 189/1000 games (~18.9%).
+Reasons for winning: 89 flag captures, 100 wins through killing all enemies
+
+Average game duration overall: 25 rounds
+Maximum number of rounds played: 210 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for ThreePieces wins: 21 rounds
+Maximum number of rounds played: 192 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for Random wins: 40 rounds
+Maximum number of rounds played: 210 rounds
+Minimum number of rounds played: 8 rounds
+
+Average computational time for Random wins: 0.030491019920800864 seconds
+Maximum computational time: 0.1368926653726401 seconds
+Minimum computational time: 0.0066434279655780415 seconds
+
+Average computational time for ThreePieces wins: 0.017548902518595873 seconds
+Maximum computational time: 0.14246504404891125 seconds
+Minimum computational time: 0.005771099963236548 seconds

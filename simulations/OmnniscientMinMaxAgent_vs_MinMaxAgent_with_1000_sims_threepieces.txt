@@ -1,0 +1,28 @@
+Statistics of OmnniscientMinMaxAgent vs. MinMaxAgent with 1000 games played.
+Overall computational time of simulation: 40250.52538898239 seconds.
+
+Agent OmnniscientMinMaxAgent won 750/1000 games (~75.0%).
+Reasons for winning: 645 flag captures, 105 wins through killing all enemies
+
+Agent MinMaxAgent won 250/1000 games (~25.0%).
+Reasons for winning: 224 flag captures, 26 wins through killing all enemies
+
+Average game duration overall: 26 rounds
+Maximum number of rounds played: 181 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for OmnniscientMinMaxAgent wins: 24 rounds
+Maximum number of rounds played: 181 rounds
+Minimum number of rounds played: 6 rounds
+
+Average game duration for MinMaxAgent wins: 32 rounds
+Maximum number of rounds played: 117 rounds
+Minimum number of rounds played: 7 rounds
+
+Average computational time for MinMaxAgent wins: 39.527346148518546 seconds
+Maximum computational time: 511.24448650711565 seconds
+Minimum computational time: 1.1082548822596436 seconds
+
+Average computational time for OmnniscientMinMaxAgent wins: 40.49158513580367 seconds
+Maximum computational time: 607.5092066403304 seconds
+Minimum computational time: 0.623570740978721 seconds

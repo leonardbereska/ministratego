@@ -1,0 +1,12 @@
+Statistics of Random vs. Random with 1000 games played.
+Overall computational time of simulation: 1.4724531383059252 seconds.
+
+Agent Random won 0/1000 games (~0.0%).
+Reasons for winning: 0 flag captures, 0 wins through killing all enemies
+
+Agent Random won 1000/1000 games (~100.0%).
+Reasons for winning: 0 flag captures, 1000 wins through killing all enemies
+
+Average game duration overall: 0 rounds
+Maximum number of rounds played: 0 rounds
+Minimum number of rounds played: 0 rounds
