@@ -598,6 +598,19 @@ class Stratego(Reinforce):
                opp_team_one, opp_team_twos, opp_team_threes, opp_team_ten, opp_team_flag, opp_team_bombs, obstacle
 
 
+class OmniscientStratego(Stratego):
+    def __init__(self, team):
+        super().__init__(team)
+
+    def decide_move(self):
+        state = self.board_to_state()
+        action = self.select_action(state, p_random=0.00)
+        if action is not None:
+            move = self.action_to_move(action[0, 0])
+        else:
+            return None
+        return move
+
 class MiniMax(Agent):
     """
     Agent deciding his moves based on the minimax algorithm. The agent guessed the enemies setup
@@ -951,7 +964,7 @@ class Heuristic(MiniMax):
     """
     def __init__(self, team, setup=None):
         super(Heuristic, self).__init__(team=team, setup=setup)
-        self.evaluator = ThreePieces(team)
+        self.evaluator = Stratego(team)
 
     def install_board(self, board, reset=False):
         super().install_board(board, reset)
