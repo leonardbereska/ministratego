@@ -322,7 +322,7 @@ def simu_env(env, num_simulations=1000, watch=True):
                     rounds_counter_win_agent_1.append(env.move_count)
                 rounds_counter_per_game.append(env.move_count)
 
-            elif env.steps > 400:  # break game that takes too long
+            elif env.steps > 100:  # break game that takes too long
                 ties += 1
                 break
     file = open("{}_vs_{}_with_{}_sims_{}.txt".format(agent_output_type_0, agent_output_type_1, num_simulations, env_type), "w")
@@ -361,7 +361,7 @@ def simu_env(env, num_simulations=1000, watch=True):
 
 
 # environment = env.Stratego(agent.Stratego(0), agent.Omniscient(1))
-environment = env.FindFlag(agent.Finder(0), agent.Random(1))
+environment = env.TwoPieces(agent.Random(0), agent.MiniMax(1))
 
 simu_env(environment, 1000, watch=False)
 #simulation(agent_type_0="omniscientminmax", agent_type_1="heuristic", num_simulations=1000)

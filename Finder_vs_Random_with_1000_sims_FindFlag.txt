@@ -1,16 +1,18 @@
 Statistics of Finder vs. Random with 1000 games played.
-Overall computational time of simulation: 2.0879576769796184 seconds.
+Overall computational time of simulation: 2.062833132614801 seconds.
 
-Agent Finder won 876/1000 games (~87.6%).
-Reasons for winning: 876 flag captures, 0 wins through killing all enemies
+Agent Finder won 860/1000 games (~86.0%).
+Reasons for winning: 860 flag captures, 0 wins through killing all enemies
 
 Agent Random won 0/1000 games (~0.0%).
 Reasons for winning: 0 flag captures, 0 wins through killing all enemies
+
+Number of tied games: 140
 
 Average game duration overall: 3 rounds
 Maximum number of rounds played: 9 rounds
 Minimum number of rounds played: 1 rounds
 
-Average game duration for Finder wins: 4 rounds
+Average game duration for Finder wins: 3 rounds
 Maximum number of rounds played: 9 rounds
 Minimum number of rounds played: 1 rounds
