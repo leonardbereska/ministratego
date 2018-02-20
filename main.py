@@ -262,7 +262,7 @@ def simu_env(env, num_simulations=1000, watch=True):
     rounds_counter_per_game = []
     rounds_counter_win_agent_0 = []
     rounds_counter_win_agent_1 = []
-  #  n_lost = 0
+    ties = 0
     env_type = str(env)
     agent_output_type_0 = str(env.agents[0])
     agent_output_type_1 = str(env.agents[1])
@@ -272,11 +272,11 @@ def simu_env(env, num_simulations=1000, watch=True):
     game_times_0 = []
     game_times_1 = []
     for simu in range(num_simulations):
-        print('{} won: {}, {} won: {}, Game {}/{}'.format(agent_output_type_0,
+        print('{} won: {}, {} won: {}, ties: {}, Game {}/{}'.format(agent_output_type_0,
                                                           red_won,
                                                           agent_output_type_1,
-                                                          blue_won, simu,
-                                                          num_simulations))
+                                                          blue_won,
+                                                          ties, simu, num_simulations))
         print('{} won by flag capture: {}, {} won by moves: {}, Game {}/{}'.format(agent_output_type_0,
                                                                                    red_wins_bc_flag,
                                                                                    agent_output_type_0,
@@ -321,8 +321,9 @@ def simu_env(env, num_simulations=1000, watch=True):
                     blue_wins_bc_noMovesLeft += 1
                     rounds_counter_win_agent_1.append(env.move_count)
                 rounds_counter_per_game.append(env.move_count)
-            elif env.steps > 2000:  # break game that takes too long
-                
+
+            elif env.steps > 400:  # break game that takes too long
+                ties += 1
                 break
     file = open("{}_vs_{}_with_{}_sims_{}.txt".format(agent_output_type_0, agent_output_type_1, num_simulations, env_type), "w")
     file.write("Statistics of {} vs. {} with {} games played.\n".format(agent_output_type_0, agent_output_type_1, num_simulations))
@@ -333,6 +334,8 @@ def simu_env(env, num_simulations=1000, watch=True):
 
     file.write("\nAgent {} won {}/{} games (~{}%).\n".format(agent_output_type_1, blue_won, num_simulations, round(100*blue_won/num_simulations, 2)))
     file.write("Reasons for winning: {} flag captures, {} wins through killing all enemies\n".format(blue_wins_bc_flag, blue_wins_bc_noMovesLeft))
+
+    file.write("\nNumber of tied games: {}\n".format(ties))
 
     file.write("\nAverage game duration overall: {} rounds\n".format(round(sum(rounds_counter_per_game)/num_simulations), 2))
     file.write("Maximum number of rounds played: {} rounds\n".format(max(rounds_counter_per_game)))
@@ -356,7 +359,9 @@ def simu_env(env, num_simulations=1000, watch=True):
     file.close()
 
 
+
 # environment = env.Stratego(agent.Stratego(0), agent.Omniscient(1))
 environment = env.FindFlag(agent.Finder(0), agent.Random(1))
+
 simu_env(environment, 1000, watch=False)
 #simulation(agent_type_0="omniscientminmax", agent_type_1="heuristic", num_simulations=1000)

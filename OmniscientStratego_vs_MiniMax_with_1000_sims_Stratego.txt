@@ -1,0 +1,28 @@
+Statistics of OmniscientStratego vs. MiniMax with 1000 games played.
+Overall computational time of simulation: 1710.4083870221361 seconds.
+
+Agent OmniscientStratego won 444/1000 games (~44.4%).
+Reasons for winning: 282 flag captures, 162 wins through killing all enemies
+
+Agent MiniMax won 556/1000 games (~55.6%).
+Reasons for winning: 436 flag captures, 120 wins through killing all enemies
+
+Average game duration overall: 28 rounds
+Maximum number of rounds played: 255 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for OmniscientStratego wins: 26 rounds
+Maximum number of rounds played: 255 rounds
+Minimum number of rounds played: 4 rounds
+
+Average game duration for MiniMax wins: 30 rounds
+Maximum number of rounds played: 220 rounds
+Minimum number of rounds played: 2 rounds
+
+Average computational time for MiniMax wins: 2.489450703900858 seconds
+Maximum computational time: 97.44609813973636 seconds
+Minimum computational time: 0.009612291918301707 seconds
+
+Average computational time for OmniscientStratego wins: 0.7348508911109435 seconds
+Maximum computational time: 49.731830183663284 seconds
+Minimum computational time: 0.018093508769624123 seconds
