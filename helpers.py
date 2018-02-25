@@ -76,6 +76,43 @@ def get_battle_matrix():
     return battleMatrix
 
 
+# def is_legal_move_extensive(board, move_to_check):
+#     """
+#     :param move_to_check: array/tuple with the coordinates of the position from and to
+#     :return: True if move is a legal move, False if not
+#     """
+#     if move_to_check is None:
+#         return False
+#     pos_before = move_to_check[0]
+#     pos_after = move_to_check[1]
+#     if not board[pos_after] is None:
+#         if board[pos_after].team == board[pos_before].team:
+#             return False  # cant fight own pieces
+#         if board[pos_after].type == 99:
+#             return False  # cant fight obstacles
+#     if pos_after not in [(i, j) for i in range(5) for j in range(5)]:
+#         return False
+#     if board[pos_before] is None:
+#         return False  # no piece on field to move
+#     move_dist = spatial.distance.cityblock(pos_before, pos_after)
+#     if move_dist > board[pos_before].move_radius:
+#         return False  # move too far for selected piece
+#     if move_dist > 1:
+#         if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
+#             return False  # no diagonal moves allowed
+#         else:
+#             if pos_after[0] == pos_before[0]:
+#                 dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
+#                 for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
+#                     if board[(pos_before[0], k)] is not None:
+#                         return False  # pieces in the way of the move
+#             else:
+#                 dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
+#                 for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
+#                     if board[(k, pos_before[1])] is not None:
+#                         return False  # pieces in the way of the move
+#     return True
+
 def is_legal_move(board, move_to_check):
     """
     :param move_to_check: array/tuple with the coordinates of the position from and to
@@ -85,32 +122,21 @@ def is_legal_move(board, move_to_check):
         return False
     pos_before = move_to_check[0]
     pos_after = move_to_check[1]
-    if pos_after not in [(i, j) for i in range(5) for j in range(5)]:
-        return False
-    if board[pos_before] is None:
-        return False  # no piece on field to move
     if not board[pos_after] is None:
         if board[pos_after].team == board[pos_before].team:
             return False  # cant fight own pieces
         if board[pos_after].type == 99:
             return False  # cant fight obstacles
-    move_dist = spatial.distance.cityblock(pos_before, pos_after)
-    if move_dist > board[pos_before].move_radius:
-        return False  # move too far for selected piece
-    if move_dist > 1:
-        if not pos_before[0] == pos_after[0] and not pos_before[1] == pos_after[1]:
-            return False  # no diagonal moves allowed
-        else:
-            if pos_after[0] == pos_before[0]:
-                dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
-                for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
-                    if board[(pos_before[0], k)] is not None:
-                        return False  # pieces in the way of the move
-            else:
-                dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
-                for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
-                    if board[(k, pos_before[1])] is not None:
-                        return False  # pieces in the way of the move
+    if pos_after[0] == pos_before[0]:
+        dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
+        for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
+            if board[(pos_before[0], k)] is not None:
+                return False  # pieces in the way of the move
+    else:
+        dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
+        for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
+            if board[(k, pos_before[1])] is not None:
+                return False  # pieces in the way of the move
     return True
 
 
@@ -168,33 +194,27 @@ def get_poss_moves(board, team):
     actions_possible = []
     for pos, piece in np.ndenumerate(board):
         if piece is not None:  # board position has a piece on it
-            if not piece.type == 99:  # that piece is not an obstacle
-                if piece.team == team:
-                    # check which moves are possible
-                    if piece.can_move:
-                        if piece.type == 2:
-                            poss_fields = [(pos[0] + i, pos[1]) for i in range(1, 5 - pos[0])] +\
-                                          [(pos[0], pos[1] + i) for i in range(1, 5 - pos[1])] + \
-                                          [(pos[0] - i, pos[1]) for i in range(1, pos[0]+1)] +\
-                                          [(pos[0], pos[1] - i) for i in range(1, pos[1]+1)]
-                            for pos_to in poss_fields:
-                                move = (pos, pos_to)
-                                if is_legal_move(board, move):
-                                    actions_possible.append(move)
-                        else:
-                            poss_fields = [(pos[0]+1, pos[1]),
-                                           (pos[0], pos[1]+1),
-                                           (pos[0]-1, pos[1]),
-                                           (pos[0], pos[1]-1)]
-                            for pos_to in poss_fields:
-                                move = (pos, pos_to)
-                                if is_legal_move(board, move):
-                                    actions_possible.append(move)
-
-                        # for pos_to in ((i, j) for i in range(5) for j in range(5)):
-                        #     move = (pos, pos_to)
-                        #     if is_legal_move(board, move):
-                        #         actions_possible.append(move)
+            if piece.team == team:
+                # check which moves are possible
+                if piece.can_move:
+                    if piece.type == 2:
+                        poss_fields = [(pos[0] + i, pos[1]) for i in range(1, 5 - pos[0])] +\
+                                      [(pos[0], pos[1] + i) for i in range(1, 5 - pos[1])] + \
+                                      [(pos[0] - i, pos[1]) for i in range(1, pos[0]+1)] +\
+                                      [(pos[0], pos[1] - i) for i in range(1, pos[1]+1)]
+                        for pos_to in poss_fields:
+                            move = (pos, pos_to)
+                            if is_legal_move(board, move):
+                                actions_possible.append(move)
+                    else:
+                        poss_fields = [(pos[0]+1, pos[1]),
+                                       (pos[0], pos[1]+1),
+                                       (pos[0]-1, pos[1]),
+                                       (pos[0], pos[1]-1)]
+                        for pos_to in poss_fields:
+                            move = (pos, pos_to)
+                            if is_legal_move(board, move):
+                                actions_possible.append(move)
     return actions_possible
 
 
