@@ -122,21 +122,26 @@ def is_legal_move(board, move_to_check):
         return False
     pos_before = move_to_check[0]
     pos_after = move_to_check[1]
+    for x in (pos_before[0], pos_before[1], pos_after[0], pos_after[1]):
+        if not -1 < x < 5:
+            return False
     if not board[pos_after] is None:
         if board[pos_after].team == board[pos_before].team:
             return False  # cant fight own pieces
         if board[pos_after].type == 99:
             return False  # cant fight obstacles
-    if pos_after[0] == pos_before[0]:
-        dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
-        for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
-            if board[(pos_before[0], k)] is not None:
-                return False  # pieces in the way of the move
-    else:
-        dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
-        for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
-            if board[(k, pos_before[1])] is not None:
-                return False  # pieces in the way of the move
+    move_dist = spatial.distance.cityblock(pos_before, pos_after)
+    if move_dist > 1:
+        if pos_after[0] == pos_before[0]:
+            dist_sign = int(np.sign(pos_after[1] - pos_before[1]))
+            for k in list(range(pos_before[1] + dist_sign, pos_after[1], int(dist_sign))):
+                if board[(pos_before[0], k)] is not None:
+                    return False  # pieces in the way of the move
+        else:
+            dist_sign = int(np.sign(pos_after[0] - pos_before[0]))
+            for k in range(pos_before[0] + dist_sign, pos_after[0], int(dist_sign)):
+                if board[(k, pos_before[1])] is not None:
+                    return False  # pieces in the way of the move
     return True
 
 
