@@ -19,21 +19,12 @@ class Agent:
         self.team = team
         self.other_team = (self.team + 1) % 2
         self.setup = setup
-        self.board = np.empty((5, 5), dtype=object)
-        if setup is not None:
-            for idx, piece in np.ndenumerate(setup):  # board is normally initialized in environment
-                piece.hidden = False
-                self.board[piece.position] = piece
+        self.board = None
 
         self.move_count = 0  # round counter of the game
         self.last_N_moves = []
         self.pieces_last_N_Moves_beforePos = []
         self.pieces_last_N_Moves_afterPos = []
-
-        # place obstacle on board
-        obstacle = pieces.Piece(99, 99, (2, 2))
-        obstacle.hidden = False
-        self.board[2, 2] = obstacle
 
         self.battleMatrix = helpers.get_battle_matrix()
 
@@ -79,7 +70,7 @@ class Agent:
         update the current board at the position with the piece both given by updated_piece
         :param updated_piece: tuple of (position, piece) with position being a tuple and piece being
         of class piece
-        :param board: numpy array of shape (5,5) representing the board that should be updated.
+        :param board: numpy array of shape (int, int) representing the board that should be updated.
         Default is the agent's own board
         :return: Updates are made in-place. No return value specified
         """
@@ -249,7 +240,7 @@ class Reinforce(Agent):
         e.g. for two pieces with 4 actions each: ((0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3))
         """
         actors = []
-        for pos in [(i, j) for i in range(5) for j in range(5)]:
+        for pos in [(i, j) for i in range(self.board.shape[0]) for j in range(self.board.shape[1])]:
             p = self.board[pos]
             if p is not None:
                 if p.team == self.team:
@@ -360,19 +351,19 @@ class Reinforce(Agent):
             board = self.board
         conditions = self.state_represent()
         state_dim = len(conditions)
-        board_state = np.zeros((state_dim, 5, 5))  # zeros for empty field
+        board_state = np.zeros((state_dim, self.board.shape[0], self.board.shape[1]))  # zeros for empty field
         for pos, val in np.ndenumerate(board):
             p = board[pos]
             # for reinforce as team 1, reverse board to have same state representation
             if self.team == 1:
-                pos = (4 - pos[0], 4 - pos[1])
+                pos = (self.board.shape[0]-1 - pos[0], self.board.shape[0]-1 - pos[1])
             if p is not None:  # piece on this field
                 for i, cond in enumerate(conditions):
                     condition, value = cond(p)
                     if condition:
                         board_state[tuple([i] + list(pos))] = value  # represent type
         board_state = torch.FloatTensor(board_state)
-        board_state = board_state.view(1, state_dim, 5, 5)  # add dimension for more batches
+        board_state = board_state.view(1, state_dim, self.board.shape[0], self.board.shape[0])  # add dimension for more batches
         return board_state
 
     def update_prob_by_fight(self, enemy_piece):
@@ -703,7 +694,7 @@ class MiniMax(Agent):
                 val = new_val
                 best_action = action
             if val >= beta:
-                board = self.undo_last_move(board)
+                self.undo_last_move(board)
                 best_action = action
                 return val, best_action
             alpha = max(alpha, val)
@@ -737,7 +728,7 @@ class MiniMax(Agent):
                 val = new_val
                 best_action = action
             if val <= alpha:
-                board = self.undo_last_move(board)
+                self.undo_last_move(board)
                 return val, best_action
             beta = min(beta, val)
             board = self.undo_last_move(board)

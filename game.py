@@ -7,20 +7,23 @@ import pieces
 
 
 class Game:
-    def __init__(self, agent0, agent1):
-        """
-        player1 = Player()
-        player2 = Player()
-        self.board = np.zeros((5, 5))
-        self.board[2, 2] = None  # obstacle in the middle
-        self.board[0:1, 0:5] = player1.decideInitialSetup()
-        self.board[3:4, 0:5] = player2.decideInitialSetup()
-        """
-
+    def __init__(self, agent0, agent1, game_size="big"):
+        self.game_size = game_size
         self.agents = (agent0, agent1)
-        self.board = np.empty((5, 5), dtype=object)
-
-        self.types_available = np.array([0, 1, 2, 2, 2, 3, 3, 10, 11, 11])
+        if game_size == "small":
+            self.types_available = np.array([0, 1] + [2]*3 + [3]*2 + [10] + [11]*2)
+            obstacle_positions = [(2, 2)]
+            self.game_dim = 5
+        elif game_size == "medium":
+            obstacle_positions = [(3, 1), (3, 5)]
+            self.types_available = np.array([0, 1] + [2]*5 + [3]*3 + [4]*3 + [5]*2 + [6] + [10] + [11]*4)
+            self.game_dim = 7
+        else:
+            obstacle_positions = [(4, 2), (5, 2), (4, 3), (5, 3), (4, 6), (5, 6), (4, 7), (5, 7)]
+            self.types_available = np.array([0, 1] + [2]*8 + [3]*5 + [4]*4 + [5]*4 + [6]*4 +
+                                            [7]*3 + [8]*2 + [9]*1 + [10] + [11]*6)
+            self.game_dim = 10
+        self.board = np.empty((self.game_dim, self.game_dim), dtype=object)
         setup0, setup1 = agent0.setup, agent1.setup
 
         for idx, piece in np.ndenumerate(setup0):
@@ -31,9 +34,10 @@ class Game:
             if piece is not None:
                 piece.hidden = False
                 self.board[piece.position] = piece
-        obstacle = pieces.Piece(99, 99, (2, 2))
-        obstacle.hidden = False
-        self.board[2, 2] = obstacle  # set obstacle
+        for pos in obstacle_positions:
+            obs = pieces.Piece(99, 99, pos)
+            obs.hidden = False
+            self.board[pos] = obs
         agent0.install_board(self.board, reset=True)
         agent1.install_board(self.board, reset=True)
 
@@ -49,7 +53,7 @@ class Game:
         self.battleMatrix = helpers.get_battle_matrix()
 
     def reset(self):
-        self.__init__(self.agents[0], self.agents[1])
+        self.__init__(self.agents[0], self.agents[1], self.game_size)
 
     def run_game(self):
         game_over = False
@@ -67,14 +71,14 @@ class Game:
         for agent_ in self.agents:
             agent_.move_count = self.move_count
 
-        if self.move_count > 1000:  # if game lasts longer than 1000 turns => tie
-            return 0, 0  # each agent gets reward 0
+        # if self.move_count > 1000:  # if game lasts longer than 1000 turns => tie
+        #     return 0, 0  # each agent gets reward 0
         new_move = self.agents[turn].decide_move()
         # test if agent can't move anymore
         if new_move is None:
             if turn == 1:
                 return 2, -2  # agent0 wins
-            elif turn == 0:
+            else:
                 return -2, 2  # agent1 wins
         self.do_move(new_move)  # execute agent's choice
         # test if game is over

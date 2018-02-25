@@ -26,7 +26,7 @@ from timeit import default_timer as timer
 import re
 
 
-def draw_random_setup(types_available, team):
+def draw_random_setup(types_available, team, game_dim):
     """
     Draw a random setup from the set of types types_available after placing the flag
     somewhere in the last row of the board of the side of 'team', or behind the obstacle.
@@ -34,28 +34,36 @@ def draw_random_setup(types_available, team):
     :param team: boolean, 1 or 0 depending on the team
     :return: the setup, in numpy array form
     """
-    setup_agent = np.empty((2, 5), dtype=object)
-    nr_pieces = len(types_available)
+
+    nr_pieces = len(types_available)-1
+    types_available = [type_ for type_ in types_available if not type_ == 0]
+    if game_dim == 5:
+        row_offset = 2
+    elif game_dim == 7:
+        row_offset = 3
+    else:
+        row_offset = 4
+    setup_agent = np.empty((row_offset, game_dim), dtype=object)
     if team == 0:
-        flag_positions = [(4, j) for j in range(5)] + [(3, 2)]
+        flag_positions = [(game_dim-1, j) for j in range(game_dim)]
         flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
-        flag_pos = 4 - flag_positions[flag_choice][0], 4 - flag_positions[flag_choice][1]
+        flag_pos = game_dim-1 - flag_positions[flag_choice][0], game_dim-1 - flag_positions[flag_choice][1]
         setup_agent[flag_pos] = pieces.Piece(0, 0, flag_positions[flag_choice])
 
         types_draw = np.random.choice(types_available, nr_pieces, replace=False)
-        positions_agent_0 = [(i, j) for i in range(3, 5) for j in range(5)]
+        positions_agent_0 = [(i, j) for i in range(game_dim-row_offset, game_dim) for j in range(game_dim)]
         positions_agent_0.remove(flag_positions[flag_choice])
 
         for idx in range(nr_pieces):
             pos = positions_agent_0[idx]
-            setup_agent[(4 - pos[0], 4 - pos[1])] = pieces.Piece(types_draw[idx], 0, pos)
+            setup_agent[(game_dim-1 - pos[0], game_dim-1 - pos[1])] = pieces.Piece(types_draw[idx], 0, pos)
     elif team == 1:
-        flag_positions = [(0, j) for j in range(5)] + [(1, 2)]
+        flag_positions = [(0, j) for j in range(game_dim)]
         flag_choice = np.random.choice(range(len(flag_positions)), 1)[0]
         setup_agent[flag_positions[flag_choice]] = pieces.Piece(0, 1, flag_positions[flag_choice])
 
         types_draw = np.random.choice(types_available, nr_pieces, replace=False)
-        positions_agent_1 = [(i, j) for i in range(2) for j in range(5)]
+        positions_agent_1 = [(i, j) for i in range(row_offset) for j in range(game_dim)]
         positions_agent_1.remove(flag_positions[flag_choice])
 
         for idx in range(nr_pieces):
@@ -88,21 +96,20 @@ def simulation(game_, num_simulations, setup_0=None, setup_1=None, show_game=Fal
 
     game_times_0 = []
     game_times_1 = []
-    types = [1, 2, 2, 2, 3, 3, 10, 11, 11]
-    #types = [1, 3, 10]
+    types = game_.types_available
     for simu in range(num_simulations):  # simulate games
-        game_.reset()
         # reset setup with new setup if none given
         if setup_0 is not None:
             setup_agent_0 = setup_0
         else:
-            setup_agent_0 = draw_random_setup(types, 0)
+            setup_agent_0 = draw_random_setup(types, 0, game_.game_dim)
         if setup_1 is not None:
             setup_agent_1 = setup_1
         else:
-            setup_agent_1 = draw_random_setup(types, 1)
+            setup_agent_1 = draw_random_setup(types, 1, game_.game_dim)
         game_.agents[0].setup = setup_agent_0
         game_.agents[1].setup = setup_agent_1
+        game_.reset()
 
         agent_output_type_0 = str(game_.agents[0])
         agent_output_type_1 = str(game_.agents[1])
@@ -311,5 +318,5 @@ def simu_env(env, num_simulations=1000, watch=True):
 #simu_env(environment, num_simulations=1000, watch=False)
 
 #for testing the full game (can use different setup functions)
-game_ = game.Game(agent.Random(0), agent.Random(1))
-simulation(game_, num_simulations=1000)
+game_ = game.Game(agent.Random(0), agent.Random(1), game_size="big")
+simulation(game_, num_simulations=1000, show_game=False)

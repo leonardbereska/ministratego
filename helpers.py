@@ -11,66 +11,20 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 import copy
 
-good_setup = np.empty((2, 5), dtype=int)
-good_setup[0, 0] = 3
-good_setup[0, 1] = 11
-good_setup[0, 2] = 0
-good_setup[0, 3] = 11
-good_setup[0, 4] = 1
-good_setup[1, 0] = 2
-good_setup[1, 1] = 2
-good_setup[1, 2] = 10
-good_setup[1, 3] = 2
-good_setup[1, 4] = 3
-# good_setup = np.flip(good_setup, 0)
-
-good_setup2 = np.empty((2, 5), dtype=int)
-good_setup2[0, 0] = 1
-good_setup2[0, 1] = 11
-good_setup2[0, 2] = 0
-good_setup2[0, 3] = 11
-good_setup2[0, 4] = 1
-good_setup2[1, 0] = 1
-good_setup2[1, 1] = 1
-good_setup2[1, 2] = 1
-good_setup2[1, 3] = 1
-good_setup2[1, 4] = 1
-
-
-def get_good_setup():
-    return good_setup
-
-
-def get_good_setup2():
-    return good_setup2
-
-
 battleMatrix = dict()
-battleMatrix[1, 11] = -1
-battleMatrix[1, 1] = 0
-battleMatrix[1, 2] = -1
-battleMatrix[1, 3] = -1
-battleMatrix[1, 0] = 1
+for i in range(1, 11):
+    for j in range(1, 11):
+        if i < j:
+            battleMatrix[i, j] = -1
+            battleMatrix[j, i] = 1
+        elif i==j:
+            battleMatrix[i, i] = 0
+    battleMatrix[i, 0] = 1
+    if i == 3:
+        battleMatrix[i, 11] = 1
+    else:
+        battleMatrix[i, 11] = -1
 battleMatrix[1, 10] = 1
-battleMatrix[2, 0] = 1
-battleMatrix[2, 11] = -1
-battleMatrix[2, 1] = 1
-battleMatrix[2, 2] = 0
-battleMatrix[2, 3] = -1
-battleMatrix[2, 10] = -1
-battleMatrix[3, 0] = 1
-battleMatrix[3, 11] = 1
-battleMatrix[3, 2] = 1
-battleMatrix[3, 3] = 0
-battleMatrix[3, 1] = 1
-battleMatrix[3, 10] = -1
-battleMatrix[10, 0] = 1
-battleMatrix[10, 11] = -1
-battleMatrix[10, 1] = 1
-battleMatrix[10, 2] = 1
-battleMatrix[10, 3] = 1
-battleMatrix[10, 10] = 0
-
 
 def get_battle_matrix():
     return battleMatrix
@@ -123,7 +77,7 @@ def is_legal_move(board, move_to_check):
     pos_before = move_to_check[0]
     pos_after = move_to_check[1]
     for x in (pos_before[0], pos_before[1], pos_after[0], pos_after[1]):
-        if not -1 < x < 5:
+        if not -1 < x < board.shape[0]:
             return False
     if not board[pos_after] is None:
         if board[pos_after].team == board[pos_before].team:
@@ -150,6 +104,7 @@ def print_board(board, same_figure=True):
     Plots a board object in a pyplot figure
     :param same_figure: Should the plot be in the same figure?
     """
+    game_dim = board.shape[0]
     board = copy.deepcopy(board)  # ensure to not accidentally change input
     # plt.interactive(False)  # make plot stay? true: close plot, false: keep plot
     if same_figure:
@@ -157,9 +112,9 @@ def print_board(board, same_figure=True):
     else:
         plt.figure()
     plt.clf()
-    layout = np.add.outer(range(5), range(5)) % 2  # chess-pattern board
+    layout = np.add.outer(range(game_dim), range(game_dim)) % 2  # chess-pattern board
     plt.imshow(layout, cmap=plt.cm.magma, alpha=.5, interpolation='nearest')  # plot board
-    for pos in ((i, j) for i in range(5) for j in range(5)):  # go through all board positions
+    for pos in ((i, j) for i in range(game_dim) for j in range(game_dim)):  # go through all board positions
         piece = board[pos]  # select piece on respective board position
         # decide which marker type to use for piece
         if piece is not None:
@@ -187,7 +142,6 @@ def print_board(board, same_figure=True):
     #plt.gca().invert_yaxis()  # own pieces down, others up
     #plt.pause(1)
     plt.pause(.2)
-
     plt.show(block=False)
     #plt.show(block=True)
 
@@ -196,6 +150,7 @@ def get_poss_moves(board, team):
     """
     :return: List of possible actions for agent of team
     """
+    game_dim = board.shape[0]
     actions_possible = []
     for pos, piece in np.ndenumerate(board):
         if piece is not None:  # board position has a piece on it
@@ -203,8 +158,8 @@ def get_poss_moves(board, team):
                 # check which moves are possible
                 if piece.can_move:
                     if piece.type == 2:
-                        poss_fields = [(pos[0] + i, pos[1]) for i in range(1, 5 - pos[0])] +\
-                                      [(pos[0], pos[1] + i) for i in range(1, 5 - pos[1])] + \
+                        poss_fields = [(pos[0] + i, pos[1]) for i in range(1, game_dim - pos[0])] +\
+                                      [(pos[0], pos[1] + i) for i in range(1, game_dim - pos[1])] + \
                                       [(pos[0] - i, pos[1]) for i in range(1, pos[0]+1)] +\
                                       [(pos[0], pos[1] - i) for i in range(1, pos[1]+1)]
                         for pos_to in poss_fields:
@@ -220,6 +175,9 @@ def get_poss_moves(board, team):
                             move = (pos, pos_to)
                             if is_legal_move(board, move):
                                 actions_possible.append(move)
+    if not actions_possible:
+        #print_board(board)
+        pass
     return actions_possible
 
 

@@ -14,7 +14,7 @@ class Piece:
         self.dead = False
         self.hidden = True
         self.guessed = False
-        assert(type in (0, 1, 2, 3, 10, 11, 88, 99))  # 0: flag, 11: bomb, 88: unknown, 99: obstacle
+        assert(type in (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 99))  # 0: flag, 11: bomb, 88: unknown, 99: obstacle
         self.type = type
         assert(team == 0 or team == 1 or team == 99)  # 99 is a neutral piece: e.g. obstacle
         self.team = team
