@@ -267,7 +267,8 @@ def simu_env(env, num_simulations=1000, watch=True):
                     blue_wins_bc_noMovesLeft += 1
                     rounds_counter_win_agent_1.append(env.move_count)
                 rounds_counter_per_game.append(env.move_count)
-            elif env.steps > 400:  # break game that takes too long
+
+            elif env.steps > 100:  # break game that takes too long
                 ties += 1
                 break
     file = open("{}_vs_{}_with_{}_sims_{}.txt".format(agent_output_type_0, agent_output_type_1, num_simulations, env_type), "w")
@@ -302,6 +303,7 @@ def simu_env(env, num_simulations=1000, watch=True):
     file.write("Maximum computational time: {} seconds\n".format(max(game_times_0)))
     file.write("Minimum computational time: {} seconds\n".format(min(game_times_0)))
     file.close()
+
 
 
 # for testing the learners and the smaller environments

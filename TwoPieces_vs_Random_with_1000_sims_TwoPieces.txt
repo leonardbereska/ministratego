@@ -1,0 +1,30 @@
+Statistics of TwoPieces vs. Random with 1000 games played.
+Overall computational time of simulation: 13.21370518426605 seconds.
+
+Agent TwoPieces won 706/1000 games (~70.6%).
+Reasons for winning: 546 flag captures, 160 wins through killing all enemies
+
+Agent Random won 291/1000 games (~29.1%).
+Reasons for winning: 165 flag captures, 126 wins through killing all enemies
+
+Number of tied games: 3
+
+Average game duration overall: 28 rounds
+Maximum number of rounds played: 194 rounds
+Minimum number of rounds played: 5 rounds
+
+Average game duration for TwoPieces wins: 20 rounds
+Maximum number of rounds played: 150 rounds
+Minimum number of rounds played: 5 rounds
+
+Average game duration for Random wins: 47 rounds
+Maximum number of rounds played: 194 rounds
+Minimum number of rounds played: 6 rounds
+
+Average computational time for Random wins: 0.02119910730788733 seconds
+Maximum computational time: 0.07893951645779973 seconds
+Minimum computational time: 0.0037873994739134886 seconds
+
+Average computational time for TwoPieces wins: 0.009978420619930364 seconds
+Maximum computational time: 0.06358944355912577 seconds
+Minimum computational time: 0.0035024678005299847 seconds

@@ -485,7 +485,7 @@ class TwoPieces(Reinforce):
         self.action_dim = 8
         self.state_dim = len(self.state_represent())
         self.model = models.SmallConv(self.state_dim, self.action_dim, n_filter=20, n_hidden=16)
-        # self.model.load_state_dict(torch.load('./saved_models/twopieces_current.pkl'))
+        self.model.load_state_dict(torch.load('./saved_models/twopieces_best.pkl'))
 
     def state_represent(self):
         own_team_one = lambda p: (p.team == self.team and p.type == 1, 1)
@@ -779,8 +779,8 @@ class MiniMax(Agent):
                 flag_alive[piece.team] = True
         if not flag_alive[self.other_team]:
             return True, True
-        if not flag_alive[self.team]:
-            return True, False
+        # if not flag_alive[self.team]:
+        #     return True, False
         if not actions_possible:
             # print('cannot move anymore')
             if max_val:  # the minmax agent is the one doing max_val, so if he cant move -> loss for him
