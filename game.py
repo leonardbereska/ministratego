@@ -48,6 +48,9 @@ class Game:
 
         self.battleMatrix = helpers.get_battle_matrix()
 
+    def reset(self):
+        self.__init__(self.agents[0], self.agents[1])
+
     def run_game(self):
         game_over = False
         rewards = None

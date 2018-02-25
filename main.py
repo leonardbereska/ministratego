@@ -1,3 +1,21 @@
+############################################################################
+#
+# The whole project is written by Leonhard Bereska and Michael Aichmüller.
+# It is hard, if not almost impossible to try to differentiate between the
+# parts coded by Bereska and the parts by Aichmüller, keep the vague
+# scheme in mind:
+# The whole game code was a 50/50 split (legal_moves, do_move, helpers etc.)
+# meaning that while one person might have started to code a function,
+# it was always revised and adapted by another, making the overall effort
+# equal.
+# The MiniMax part was mainly coded by Aichmüller, revision by Bereska
+# The DQN learning part was mainly coded by Bereska, revision by Aichmüller.
+# Yet bugfixing, and overall adaptation to the whole game flow was again
+# an equal effort of both parts, thus it doesn't feel right to attribute parts
+# to one person or another.
+#
+##############################################################################
+
 import numpy as np
 import game
 import pieces
@@ -46,14 +64,12 @@ def draw_random_setup(types_available, team):
     return setup_agent
 
 
-def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_1=None, show_game=False):
+def simulation(game_, num_simulations, setup_0=None, setup_1=None, show_game=False):
     """
     Simulate num_simulations many games of the agent of type agent_type_0 against the agent of
     type agent_type_1. If setup_0 or setup_1 are provided respectively, then take the pieces
     setup from those. If show_game is True, the game will be printed by the internal function.
-    :param agent_type_0: string, possible values are "random", "minmax", "omniscientminmax", "reinforce",
-    "montecarlo", "heuristic", "omniscientheuristic", "montecarloheuristic"
-    :param agent_type_1: string, possible values are equal to those of agent_type_0
+    :param game_: game object that runs the simulation
     :param num_simulations: integer number of games to simulate
     :param setup_0: (optional) numpy array of the setup of agent 0
     :param setup_1: (optional) numpy array of the setup of agent 1
@@ -69,86 +85,13 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
     rounds_counter_per_game = []
     rounds_counter_win_agent_0 = []
     rounds_counter_win_agent_1 = []
-    available_agents = ["random",
-                        "minmax",
-                        "omniscientminmax",
-                        "reinforce",
-                        "montecarlo",
-                        "heuristic",
-                        "omniscientheuristic",
-                        "montecarloheuristic"]
-    assert (agent_type_0 in available_agents)
-    if agent_type_0 == "random":
-        agent_0 = agent.Random(team=0)
-        agent_output_type_0 = "RandomAgent"
-
-    elif agent_type_0 == "heuristic":
-        agent_0 = agent.Heuristic(team=0)
-        agent_output_type_0 = "HeuristicAgent"
-
-    elif agent_type_0 == "montecarloheuristic":
-        agent_0 = agent.MonteCarloHeuristic(team=0)
-        agent_output_type_0 = "MonteCarloHeuristicAgent"
-
-    elif agent_type_0 == "omniscientheuristic":
-        agent_0 = agent.OmniscientHeuristic(team=0)
-        agent_output_type_0 = "OmniscientHeuristicAgent"
-
-    elif agent_type_0 == "montecarlo":
-        agent_0 = agent.MonteCarlo(team=0, number_of_iterations_game_sim=100)
-        agent_output_type_0 = "MonteCarloAgent"
-
-    elif agent_type_0 == "minmax":
-        agent_0 = agent.MiniMax(team=0)
-        agent_output_type_0 = "MinMaxAgent"
-
-    elif agent_type_0 == "omniscientminmax":
-        agent_0 = agent.Omniscient(team=0)
-        agent_output_type_0 = "OmnniscientMinMaxAgent"
-
-    else:
-        agent_0 = agent.Stratego(team=0)
-        agent_output_type_0 = "ReinforceLearningAgent"
-
-    assert (agent_type_1 in available_agents)
-
-    if agent_type_1 == "random":
-        agent_1 = agent.Random(team=1)
-        agent_output_type_1 = "RandomAgent"
-
-    elif agent_type_1 == "heuristic":
-        agent_1 = agent.Heuristic(team=1)
-        agent_output_type_1 = "HeuristicAgent"
-
-    elif agent_type_1 == "montecarloheuristic":
-        agent_1 = agent.MonteCarloHeuristic(team=1)
-        agent_output_type_1 = "MonteCarloHeuristicAgent"
-
-    elif agent_type_1 == "omniscientheuristic":
-        agent_1 = agent.OmniscientHeuristic(team=1)
-        agent_output_type_1 = "OmniscientHeuristicAgent"
-
-    elif agent_type_1 == "montecarlo":
-        agent_1 = agent.MonteCarlo(team=1, number_of_iterations_game_sim=100)
-        agent_output_type_1 = "MonteCarloAgent"
-
-    elif agent_type_1 == "minmax":
-        agent_1 = agent.MiniMax(team=1)
-        agent_output_type_1 = "MinMaxAgent"
-
-    elif agent_type_1 == "omniscientminmax":
-        agent_1 = agent.Omniscient(team=1)
-        agent_output_type_1 = "OmnniscientMinMaxAgent"
-
-    else:
-        agent_1 = agent.Stratego(team=1)
-        agent_output_type_1 = "ReinforceLearningAgent"
 
     game_times_0 = []
     game_times_1 = []
     types = [1, 2, 2, 2, 3, 3, 10, 11, 11]
     #types = [1, 3, 10]
     for simu in range(num_simulations):  # simulate games
+        game_.reset()
         # reset setup with new setup if none given
         if setup_0 is not None:
             setup_agent_0 = setup_0
@@ -158,10 +101,14 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
             setup_agent_1 = setup_1
         else:
             setup_agent_1 = draw_random_setup(types, 1)
-        agent_0.setup = setup_agent_0
-        agent_1.setup = setup_agent_1
-        # restart game
-        game_ = game.Game(agent_0, agent_1)
+        game_.agents[0].setup = setup_agent_0
+        game_.agents[1].setup = setup_agent_1
+
+        agent_output_type_0 = str(game_.agents[0])
+        agent_output_type_1 = str(game_.agents[1])
+        agent_output_type_0 = re.search('agent.(.+?) object', agent_output_type_0).group(1)
+        agent_output_type_1 = re.search('agent.(.+?) object', agent_output_type_1).group(1)
+
         game_time_s = timer()
         if (simu+1) % 1 == 0:
             print('{} won: {}, {} won: {}, Game {}/{}'.format(agent_output_type_0,
@@ -182,7 +129,7 @@ def simulation(agent_type_0, agent_type_1, num_simulations, setup_0=None, setup_
                                                                                        simu,
                                                                                        num_simulations))
         print("Game number: " + str(simu + 1))
-        for step in range(2000):  # game longer than
+        for step in range(2000):
             if show_game:
                 helpers.print_board(game_.board)
             game_reward = game_.run_step()
@@ -296,7 +243,6 @@ def simu_env(env, num_simulations=1000, watch=True):
         done = False
         while not done:
             _, done, won = env.step()
-
             if watch:
                 env.show()
             if done:
@@ -358,6 +304,10 @@ def simu_env(env, num_simulations=1000, watch=True):
     file.close()
 
 
-environment = env.Stratego(agent.OmniscientStratego(0), agent.MonteCarloHeuristic(1))
-simu_env(environment, 1000, watch=False)
-#simulation(agent_type_0="omniscientminmax", agent_type_1="heuristic", num_simulations=1000)
+# for testing the learners and the smaller environments
+#environment = env.Stratego(agent.Heuristic(0), agent.MiniMax(1))
+#simu_env(environment, num_simulations=1000, watch=False)
+
+#for testing the full game (can use different setup functions)
+game_ = game.Game(agent.Random(0), agent.Random(1))
+simulation(game_, num_simulations=1000)

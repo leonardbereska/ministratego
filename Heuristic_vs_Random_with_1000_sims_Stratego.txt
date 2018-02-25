@@ -1,0 +1,30 @@
+Statistics of Heuristic vs. Random with 1000 games played.
+Overall computational time of simulation: 9387.424757046527 seconds.
+
+Agent Heuristic won 699/1000 games (~69.9%).
+Reasons for winning: 526 flag captures, 173 wins through killing all enemies
+
+Agent Random won 301/1000 games (~30.1%).
+Reasons for winning: 141 flag captures, 160 wins through killing all enemies
+
+Number of tied games: 0
+
+Average game duration overall: 33 rounds
+Maximum number of rounds played: 122 rounds
+Minimum number of rounds played: 2 rounds
+
+Average game duration for Heuristic wins: 32 rounds
+Maximum number of rounds played: 122 rounds
+Minimum number of rounds played: 4 rounds
+
+Average game duration for Random wins: 36 rounds
+Maximum number of rounds played: 112 rounds
+Minimum number of rounds played: 2 rounds
+
+Average computational time for Random wins: 1.513637779817838 seconds
+Maximum computational time: 30.316717839232297 seconds
+Minimum computational time: 0.01661453683846048 seconds
+
+Average computational time for Heuristic wins: 12.77799683164715 seconds
+Maximum computational time: 5023.801262685107 seconds
+Minimum computational time: 0.0459486425461364 seconds
